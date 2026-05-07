@@ -13,201 +13,11 @@
 
   html, body {
     margin: 0; padding: 0;
-    font-family: 'Inter', system-ui, sans-serif;
     min-height: 100vh;
-    overflow: hidden;
-    background: #040608;
-  }
-
-  /* ─── video background ─── */
-
-  .bg {
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    overflow: hidden;
-  }
-
-  .bg-clip {
-    position: absolute;
-    inset: 0;
-    overflow: hidden;
-    opacity: 0;
-    transition: opacity 1.4s ease;
-  }
-
-  .bg-clip.active { opacity: 1; }
-
-  .bg-clip video {
-    position: absolute;
-    width: 112%;
-    height: 112%;
-    top: -6%;
-    left: -6%;
-    object-fit: cover;
-    filter: grayscale(0.35) contrast(1.12) brightness(0.9);
-  }
-
-  /* ── Ken Burns: each clip gets its own cinematic move ── */
-  /* Animation fires fresh whenever .active is applied     */
-
-  .bg-clip:nth-child(1).active video {
-    /* Slow push in — aerial power site */
-    animation: kb-push-in 18s ease-in-out forwards;
-  }
-  .bg-clip:nth-child(2).active video {
-    /* Pan right across the workers tunnel */
-    animation: kb-pan-right 16s ease-in-out forwards;
-  }
-  .bg-clip:nth-child(3).active video {
-    /* Pull back + drift left — wide industrial site */
-    animation: kb-pull-back 16s ease-in-out forwards;
-  }
-  .bg-clip:nth-child(4).active video {
-    /* Tilt up — atom dish silhouette */
-    animation: kb-tilt-up 16s ease-in-out forwards;
-  }
-  .bg-clip:nth-child(5).active video {
-    /* Creep in — 1957 nuclear plant */
-    animation: kb-creep-in 18s ease-in-out forwards;
-  }
-  .bg-clip:nth-child(6).active video {
-    /* Pan left — Hoover Dam concrete machinery */
-    animation: kb-pan-right 16s ease-in-out forwards;
-  }
-  .bg-clip:nth-child(7).active video {
-    /* Hold + slight push — tunnel locomotive silhouette */
-    animation: kb-creep-in 18s ease-in-out forwards;
-  }
-  .bg-clip:nth-child(8).active video {
-    /* Pan along row — turbine generator hall */
-    animation: kb-pan-right 16s ease-in-out forwards;
-  }
-  .bg-clip:nth-child(9).active video {
-    /* Zoom out reveal — SPIE tilt-shift build timelapse */
-    animation: kb-pull-back 16s ease-in-out forwards;
-  }
-  .bg-clip:nth-child(10).active video {
-    /* Aerial drift in — Chicago Apple Store build timelapse */
-    animation: kb-push-in 16s ease-in-out forwards;
-  }
-
-  @keyframes kb-push-in {
-    from { transform: scale(1.04) translate(1%,  0.5%); }
-    to   { transform: scale(1.18) translate(-2%, -1%);  }
-  }
-  @keyframes kb-pan-right {
-    from { transform: scale(1.10) translate(-5%,  0%);  }
-    to   { transform: scale(1.10) translate(5%,  -0.5%); }
-  }
-  @keyframes kb-pull-back {
-    from { transform: scale(1.18) translate(2%,  1%);   }
-    to   { transform: scale(1.04) translate(-1%, 0%);   }
-  }
-  @keyframes kb-tilt-up {
-    from { transform: scale(1.10) translate(0%,  3%);   }
-    to   { transform: scale(1.10) translate(0%, -3%);   }
-  }
-  @keyframes kb-creep-in {
-    from { transform: scale(1.02) translate(0%,  0%);   }
-    to   { transform: scale(1.14) translate(-1.5%, -1.5%); }
-  }
-
-  /* Cut flash */
-  .bg-cut {
-    position: absolute;
-    inset: 0;
-    background: #020406;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    z-index: 2;
-    pointer-events: none;
-  }
-
-  /* Scan lines */
-  .bg-scanlines {
-    position: absolute;
-    inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent 0px,  transparent 2px,
-      rgba(0,0,0,0.055) 2px, rgba(0,0,0,0.055) 4px
-    );
-    z-index: 3;
-    pointer-events: none;
-  }
-
-  /* Gray see-through overlay */
-  .bg-gray {
-    position: absolute;
-    inset: 0;
-    background: rgba(16, 18, 22, 0.42);
-    z-index: 4;
-    pointer-events: none;
-  }
-
-  /* Vignette */
-  .bg-vignette {
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(ellipse 78% 76% at 50% 50%,
-      transparent 38%, rgba(0,0,0,0.54) 100%);
-    z-index: 5;
-    pointer-events: none;
-  }
-
-  /* ─── top bar ─── */
-
-  .topbar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 20;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    padding: 32px 80px;
     background: #ffffff;
-  }
-
-  .topbar-lockup {
-    display: flex;
-    align-items: center;
-    gap: 18px;
-  }
-
-  .topbar-lockup img {
-    width: 72px;
-    height: auto;
-    display: block;
-    filter: brightness(0);
-  }
-
-  .topbar-lockup .topbar-word {
-    display: flex;
-    flex-direction: column;
-    line-height: 0.92;
-    letter-spacing: -0.035em;
-  }
-
-  .topbar-lockup .topbar-word span {
-    font-family: 'Inter', system-ui, sans-serif;
-    font-weight: 700;
-    font-size: 30px;
-    color: #000000;
-  }
-
-  /* ─── stage ─── */
-
-  .stage {
-    position: relative;
-    z-index: 10;
-    min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 80px;
   }
 
   .lockup {
@@ -220,7 +30,7 @@
     width: 260px;
     height: auto;
     display: block;
-    filter: brightness(0) invert(1) drop-shadow(0 2px 20px rgba(0,0,0,0.5));
+    filter: brightness(0);
   }
 
   .lockup .word {
@@ -231,124 +41,27 @@
   }
 
   .lockup .word .l1 {
+    font-family: 'Inter', system-ui, sans-serif;
     font-size: 80px;
     font-weight: 700;
-    color: #ffffff;
+    color: #000000;
   }
 
   .lockup .word .l2 {
+    font-family: 'Inter', system-ui, sans-serif;
     font-size: 80px;
     font-weight: 700;
-    color: rgba(255, 255, 255, 0.80);
+    color: rgba(0, 0, 0, 0.65);
   }
 </style>
 </head>
 <body>
-  <nav class="topbar">
-    <div class="topbar-lockup">
-      <img src="spi-mark.png" alt="SPI">
-      <div class="topbar-word">
-        <span>Steinmetz</span>
-        <span>Power Intelligence</span>
-      </div>
-    </div>
-  </nav>
-
-  <div class="bg">
-    <!-- 1. Modern aerial power plant (color, Pexels) -->
-    <div class="bg-clip active">
-      <video src="videos/web_clip1.mp4" muted playsinline></video>
-    </div>
-    <!-- 2. Workers with hard hats in mine tunnel (1950s B&W) -->
-    <div class="bg-clip">
-      <video src="videos/web_workers.mp4" muted playsinline></video>
-    </div>
-    <!-- 3. Wide industrial mining site (1950s B&W) -->
-    <div class="bg-clip">
-      <video src="videos/web_site.mp4" muted playsinline></video>
-    </div>
-    <!-- 4. Satellite dish silhouette / atom animation (1953 B&W) -->
-    <div class="bg-clip">
-      <video src="videos/web_atom.mp4" muted playsinline></video>
-    </div>
-    <!-- 5. First private nuclear power plant, 1957 newsreel -->
-    <div class="bg-clip">
-      <video src="videos/web_nuke.mp4" muted playsinline></video>
-    </div>
-    <!-- 6. Hoover Dam construction — concrete pour machinery -->
-    <div class="bg-clip">
-      <video src="videos/web_hoover_build.mp4" muted playsinline></video>
-    </div>
-    <!-- 7. Hoover Dam — tunnel locomotive silhouette -->
-    <div class="bg-clip">
-      <video src="videos/web_hoover_tunnel.mp4" muted playsinline></video>
-    </div>
-    <!-- 8. Turbine generator hall — rows of machines (data center feel) -->
-    <div class="bg-clip">
-      <video src="videos/web_turbine_hall.mp4" muted playsinline></video>
-    </div>
-    <!-- 9. SPIE tilt-shift construction timelapse — Minecraft-like block assembly -->
-    <div class="bg-clip">
-      <video src="videos/web_spie_build.mp4" muted playsinline></video>
-    </div>
-    <!-- 10. Chicago Apple Store aerial build timelapse — structure rising day/night -->
-    <div class="bg-clip">
-      <video src="videos/web_apple_build.mp4" muted playsinline></video>
-    </div>
-    <div class="bg-cut" id="bg-cut"></div>
-    <div class="bg-scanlines"></div>
-    <div class="bg-gray"></div>
-    <div class="bg-vignette"></div>
-  </div>
-
-  <div class="stage">
-    <div class="lockup">
-      <img class="mark" src="spi-mark.png" alt="SPI mark">
-      <div class="word">
-        <span class="l1">Steinmetz Power</span>
-        <span class="l2">Infrastructure</span>
-      </div>
+  <div class="lockup">
+    <img class="mark" src="spi-mark.png" alt="SPI mark">
+    <div class="word">
+      <span class="l1">Steinmetz Power</span>
+      <span class="l2">Infrastructure</span>
     </div>
   </div>
-
-  <script>
-    const clips = Array.from(document.querySelectorAll('.bg-clip'));
-    const cut   = document.getElementById('bg-cut');
-    let idx = 0;
-    let timer = null;
-
-    function playActive() {
-      const vid = clips[idx].querySelector('video');
-      vid.currentTime = 0;
-      vid.play().catch(() => {});
-    }
-
-    function advance() {
-      if (timer) clearTimeout(timer);
-      cut.style.opacity = '0.92';
-      setTimeout(() => {
-        clips[idx].classList.remove('active');
-        idx = (idx + 1) % clips.length;
-        clips[idx].classList.add('active');
-        playActive();
-        cut.style.opacity = '0';
-        scheduleNext();
-      }, 220);
-    }
-
-    function scheduleNext() {
-      const vid = clips[idx].querySelector('video');
-      // Advance when video ends, or after 14s max
-      const onEnd = () => advance();
-      vid.addEventListener('ended', onEnd, { once: true });
-      timer = setTimeout(() => {
-        vid.removeEventListener('ended', onEnd);
-        advance();
-      }, 14000);
-    }
-
-    playActive();
-    scheduleNext();
-  </script>
 </body>
 </html>

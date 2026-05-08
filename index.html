@@ -2,14 +2,18 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>Steinmetz Power Intelligence</title>
+<title>Steinmetz Power Infrastructure</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="icon" type="image/png" href="favicon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@700&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; }
+
+  @font-face {
+    font-family: 'Geograph';
+    src: url('KlimTestFonts (1)/Test web fonts (Variable, WOFF2)/Test Geograph/test-geograph-vf-roman.woff2') format('woff2');
+    font-weight: 100 900;
+    font-style: normal;
+  }
 
   html, body {
     margin: 0; padding: 0;
@@ -23,11 +27,11 @@
   .lockup {
     display: flex;
     align-items: center;
-    gap: 36px;
+    gap: 14px;
   }
 
   .lockup img.mark {
-    width: 260px;
+    width: 100px;
     height: auto;
     display: block;
     filter: brightness(0);
@@ -40,18 +44,11 @@
     letter-spacing: -0.035em;
   }
 
-  .lockup .word .l1 {
-    font-family: 'Inter', system-ui, sans-serif;
-    font-size: 80px;
+  .lockup .word span {
+    font-family: 'Geograph', system-ui, sans-serif;
+    font-size: 40px;
     font-weight: 700;
     color: #000000;
-  }
-
-  .lockup .word .l2 {
-    font-family: 'Inter', system-ui, sans-serif;
-    font-size: 80px;
-    font-weight: 700;
-    color: rgba(0, 0, 0, 0.65);
   }
 </style>
 </head>
@@ -59,8 +56,8 @@
   <div class="lockup">
     <img class="mark" src="spi-mark.png" alt="SPI mark">
     <div class="word">
-      <span class="l1">Steinmetz Power</span>
-      <span class="l2">Infrastructure</span>
+      <span>Steinmetz</span>
+      <span>Power Infrastructure</span>
     </div>
   </div>
 </body>

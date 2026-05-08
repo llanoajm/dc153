@@ -2,18 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>Steinmetz Power Infrastructure</title>
+<title>Steinmetz</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="icon" type="image/png" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; }
-
-  @font-face {
-    font-family: 'Geograph';
-    src: url('KlimTestFonts (1)/Test web fonts (Variable, WOFF2)/Test Geograph/test-geograph-vf-roman.woff2') format('woff2');
-    font-weight: 100 900;
-    font-style: normal;
-  }
 
   html, body {
     margin: 0; padding: 0;
@@ -22,43 +18,38 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    font-family: 'Sora', system-ui, sans-serif;
+    color: #000;
   }
 
   .lockup {
+    --word-size: 44px;
+    --mark-size: 68px;
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 16px;
   }
 
-  .lockup img.mark {
-    width: 100px;
-    height: auto;
+  .mark {
+    height: var(--mark-size);
+    width: auto;
     display: block;
-    filter: brightness(0);
   }
 
-  .lockup .word {
-    display: flex;
-    flex-direction: column;
-    line-height: 0.92;
-    letter-spacing: -0.035em;
-  }
-
-  .lockup .word span {
-    font-family: 'Geograph', system-ui, sans-serif;
-    font-size: 40px;
-    font-weight: 700;
-    color: #000000;
+  .word {
+    font-size: var(--word-size);
+    font-weight: 600;
+    color: #000;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    line-height: 1;
   }
 </style>
 </head>
 <body>
   <div class="lockup">
-    <img class="mark" src="spi-mark.png" alt="SPI mark">
-    <div class="word">
-      <span>Steinmetz</span>
-      <span>Power Infrastructure</span>
-    </div>
+    <img class="mark" src="spi-mark-filled.png" alt="Steinmetz mark">
+    <div class="word">Steinmetz</div>
   </div>
 </body>
 </html>

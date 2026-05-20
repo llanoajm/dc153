@@ -1,0 +1,20 @@
+research/
+data/
+data
+wandb/
+wandb
+build/
+
+# Ray
+.prometheus*/
+
+# Python
+*.pyc
+*.whl
+
+
+.claude/
+
+# Test outputs
+zap/tests/**/*.csv
+zap/tests/**/*.png

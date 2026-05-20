@@ -1,0 +1,47 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors / agents
+.idea/
+.vscode/
+*.swp
+.claude/
+
+# Secrets / local config
+.env
+.env.*
+!.env.example
+.vercel/
+
+# Node / Next.js
+node_modules/
+.next/
+next-env.d.ts
+*.tsbuildinfo
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.whl
+.venv/
+venv/
+.eggs/
+*.egg-info/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Build / experiment outputs
+build/
+dist/
+wandb/
+.prometheus*/
+research/
+zap/tests/**/*.csv
+zap/tests/**/*.png
+
+# Large local fonts / assets that shouldn't be tracked
+webpage/KlimTestFonts*/
+webpage/videos/

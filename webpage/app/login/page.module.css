@@ -1,0 +1,127 @@
+.page {
+  min-height: 100vh;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #000;
+}
+
+.card {
+  width: clamp(300px, 90vw, 380px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+}
+
+.lockup {
+  --word-size: clamp(20px, 4.4vw, 36px);
+  --mark-size: clamp(30px, 6.5vw, 54px);
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 1.6vw, 13px);
+}
+
+.mark {
+  height: var(--mark-size);
+  width: auto;
+  display: block;
+}
+
+.word {
+  font-size: var(--word-size);
+  font-weight: 600;
+  color: #000;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #888;
+}
+
+.field input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 8px;
+  font-family: var(--font-sora), system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: #000;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.field input:focus {
+  border-color: #000;
+}
+
+.field input::placeholder {
+  color: #bbb;
+}
+
+.error {
+  font-size: 12px;
+  font-weight: 500;
+  color: #c0392b;
+  text-align: center;
+  min-height: 16px;
+  letter-spacing: 0.01em;
+}
+
+.btn {
+  margin-top: 6px;
+  width: 100%;
+  padding: 13px;
+  background: #000;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--font-sora), system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.btn:hover:not(:disabled) { background: #222; }
+.btn:active:not(:disabled) { transform: scale(0.98); }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.footer {
+  position: fixed;
+  bottom: clamp(20px, 4vh, 36px);
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: clamp(12px, 1.2vw, 14px);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  color: #aaa;
+  line-height: 1;
+}

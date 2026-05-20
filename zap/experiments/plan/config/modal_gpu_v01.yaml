@@ -1,0 +1,82 @@
+# Modal H100 GPU config — ADMM solver on western US grid (100 nodes, 2 days)
+# This actually runs on GPU (use_admm: true dispatches via ADMM on CUDA).
+#
+# Usage:
+#   modal run modal_run.py --config-name modal_gpu_v01
+#
+# Requires PyPSA western data in the zap-data volume:
+#   modal volume put zap-data ./data/pypsa pypsa
+
+---
+tags: []
+
+system:
+  threads: 32
+  runtime: 120
+
+data:
+  name: pypsa
+  case: load_medium
+  add_ground: true
+  use_batteries: true
+  num_nodes: 100
+  use_extra_components: true
+  start_hour: peak_hybrid_day
+  num_hours: 48
+  dont_expand: [hydro, coal, biomass]
+  scale_by_hours: false
+  args:
+    power_unit: 1000.0
+    cost_unit: 100.0
+    marginal_load_value: 500.0
+    scale_load: 1.0
+    scale_generator_capacity_factor: 0.7
+    scale_line_capacity_factor: 0.7
+    carbon_tax: 0.0
+    generator_cost_perturbation: 1.0
+    load_cost_perturbation: 10.0
+    drop_empty_generators: false
+    expand_empty_generators: 0.5
+    battery_discharge_cost: 1.0
+    battery_init_soc: 0.0
+    battery_final_soc: 0.0
+
+problem:
+  stochastic: false
+  cost_weight: 1.0
+  emissions_weight: 200.0
+  regularize: 1.0e-6
+  parameters: [generator, dc_line, ac_line, battery]
+
+optimizer:
+  name: gradient_descent
+  num_iterations: 200
+  initial_state: initial
+  use_wandb: false
+  checkpoint_every: 10
+  parallel: false
+  args:
+    step_size: 1.0e-2
+    clip: 1000.0
+
+layer:
+  use_admm: true
+  adapt_rho: false
+  torch_dtype: float32
+  args:
+    machine: cuda
+    num_iterations: 2000
+    minimum_iterations: 100
+    atol: 1.0e-3
+    rtol: 0.0
+    rho_power: 1.0
+    rho_angle: 1.0
+    alpha: 1.0
+    resid_norm: 2
+    battery_window: 24
+    adaptive_rho: true
+    adaptation_frequency: 50
+    verbose: 0
+
+relaxation:
+  should_solve: false

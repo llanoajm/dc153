@@ -10,6 +10,7 @@ import { DashboardRenderer } from "./dashboard"
 import { NetworkGraphRenderer } from "./network-graph"
 import { GeoMapRenderer } from "./geo-map"
 import { RunRenderer } from "./run"
+import { PanelRenderer } from "./panel"
 import { rendererFor } from "./types"
 
 // Universal entry point. Pick a renderer by (1) explicit
@@ -38,6 +39,8 @@ export function ArtifactRenderer({ artifact }: { artifact: Artifact }) {
       return <GeoMapRenderer artifact={artifact} />
     case "run":
       return <RunRenderer artifact={artifact} />
+    case "panel":
+      return <PanelRenderer artifact={artifact} />
     case "file":
     default:
       return <FileRenderer artifact={artifact} />

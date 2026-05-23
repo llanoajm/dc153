@@ -3,8 +3,10 @@ import { notFound } from "next/navigation"
 import { getArtifact } from "@/lib/artifacts"
 import { ArtifactRenderer, rendererFor } from "@/components/renderers"
 import { LineageStrip } from "@/components/features/LineageStrip"
-import { isDashboardArtifact, isPinned } from "@/lib/dashboards"
+import { isPinnableArtifact, isPanelArtifact, isPinned } from "@/lib/dashboards"
 import { PinButton } from "@/components/dashboards/PinButton"
+import { PanelReviewStrip } from "@/components/panels/PanelReviewStrip"
+import { PromoteToSkillButton } from "@/components/panels/PromoteToSkillButton"
 
 export default async function ArtifactPage({
   params,
@@ -31,7 +33,10 @@ export default async function ArtifactPage({
             ) : null}
           </div>
           <div className="flex items-center gap-4">
-            {isDashboardArtifact(artifact) ? (
+            {isPanelArtifact(artifact) ? (
+              <PromoteToSkillButton artifact={artifact} />
+            ) : null}
+            {isPinnableArtifact(artifact) ? (
               <PinButton id={artifact.id} initialPinned={isPinned(artifact)} size="md" />
             ) : null}
             <Link
@@ -44,6 +49,8 @@ export default async function ArtifactPage({
         </div>
 
         <LineageStrip artifact={artifact} />
+
+        {isPanelArtifact(artifact) ? <PanelReviewStrip artifact={artifact} /> : null}
 
         <ArtifactRenderer artifact={artifact} />
 

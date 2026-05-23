@@ -1,5 +1,5 @@
-## Current item (from LOOP_QUEUE.md line 123)
-- [ ] 13. Multi-modal extraction (PPTX, images, vision captioning) (ROADMAP §1)
+## Current item (from LOOP_QUEUE.md line 132)
+- [ ] 14. Org scopes + shared glossary/skills/networks (ROADMAP §10)
 
 ## Attempt
 1 of 5
@@ -32,7 +32,7 @@
 - No emojis in code or UI unless explicitly requested.
 
 STATUS: done
-SUMMARY: PPTX/image/audio ingestion shipped — new scripts ingest_pptx/_image/_audio share an OpenRouter vision+audio caption helper (with deterministic fallback), and a universal /api/upload/source route dispatches by mime so SourcesPanel handles all four kinds end-to-end.
-ACCEPTANCE: PPTX upload → text + slide images + per-slide captions: pass (ingest_pptx.py extracts slide text frames + picture shapes, captions via _caption.caption_image, surfaces in markdown view spec). Image upload → caption via vision model: pass (ingest_image.py calls OpenRouter when OPENROUTER_API_KEY present; deterministic fallback otherwise). Audio upload → transcript + speaker turns: pass (ingest_audio.py transcribes via multimodal model, per-turn chunking when Speaker N: prefix detected; fallback when no key). All extracted content surfaces in the Sources panel: pass (universal /api/upload/source route + SourcesPanel accepts the full mime set, renders type-aware subtitles). npm run build exits 0: pass.
-
+SUMMARY: Org scopes shipped — orgs/org_members tables with RLS + roles, artifacts gain org_id with scope-aware policies, syncOrgContextOverlays composes org-then-personal glossary/context files into every session, /app/orgs lets owners create orgs and invite members and edit the canonical org docs.
+NEXT_STEPS:
+ACCEPTANCE: all four programmatic criteria pass — (1) `orgs` + `org_members` with role check + RLS live in supabase/schema.sql (user must paste into Supabase before runtime); (2) artifacts carry org_id and the RLS scope policy admits personal/org-canonical/org-member/bundled rows; (3) glossary + context_doc compose at session time via syncOrgContextOverlays which writes `glossary.org.<slug>.md` / `company-context.org.<slug>.md` and re-orders opencode.jsonc instructions so org loads first; (4) onboarding loop wired — every /app load runs syncOrgContextOverlays, /app/orgs lets owners author the canonical org glossary/context that a new member then sees on their first login; `npm run build` exits 0.
 VERIFIED: yes

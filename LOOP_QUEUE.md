@@ -129,7 +129,7 @@ Legend: `- [ ]` pending · `- [x]` done & verified · `- [!]` blocked (see LOOP_
     - All extracted content surfaces in the Sources panel
     - `npm run build` exits 0
 
-- [ ] 14. Org scopes + shared glossary/skills/networks (ROADMAP §10)
+- [x] 14. Org scopes + shared glossary/skills/networks (ROADMAP §10)
   - context: multi-user; same Supabase project
   - acceptance:
     - `orgs` + `org_members` tables in schema with roles (owner, admin, member) and RLS

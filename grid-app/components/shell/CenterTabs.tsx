@@ -1,6 +1,6 @@
 "use client"
 
-import { ReactNode, useState } from "react"
+import { ReactNode } from "react"
 
 export interface CenterTab {
   id: string
@@ -10,25 +10,17 @@ export interface CenterTab {
 }
 
 export function CenterTabs({
-  initialTabs,
-  defaultTabId,
+  tabs,
+  activeId,
+  onSelect,
+  onClose,
 }: {
-  initialTabs: CenterTab[]
-  defaultTabId?: string
+  tabs: CenterTab[]
+  activeId: string
+  onSelect: (id: string) => void
+  onClose?: (id: string) => void
 }) {
-  const [tabs, setTabs] = useState<CenterTab[]>(initialTabs)
-  const [activeId, setActiveId] = useState<string>(defaultTabId ?? initialTabs[0]?.id ?? "")
   const activeTab = tabs.find((t) => t.id === activeId) ?? tabs[0]
-
-  const closeTab = (id: string) => {
-    setTabs((prev) => {
-      const next = prev.filter((t) => t.id !== id)
-      if (id === activeId && next.length > 0) {
-        setActiveId(next[0].id)
-      }
-      return next
-    })
-  }
 
   return (
     <div className="flex-1 flex flex-col min-w-0 min-h-0">
@@ -43,15 +35,15 @@ export function CenterTabs({
                   ? "text-black border-b-2 border-black -mb-px"
                   : "text-black/40 hover:text-black"
               }`}
-              onClick={() => setActiveId(t.id)}
+              onClick={() => onSelect(t.id)}
             >
               <span>{t.label}</span>
-              {t.closable ? (
+              {t.closable && onClose ? (
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation()
-                    closeTab(t.id)
+                    onClose(t.id)
                   }}
                   className="text-black/30 hover:text-black opacity-0 group-hover:opacity-100"
                   aria-label={`Close ${t.label}`}

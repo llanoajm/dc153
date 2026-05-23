@@ -1,26 +1,56 @@
 "use client"
 
 import { ReactNode, useState } from "react"
+import { usePathname, useRouter } from "next/navigation"
 import { LeftRail } from "./LeftRail"
 import { CenterTabs, type CenterTab } from "./CenterTabs"
 import { RightRail } from "./RightRail"
 import { CommandPalette } from "./CommandPalette"
 
+// Maps each left-rail section key to its route. Sections that don't have a
+// dedicated route yet stay no-op so the rail item still highlights without
+// breaking navigation.
+const RAIL_ROUTES: Record<string, string> = {
+  chats: "/app",
+  networks: "/app/networks",
+}
+
+function currentRailKey(pathname: string): string {
+  if (pathname.startsWith("/app/networks")) return "networks"
+  if (pathname.startsWith("/app/artifacts/")) return "networks"
+  return "chats"
+}
+
+function primaryTabLabel(pathname: string): string {
+  if (pathname.startsWith("/app/networks")) return "Networks"
+  if (pathname.startsWith("/app/artifacts/")) return "Artifact"
+  return "Chat"
+}
+
 export function WorkspaceShell({ children }: { children: ReactNode }) {
+  const router = useRouter()
+  const pathname = usePathname()
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [rightCollapsed, setRightCollapsed] = useState(true)
 
-  const initialTabs: CenterTab[] = [
-    { id: "chat", label: "Chat", content: children, closable: false },
+  const tabs: CenterTab[] = [
+    { id: "primary", label: primaryTabLabel(pathname), content: children, closable: false },
   ]
+
+  const handleRailSelect = (key: string) => {
+    const href = RAIL_ROUTES[key]
+    if (href) router.push(href)
+  }
 
   return (
     <div className="flex-1 flex min-h-0 min-w-0">
       <LeftRail
         collapsed={leftCollapsed}
         onToggle={() => setLeftCollapsed((c) => !c)}
+        active={currentRailKey(pathname)}
+        onSelect={handleRailSelect}
       />
-      <CenterTabs initialTabs={initialTabs} defaultTabId="chat" />
+      <CenterTabs tabs={tabs} activeId="primary" onSelect={() => {}} />
       <RightRail
         collapsed={rightCollapsed}
         onToggle={() => setRightCollapsed((c) => !c)}

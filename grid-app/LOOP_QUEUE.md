@@ -54,7 +54,7 @@ Legend: `- [ ]` pending · `- [x]` done & verified · `- [!]` blocked (see LOOP_
     - 1-hour smoke-dispatch passes for each: `python scripts/smoke_dispatch.py data/networks/<name>` exits 0
     - `npm run build` exits 0
 
-- [ ] 6. Network-graph renderer + PyPSA folder ingest + smoke-dispatch on upload (ROADMAP §1, §6, §11.6)
+- [x] 6. Network-graph renderer + PyPSA folder ingest + smoke-dispatch on upload (ROADMAP §1, §6, §11.6)
   - context: drag-drop a PyPSA folder, see it render, dispatched in the background
   - acceptance:
     - `components/renderers/network-graph.tsx` renders bus/line topology (force-directed or D3)

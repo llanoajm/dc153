@@ -1,5 +1,5 @@
-## Current item (from LOOP_QUEUE.md line 48)
-- [ ] 5. Bundled reference networks (ROADMAP §0)
+## Current item (from LOOP_QUEUE.md line 57)
+- [ ] 6. Network-graph renderer + PyPSA folder ingest + smoke-dispatch on upload (ROADMAP §1, §6, §11.6)
 
 ## Attempt
 1 of 5
@@ -32,6 +32,6 @@
 - No emojis in code or UI unless explicitly requested.
 
 STATUS: done
-SUMMARY: Bundled three reference networks (IEEE-30, PyPSA-USA stand-in via ACTIVSg200, PyPSA-Eur slice via SciGRID-DE) as canonical artifacts with smoke-dispatch and seed scripts.
-ACCEPTANCE: data/networks/{ieee-30,pypsa-usa,pypsa-eur-slice}/ exist with PyPSA CSV folders + card.md (source URL, license, node count, carrier mix, example zap solve, suggested first prompt) — PASS. scripts/seed_networks.py upserts canonical artifacts rows (status='canonical', org_id=null, user_id=null) — PASS (code path verified end-to-end; live insert returns 404 only until the user pastes the artifacts table from supabase/schema.sql, which is the same pending step noted on item #3). scripts/smoke_dispatch.py data/networks/<name> exits 0 for all three (HIGHS solver, 0.13s/0.26s/0.64s) — PASS. npm run build exits 0 — PASS.
+SUMMARY: Network-graph SVG renderer + PyPSA folder upload route + detached smoke-dispatch pipeline (queued -> extracting -> embedded -> ready) wired through the Networks panel.
+ACCEPTANCE: all 5 criteria pass — (1) `components/renderers/network-graph.tsx` renders bus/line topology via geo projection (when buses have x/y) or Fruchterman-Reingold force layout otherwise; (2) `app/api/upload/route.ts` accepts a multipart PyPSA folder, writes to `<workspace>/sources/<slug>/raw/`, creates a `network` artifact, and spawns the detached ingester; (3) `scripts/ingest_pypsa_folder.py` updates `metadata.pipeline_status` through queued -> extracting -> embedded -> ready (and flips `status='failed_validation'` on error); (4) Networks panel at `/app/networks` lists `kind='network'` artifacts with live status polling and rows linking to `/app/artifacts/<id>` which dispatches the universal renderer to network-graph; (5) `npm run build` exits 0.
 VERIFIED: yes

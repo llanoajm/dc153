@@ -25,10 +25,10 @@ Build cursor. Update when you finish something or change direction. Last updated
 
 Everything past v0. See `ROADMAP.md` build order for the prioritized list. Highest-impact gaps:
 
-- **Tool-call cards in chat** — currently chat hides all tool calls; only text parts render. Sections 11, 11.5 in ROADMAP.
+- ~~**Tool-call cards in chat**~~ Done (2026-05-23): cards for Read, Edit, Write, Bash, Grep, Glob, WebFetch, WebSearch, Skill in `components/chat/cards/` + dispatcher at `components/chat/ToolCallCard.tsx`; unknown tools fall back to a generic JSON card. Reasoning parts collapse behind a `<details>`.
 - **Workspace shell** — there's a header strip and a chat. No left rail, tabs, right rail, command palette.
 - **Artifacts table + universal renderer** — Supabase has the `features` table but nothing writes to it; no `artifacts` table yet; no `view_spec` rendering.
-- **Streaming** — current chat polls every 2.5s during pending state.
+- ~~**Streaming** — current chat polls every 2.5s during pending state.~~ Done (2026-05-23): SSE proxy at `app/api/opencode/session/[id]/stream/route.ts` filtered to the session, chat consumes via EventSource (no polling).
 - **Per-user MCP server exposing `features/`** — agent re-reads its own code each session.
 - **Bundled reference networks** — none. Workspace starts empty.
 - **Geo-map, network-graph renderer** — nothing.
@@ -53,8 +53,15 @@ Everything past v0. See `ROADMAP.md` build order for the prioritized list. Highe
 
 ## What to do next (suggested)
 
-Per ROADMAP build order, item #1: **streaming + tool-call cards in chat**. That's the substrate that unlocks everything else feeling alive. Roughly 3-5 days. Alternative starting points if user wants something else:
-- Item #2 workspace shell (3-5 days) — paths to the same eventual outcome, different starting feel.
+Per ROADMAP build order, item #2: **workspace shell** (left rail + center tabs + right rail + Cmd+K palette).
+Item #1 (streaming + tool-call cards) shipped on 2026-05-23.
+
+Alternative starting points if user wants something else:
 - Item #3 artifacts table + universal renderer (1 week) — the longest-leverage backbone.
+- Item #4 per-user MCP server exposing `features/` (1–2 days).
+
+## Agent log
+
+- 2026-05-23 — streaming + tool-call cards landed. SSE proxy at `/api/opencode/session/[id]/stream` filters opencode `/event` to the requested sessionID and re-emits as SSE. Chat reducer maintains `messages: UiMessage[]` keyed by id; deltas accumulate into part fields. Login page now wraps `useSearchParams` in `<Suspense>` so `next build` passes (pre-existing issue surfaced when build was actually run).
 
 Confirm with the user before diving in.

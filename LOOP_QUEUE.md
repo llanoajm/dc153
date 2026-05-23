@@ -18,7 +18,7 @@ Legend: `- [ ]` pending · `- [x]` done & verified · `- [!]` blocked (see LOOP_
     - `npm run build` exits 0
     - `curl -N http://localhost:3000/api/opencode/sessions/<id>/stream` streams chunks (manual ok)
 
-- [ ] 2. Workspace shell (ROADMAP §11.5)
+- [x] 2. Workspace shell (ROADMAP §11.5)
   - context: left rail + center tabs + right rail; replaces the bare header+chat layout
   - acceptance:
     - `components/shell/LeftRail.tsx`, `CenterTabs.tsx`, `RightRail.tsx` exist

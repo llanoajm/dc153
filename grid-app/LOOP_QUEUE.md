@@ -72,7 +72,7 @@ Legend: `- [ ]` pending · `- [x]` done & verified · `- [!]` blocked (see LOOP_
     - Failed extractions saved with `status='failed_validation'`
     - `npm run build` exits 0
 
-- [ ] 8. Agentic data acquisition (web-fetch a named network) (ROADMAP §6.5)
+- [x] 8. Agentic data acquisition (web-fetch a named network) (ROADMAP §6.5)
   - context: "Pull WECC 240" end-to-end with license + checksum
   - acceptance:
     - Agent uses WebSearch/WebFetch via existing opencode tools

@@ -6,6 +6,9 @@ import {
   type ArtifactKind,
   type ArtifactStatus,
 } from "@/lib/artifacts"
+import { recordAudit } from "@/lib/audit"
+import { reviewFeatureDetached } from "@/lib/review"
+import { ensureUserWorkspace } from "@/lib/user-workspace"
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
@@ -75,6 +78,25 @@ export async function POST(req: NextRequest) {
       status: isStatus(body.status) ? body.status : "draft",
       org_id: typeof body.org_id === "string" ? body.org_id : null,
     })
+    // Audit + reviewer (ROADMAP §9 / LOOP_QUEUE item 15). Every artifact
+    // write is logged; feature artifacts also trigger the reviewer pass so
+    // status flips to canonical / failed_validation per policy.
+    await recordAudit({
+      user_id: user.id,
+      org_id: created.org_id,
+      artifact_id: created.id,
+      action: "artifact.created",
+      actor: "user",
+      payload: { kind: created.kind, status: created.status },
+    })
+    if (created.kind === "feature") {
+      try {
+        const workspace = await ensureUserWorkspace(user.id)
+        reviewFeatureDetached(created.id, workspace)
+      } catch (e) {
+        console.error("[artifacts] reviewer dispatch failed:", e)
+      }
+    }
     return NextResponse.json(created, { status: 201 })
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 })

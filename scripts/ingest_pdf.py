@@ -600,11 +600,72 @@ def _draft_features_from_text(
         try:
             created = _supabase_request(env, "POST", "artifacts", row)
             if created:
-                results.append({**entry, "artifact_id": created[0].get("id")})
+                draft_id = created[0].get("id")
+                results.append({**entry, "artifact_id": draft_id})
+                # Audit + reviewer pass (ROADMAP §9 / LOOP_QUEUE item 15).
+                _audit_draft_insert(env, artifact, draft_id, entry)
+                _run_reviewer(draft_id, workspace)
         except urllib.error.HTTPError as exc:
             sys.stderr.write(f"draft feature insert failed for {entry['slug']}: {exc}\n")
             continue
     return results
+
+
+def _audit_draft_insert(
+    env: dict[str, str],
+    source_artifact: dict[str, Any],
+    draft_id: str | None,
+    entry: dict[str, Any],
+) -> None:
+    if not draft_id:
+        return
+    try:
+        _supabase_request(
+            env,
+            "POST",
+            "audit_log",
+            {
+                "user_id": source_artifact.get("user_id"),
+                "org_id": source_artifact.get("org_id"),
+                "artifact_id": draft_id,
+                "action": "artifact.drafted",
+                "actor": "agent",
+                "payload": {
+                    "drafted_by": "ingest_pdf.draft_features",
+                    "source_artifact_id": source_artifact.get("id"),
+                    "heading": entry.get("heading"),
+                    "slug": entry.get("slug"),
+                },
+            },
+        )
+    except Exception as exc:
+        sys.stderr.write(f"audit draft insert failed: {exc}\n")
+
+
+def _run_reviewer(artifact_id: str | None, workspace: Path) -> None:
+    """Spawn the reviewer detached so ingestion doesn't block on Supabase
+    round-trips. The reviewer writes its own audit + status patch."""
+    if not artifact_id:
+        return
+    try:
+        import subprocess
+
+        script = Path(__file__).resolve().parent / "review_feature.py"
+        subprocess.Popen(
+            [
+                sys.executable,
+                str(script),
+                "--artifact-id",
+                artifact_id,
+                "--workspace",
+                str(workspace),
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+    except Exception as exc:
+        sys.stderr.write(f"reviewer spawn failed for {artifact_id}: {exc}\n")
 
 
 def _cli() -> int:

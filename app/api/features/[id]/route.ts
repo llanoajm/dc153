@@ -4,6 +4,8 @@ import path from "node:path"
 import { createClient } from "@/lib/supabase/server"
 import { ensureUserWorkspace } from "@/lib/user-workspace"
 import type { ArtifactStatus } from "@/lib/artifacts"
+import { recordAudit } from "@/lib/audit"
+import { reviewFeatureDetached } from "@/lib/review"
 
 // PATCH /api/features/<id>
 //
@@ -182,5 +184,24 @@ export async function PATCH(
     .select()
     .single()
   if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 })
+
+  // Audit + reviewer (ROADMAP §9 / LOOP_QUEUE item 15). Every mutation lands
+  // in audit_log; an edit re-triggers the reviewer so the per-user/org policy
+  // can re-decide canonical vs failed_validation against the new code.
+  await recordAudit({
+    user_id: user.id,
+    org_id: (updated as { org_id: string | null }).org_id ?? null,
+    artifact_id: id,
+    action: code != null ? "artifact.edited" : "artifact.status_changed",
+    actor: "user",
+    payload: {
+      from_status: existing.status,
+      to_status: (updated as { status: string }).status,
+      code_changed: code != null,
+    },
+  })
+  if (code != null || targetStatus === "draft") {
+    reviewFeatureDetached(id, workspace)
+  }
   return NextResponse.json(updated)
 }

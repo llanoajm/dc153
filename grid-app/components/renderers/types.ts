@@ -22,6 +22,7 @@ export type RendererName =
   | "dashboard"
   | "network-graph"
   | "geo-map"
+  | "run"
 
 export const KIND_TO_RENDERER: Record<string, RendererName> = {
   source_document: "markdown",
@@ -31,7 +32,7 @@ export const KIND_TO_RENDERER: Record<string, RendererName> = {
   feature: "code",
   skill: "code",
   dataset: "table",
-  run: "chart",
+  run: "run",
   network: "network-graph",
   view: "dashboard",
   panel: "dashboard",

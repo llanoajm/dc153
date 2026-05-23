@@ -1,23 +1,54 @@
+"use client"
+
+import { useEffect, useRef, useState } from "react"
 import type { RendererProps } from "./types"
 
-// view_spec shape: a Vega-Lite spec (ROADMAP §11.6). Vega-Lite isn't bundled
-// yet — adding it without a use case is premature. For now we show the spec
-// + a tiny preview when data is inline so the contract is testable; swap in
-// a real Vega-Lite renderer here when the chart artifact lands.
+// view_spec is a Vega-Lite spec (ROADMAP §11.6). The renderer dynamic-imports
+// vega-embed so the ~1MB Vega bundle only loads when an artifact actually
+// mounts a chart. If `view_spec.spec` is set we treat that as the canonical
+// spec and use the rest of view_spec for renderer-side options; otherwise we
+// treat view_spec itself as the spec.
+type VegaEmbed = typeof import("vega-embed")["default"]
+
+interface ChartViewSpec {
+  spec?: Record<string, unknown>
+  renderer?: string
+  title?: string
+  description?: string
+  // Top-level vega-lite fields we recognize for the "no spec wrapper" case.
+  mark?: unknown
+  encoding?: Record<string, unknown>
+  data?: Record<string, unknown>
+  layer?: unknown[]
+  hconcat?: unknown[]
+  vconcat?: unknown[]
+  repeat?: unknown
+  facet?: unknown
+}
+
 export function ChartRenderer({ artifact }: RendererProps) {
-  const spec = artifact.view_spec as {
-    mark?: string
-    encoding?: Record<string, unknown>
-    data?: { values?: unknown[] }
-    title?: string
-  }
-  const rows = spec.data?.values ?? []
+  const viewSpec = (artifact.view_spec ?? {}) as ChartViewSpec
+  const spec = pickSpec(viewSpec)
+  const title =
+    typeof viewSpec.title === "string"
+      ? viewSpec.title
+      : typeof (spec as Record<string, unknown>)?.title === "string"
+      ? ((spec as Record<string, unknown>).title as string)
+      : artifact.name
+
   return (
     <div className="space-y-3">
       <div className="font-mark text-xs tracking-wider text-black/60 uppercase">
-        {spec.title ?? `Chart · ${spec.mark ?? "vega-lite"}`}
+        {title}
       </div>
-      <MiniBarPreview rows={Array.isArray(rows) ? rows : []} encoding={spec.encoding} />
+      {spec ? (
+        <VegaLiteChart spec={spec} />
+      ) : (
+        <div className="text-sm font-serif-soft text-black/50 border border-dashed border-black/15 px-4 py-6">
+          No chart spec on this artifact. Set <code className="font-mono">view_spec</code> to a
+          Vega-Lite spec (or wrap it as <code className="font-mono">view_spec.spec</code>).
+        </div>
+      )}
       <details className="text-[11px] font-mono">
         <summary className="cursor-pointer text-black/50">view spec</summary>
         <pre className="mt-2 p-3 bg-black/[0.04] overflow-x-auto whitespace-pre-wrap">
@@ -28,54 +59,95 @@ export function ChartRenderer({ artifact }: RendererProps) {
   )
 }
 
-function MiniBarPreview({
-  rows,
-  encoding,
+function pickSpec(view: ChartViewSpec): Record<string, unknown> | null {
+  if (view.spec && typeof view.spec === "object") {
+    return view.spec as Record<string, unknown>
+  }
+  if (
+    view.mark ||
+    view.layer ||
+    view.hconcat ||
+    view.vconcat ||
+    view.repeat ||
+    view.facet ||
+    view.encoding
+  ) {
+    const { renderer: _r, title: _t, description: _d, ...rest } = view
+    void _r
+    void _t
+    void _d
+    return rest as Record<string, unknown>
+  }
+  return null
+}
+
+export function VegaLiteChart({
+  spec,
+  className,
+  height,
 }: {
-  rows: unknown[]
-  encoding: Record<string, unknown> | undefined
+  spec: Record<string, unknown>
+  className?: string
+  height?: number
 }) {
-  if (rows.length === 0) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    let view: { finalize: () => void } | null = null
+    setError(null)
+
+    ;(async () => {
+      try {
+        const mod = await import("vega-embed")
+        if (cancelled || !ref.current) return
+        const embed: VegaEmbed = mod.default
+        const merged: Record<string, unknown> = {
+          $schema: "https://vega.github.io/schema/vega-lite/v6.json",
+          width: "container",
+          autosize: { type: "fit", contains: "padding" },
+          ...spec,
+        }
+        if (height !== undefined && !("height" in spec)) {
+          merged.height = height
+        }
+        const result = await embed(ref.current, merged as Parameters<VegaEmbed>[1], {
+          actions: false,
+          renderer: "svg",
+          ast: true,
+        })
+        if (cancelled) {
+          result.view.finalize()
+          return
+        }
+        view = result.view
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : String(e))
+        }
+      }
+    })()
+
+    return () => {
+      cancelled = true
+      try {
+        view?.finalize()
+      } catch {
+        // ignore
+      }
+    }
+  }, [spec, height])
+
+  if (error) {
     return (
-      <div className="text-sm font-serif-soft text-black/50">
-        No inline data. Set <code className="font-mono">view_spec.data.values</code> for an inline
-        preview, or upgrade to the full Vega-Lite renderer.
+      <div className={className}>
+        <div className="text-xs font-mono text-red-700 border border-red-200 bg-red-50 px-3 py-2">
+          chart render error: {error}
+        </div>
       </div>
     )
   }
-  const xField = readField(encoding, "x")
-  const yField = readField(encoding, "y")
-  const series = rows
-    .map((r) => (typeof r === "object" && r ? (r as Record<string, unknown>) : null))
-    .filter((r): r is Record<string, unknown> => r !== null)
-    .slice(0, 40)
-  const max = Math.max(
-    1,
-    ...series.map((r) => (typeof r[yField] === "number" ? (r[yField] as number) : 0)),
-  )
-  return (
-    <div className="flex items-end gap-1 h-32 border-b border-l border-black/10 px-2 py-2">
-      {series.map((r, i) => {
-        const v = typeof r[yField] === "number" ? (r[yField] as number) : 0
-        const h = Math.max(2, (Math.abs(v) / max) * 100)
-        return (
-          <div key={i} className="flex flex-col items-center gap-1">
-            <div
-              className="bg-black w-3"
-              style={{ height: `${h}%` }}
-              title={`${String(r[xField] ?? i)}: ${v}`}
-            />
-          </div>
-        )
-      })}
-    </div>
-  )
-}
 
-function readField(encoding: Record<string, unknown> | undefined, axis: "x" | "y"): string {
-  const e = encoding?.[axis]
-  if (e && typeof e === "object" && "field" in e && typeof (e as Record<string, unknown>).field === "string") {
-    return (e as Record<string, unknown>).field as string
-  }
-  return axis === "x" ? "x" : "y"
+  return <div ref={ref} className={`w-full ${className ?? ""}`} />
 }

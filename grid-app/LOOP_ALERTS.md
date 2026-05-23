@@ -5,3 +5,4 @@
 [2026-05-23T05:22:33+00:00] DONE: - [ ] 5. Bundled reference networks (ROADMAP §0)
 [2026-05-23T05:37:35+00:00] DONE: - [ ] 6. Network-graph renderer + PyPSA folder ingest + smoke-dispatch on upload (ROADMAP §1, §6, §11.6)
 [2026-05-23T05:47:38+00:00] DONE: - [ ] 7. Heterogeneous upload + custom-importer skill loop (ROADMAP §1)
+[2026-05-23T05:56:36+00:00] DONE: - [ ] 8. Agentic data acquisition (web-fetch a named network) (ROADMAP §6.5)

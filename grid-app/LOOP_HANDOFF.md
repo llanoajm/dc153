@@ -1,5 +1,5 @@
-## Current item (from LOOP_QUEUE.md line 75)
-- [ ] 8. Agentic data acquisition (web-fetch a named network) (ROADMAP §6.5)
+## Current item (from LOOP_QUEUE.md line 85)
+- [ ] 9. Geo-map renderer + LMP heatmap + time slider (ROADMAP §11.7)
 
 ## Attempt
 1 of 5
@@ -32,8 +32,6 @@
 - No emojis in code or UI unless explicitly requested.
 
 STATUS: done
-SUMMARY: Agentic data acquisition (ROADMAP §6.5) — `/api/fetch` + MCP tool `steinmetz__fetch_network` download a URL into the workspace, write a network artifact with source_url/license/fetched_at/checksum, and reuse the upload ingestion pipeline; missing license keeps the artifact draft and prompts the user.
-NEXT_STEPS:
-ACCEPTANCE: Agent uses WebSearch/WebFetch via existing opencode tools — PASS (already wired); fetched data lands in `<workspace>/sources/<slug>/raw/` — PASS (scripts/fetch_url.py); artifact row has `metadata.source_url`/`.license`/`.fetched_at`/`.checksum` — PASS (artifact created via Supabase REST with these fields); license capture / prompt-before-canonical — PASS (`metadata.license_unknown=true` + `status='draft'` when license empty, AGENTS.md documents the rule); validation reuses upload pipeline — PASS (spawns `ingest_pypsa_folder.py` detached); `npm run build` exits 0 — PASS.
-
+SUMMARY: Geo-map renderer (MapLibre + OSM tiles) with LMP overlay, signed-flow line color, DC-dashed styling, force-directed fallback, and a dispatch-hour time slider.
+ACCEPTANCE: All criteria pass. (1) `components/renderers/geo-map.tsx` exists and renders via MapLibre with an OSM raster style (no Mapbox token). (2) Bus glyphs placed at lat/lon when buses have `x`/`y`; SVG force-directed fallback otherwise. (3) Lines log-thickness from `s_nom`, color from signed flow, dashed for DC. (4) Per-bus LMP color overlay anchored on the dispatch LMP extent. (5) Time slider scrubs `dispatch.hours`; both LMPs and flows re-paint on tick. (6) `npm run build` exits 0.
 VERIFIED: yes

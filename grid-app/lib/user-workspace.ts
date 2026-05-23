@@ -175,7 +175,9 @@ extend, say so and ask — don't sprinkle the change across guesses.
 
   // Regenerate opencode.jsonc every materialization so the MCP config picks
   // up changes to the server script path (and so existing workspaces get the
-  // user-features server without manual migration).
+  // user-features server without manual migration). `instructions` lists the
+  // per-user glossary + company-context docs (ROADMAP §3 / LOOP_QUEUE item
+  // 11) so opencode auto-loads them into the session's system prompt.
   const opencodeConfig = {
     $schema: "https://opencode.ai/config.json",
     provider: {},
@@ -189,12 +191,35 @@ extend, say so and ask — don't sprinkle the change across guesses.
         },
       },
     },
+    instructions: ["glossary.md", "company-context.md"],
     permission: {},
   }
   await fs.writeFile(
     path.join(dir, ".opencode", "opencode.jsonc"),
     JSON.stringify(opencodeConfig, null, 2) + "\n",
     "utf8",
+  )
+
+  // Stub the workspace-context files so opencode finds them on the very first
+  // session, before any PDF has been ingested. Ingestion appends real content
+  // to these files; never overwrite a non-stub on materialization.
+  await writeIfMissing(
+    path.join(dir, "glossary.md"),
+    `# Glossary
+
+Domain terms and acronyms used by this user's documents. Auto-built by the
+Steinmetz PDF ingestion pipeline; user-editable. Each entry's source PDF is
+recorded inline so you can trace a definition back to its origin.
+`,
+  )
+  await writeIfMissing(
+    path.join(dir, "company-context.md"),
+    `# Company / Domain Context
+
+Narrative system context distilled from the user's uploaded sources. Auto-
+built by the Steinmetz PDF ingestion pipeline; user-editable. The agent loads
+this as system context every session.
+`,
   )
 
   await writeIfMissing(

@@ -1,0 +1,107 @@
+import fs from "node:fs/promises"
+import path from "node:path"
+import { createClient } from "@/lib/supabase/server"
+import { ensureUserWorkspace } from "@/lib/user-workspace"
+import { MarkdownRenderer } from "@/components/renderers/markdown"
+import { redirect } from "next/navigation"
+
+// Workspace-level glossary + company-context viewer (ROADMAP §3). Reads the
+// live files from the user's workspace — the same files opencode loads as
+// system context via the `instructions:` array in `.opencode/opencode.jsonc`.
+// Two side-by-side panes so the user can audit what the agent sees.
+export default async function GlossaryPage() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) redirect("/login?next=/app/glossary")
+
+  const workspace = await ensureUserWorkspace(user.id)
+  const glossaryPath = path.join(workspace, "glossary.md")
+  const contextPath = path.join(workspace, "company-context.md")
+  const [glossary, context] = await Promise.all([
+    readSafely(glossaryPath),
+    readSafely(contextPath),
+  ])
+
+  return (
+    <div className="h-full overflow-y-auto">
+      <div className="max-w-6xl mx-auto w-full px-6 py-8 space-y-6">
+        <div>
+          <div className="text-[11px] font-mark tracking-wider uppercase text-black/50">
+            Glossary &amp; Context
+          </div>
+          <h1 className="font-serif-soft text-2xl mt-1">What the agent sees</h1>
+          <p className="font-serif-soft text-sm text-black/60 mt-2 max-w-prose">
+            These two files are auto-loaded as system context every opencode
+            session (configured via{" "}
+            <code className="font-mono text-[11px]">.opencode/opencode.jsonc</code>
+            {" → "}
+            <code className="font-mono text-[11px]">instructions</code>). Upload
+            PDFs in <a className="underline" href="/app/sources">Sources</a> to
+            grow them.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <DocPane title="glossary.md" path={glossaryPath} content={glossary} />
+          <DocPane title="company-context.md" path={contextPath} content={context} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DocPane({
+  title,
+  path: filePath,
+  content,
+}: {
+  title: string
+  path: string
+  content: string
+}) {
+  return (
+    <section className="border border-black/10">
+      <header className="px-4 py-2 border-b border-black/10 bg-black/[0.03] flex items-center justify-between">
+        <span className="font-mono text-[12px] text-black/80">{title}</span>
+        <span className="font-mono text-[10px] text-black/40 truncate ml-2">{filePath}</span>
+      </header>
+      <div className="p-4">
+        {content ? (
+          <MarkdownRenderer
+            artifact={{
+              id: "ws-" + title,
+              user_id: null,
+              org_id: null,
+              kind: "markdown",
+              name: title,
+              slug: null,
+              fs_path: null,
+              storage_path: null,
+              metadata: {},
+              view_spec: { text: content },
+              parent_id: null,
+              parent_session_id: null,
+              status: "draft",
+              created_at: "",
+              updated_at: "",
+            }}
+          />
+        ) : (
+          <div className="text-sm font-serif-soft text-black/50">
+            Empty. Upload a PDF in Sources to populate this file.
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
+async function readSafely(p: string): Promise<string> {
+  try {
+    return await fs.readFile(p, "utf8")
+  } catch {
+    return ""
+  }
+}

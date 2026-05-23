@@ -132,3 +132,40 @@ create policy "artifacts update own" on public.artifacts
 drop policy if exists "artifacts delete own" on public.artifacts;
 create policy "artifacts delete own" on public.artifacts
   for delete using (auth.uid() = user_id);
+
+-- ============================================================================
+-- source_chunks
+--
+-- PDF + document ingestion (ROADMAP §1, §3). Each row is a contiguous chunk
+-- of text extracted from a `source_document` artifact, with an embedding
+-- stored as a JSON array (deterministic hashing-based bag-of-words for now
+-- — upgradeable to semantic embeddings without a schema change).
+-- ============================================================================
+create table if not exists public.source_chunks (
+  id uuid primary key default gen_random_uuid(),
+  artifact_id uuid not null references public.artifacts(id) on delete cascade,
+  user_id uuid references auth.users(id) on delete cascade,
+  ordinal int not null,
+  page int,
+  text text not null,
+  embedding jsonb not null default '[]'::jsonb,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz default now()
+);
+
+create index if not exists source_chunks_artifact_idx
+  on public.source_chunks (artifact_id, ordinal);
+create index if not exists source_chunks_user_idx
+  on public.source_chunks (user_id);
+
+alter table public.source_chunks enable row level security;
+
+drop policy if exists "source_chunks select own" on public.source_chunks;
+create policy "source_chunks select own" on public.source_chunks
+  for select using (auth.uid() = user_id);
+drop policy if exists "source_chunks insert own" on public.source_chunks;
+create policy "source_chunks insert own" on public.source_chunks
+  for insert with check (auth.uid() = user_id);
+drop policy if exists "source_chunks delete own" on public.source_chunks;
+create policy "source_chunks delete own" on public.source_chunks
+  for delete using (auth.uid() = user_id);

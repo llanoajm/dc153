@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import type { PinnedDashboard } from "./types"
 
 export interface RailSection {
   key: string
@@ -17,6 +18,7 @@ const DEFAULT_SECTIONS: RailSection[] = [
   { key: "skills", label: "Skills / Features" },
   { key: "glossary", label: "Glossary" },
   { key: "orgs", label: "Orgs" },
+  { key: "dashboards", label: "Dashboards" },
 ]
 
 export function LeftRail({
@@ -25,12 +27,14 @@ export function LeftRail({
   sections = DEFAULT_SECTIONS,
   active,
   onSelect,
+  pinnedDashboards = [],
 }: {
   collapsed: boolean
   onToggle: () => void
   sections?: RailSection[]
   active?: string
   onSelect?: (key: string) => void
+  pinnedDashboards?: PinnedDashboard[]
 }) {
   const [internalActive, setInternalActive] = useState(sections[0]?.key ?? "")
   const current = active ?? internalActive
@@ -79,6 +83,30 @@ export function LeftRail({
             {s.label}
           </button>
         ))}
+        {pinnedDashboards.length > 0 ? (
+          <div className="mt-3 border-t border-black/10 pt-2">
+            <div className="px-3 pb-1 text-[10px] font-mark tracking-wider uppercase text-black/40">
+              Pinned
+            </div>
+            {pinnedDashboards.map((d) => {
+              const key = `pin:${d.id}`
+              return (
+                <button
+                  key={d.id}
+                  onClick={() => select(key)}
+                  title={d.name}
+                  className={`w-full text-left px-3 py-1.5 text-sm transition-colors truncate ${
+                    current === key
+                      ? "bg-black/[0.06] text-black"
+                      : "text-black/70 hover:text-black hover:bg-black/[0.03]"
+                  }`}
+                >
+                  {d.name}
+                </button>
+              )
+            })}
+          </div>
+        ) : null}
       </nav>
       <div className="border-t border-black/10 px-3 py-2 text-[10px] font-serif-soft">
         ⌘K to search

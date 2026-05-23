@@ -77,8 +77,13 @@ const OSM_STYLE = {
 }
 
 export function GeoMapRenderer({ artifact }: RendererProps) {
-  const spec = artifact.view_spec as TopologyPayload & { renderer?: string }
+  const spec = artifact.view_spec as TopologyPayload & { renderer?: string; _controlled_hour_idx?: number }
   const inline = useMemo(() => normalize(spec), [spec])
+  // When mounted inside a dashboard with a shared time-slider control, the
+  // dashboard injects the active index here so this panel's hour stays locked
+  // to the parent slider instead of running its own state.
+  const externalHourIdx =
+    typeof spec._controlled_hour_idx === "number" ? Math.max(0, Math.floor(spec._controlled_hour_idx)) : null
   const [loaded, setLoaded] = useState<TopologyPayload | null>(null)
   const [loadErr, setLoadErr] = useState<string | null>(null)
 
@@ -109,7 +114,7 @@ export function GeoMapRenderer({ artifact }: RendererProps) {
     <div className="space-y-3">
       <Header artifact={artifact} payload={payload} pipelineStatus={pipelineStatus} />
       {payload ? (
-        <MapBody payload={payload} dispatch={dispatch} />
+        <MapBody payload={payload} dispatch={dispatch} externalHourIdx={externalHourIdx} />
       ) : loadErr ? (
         <div className="text-sm font-serif-soft text-black/50 border border-black/10 px-3 py-6 text-center">
           Could not load topology: <span className="font-mono">{loadErr}</span>
@@ -184,19 +189,27 @@ function Header({
 function MapBody({
   payload,
   dispatch,
+  externalHourIdx,
 }: {
   payload: TopologyPayload
   dispatch: DispatchPayload | undefined
+  externalHourIdx: number | null
 }) {
   const buses = payload.buses ?? []
   const lines = payload.lines ?? []
   const haveGeo = buses.length > 0 && buses.every((b) => typeof b.x === "number" && typeof b.y === "number")
 
   const hours = dispatch?.hours ?? []
-  const [hourIdx, setHourIdx] = useState(0)
+  const [internalHourIdx, setInternalHourIdx] = useState(0)
   useEffect(() => {
-    if (hourIdx >= Math.max(1, hours.length)) setHourIdx(0)
-  }, [hours.length, hourIdx])
+    if (internalHourIdx >= Math.max(1, hours.length)) setInternalHourIdx(0)
+  }, [hours.length, internalHourIdx])
+  const hourIdx =
+    externalHourIdx !== null
+      ? Math.min(Math.max(0, externalHourIdx), Math.max(0, hours.length - 1))
+      : internalHourIdx
+  const setHourIdx = setInternalHourIdx
+  const showInternalSlider = externalHourIdx === null && hours.length > 0
 
   if (!haveGeo) {
     return (
@@ -207,7 +220,7 @@ function MapBody({
           <span className="font-mono">buses.csv</span> to enable the map.
         </div>
         <FallbackGraph buses={buses} lines={lines} dispatch={dispatch} hourIdx={hourIdx} />
-        {hours.length > 0 ? (
+        {showInternalSlider ? (
           <TimeSlider hours={hours} hourIdx={hourIdx} setHourIdx={setHourIdx} />
         ) : null}
         <Legend dispatch={dispatch} />
@@ -218,7 +231,7 @@ function MapBody({
   return (
     <div className="space-y-2">
       <MapLibreView buses={buses} lines={lines} dispatch={dispatch} hourIdx={hourIdx} />
-      {hours.length > 0 ? (
+      {showInternalSlider ? (
         <TimeSlider hours={hours} hourIdx={hourIdx} setHourIdx={setHourIdx} />
       ) : null}
       <Legend dispatch={dispatch} />

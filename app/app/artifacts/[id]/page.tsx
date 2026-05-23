@@ -3,6 +3,8 @@ import { notFound } from "next/navigation"
 import { getArtifact } from "@/lib/artifacts"
 import { ArtifactRenderer, rendererFor } from "@/components/renderers"
 import { LineageStrip } from "@/components/features/LineageStrip"
+import { isDashboardArtifact, isPinned } from "@/lib/dashboards"
+import { PinButton } from "@/components/dashboards/PinButton"
 
 export default async function ArtifactPage({
   params,
@@ -28,12 +30,17 @@ export default async function ArtifactPage({
               <div className="font-mono text-[11px] text-black/40 mt-1">{artifact.slug}</div>
             ) : null}
           </div>
-          <Link
-            href="/app"
-            className="text-xs font-mark tracking-wider text-black/60 hover:text-black"
-          >
-            ← back to chat
-          </Link>
+          <div className="flex items-center gap-4">
+            {isDashboardArtifact(artifact) ? (
+              <PinButton id={artifact.id} initialPinned={isPinned(artifact)} size="md" />
+            ) : null}
+            <Link
+              href="/app"
+              className="text-xs font-mark tracking-wider text-black/60 hover:text-black"
+            >
+              ← back to chat
+            </Link>
+          </div>
         </div>
 
         <LineageStrip artifact={artifact} />

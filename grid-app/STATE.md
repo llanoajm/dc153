@@ -27,7 +27,7 @@ Everything past v0. See `ROADMAP.md` build order for the prioritized list. Highe
 
 - ~~**Tool-call cards in chat**~~ Done (2026-05-23): cards for Read, Edit, Write, Bash, Grep, Glob, WebFetch, WebSearch, Skill in `components/chat/cards/` + dispatcher at `components/chat/ToolCallCard.tsx`; unknown tools fall back to a generic JSON card. Reasoning parts collapse behind a `<details>`.
 - ~~**Workspace shell**~~ Done (2026-05-23): `components/shell/{WorkspaceShell,LeftRail,CenterTabs,RightRail,CommandPalette}.tsx` mounted in `app/app/layout.tsx`. Left rail has the default sections (Chats, Sources, Networks, Datasets, Runs, Reports, Skills/Features, Glossary); center pane is a tab bar with Chat as the default (closable=false) tab; right rail is contextual/placeholder, collapsed by default; Cmd/Ctrl+K opens an empty palette. Rail items don't route yet — they just track active state in-memory.
-- **Artifacts table + universal renderer** — Supabase has the `features` table but nothing writes to it; no `artifacts` table yet; no `view_spec` rendering.
+- ~~**Artifacts table + universal renderer**~~ Done (2026-05-23): `artifacts` table in `supabase/schema.sql` with RLS (own-rows + canonical-shared). `lib/artifacts.ts` exposes `createArtifact`/`getArtifact`/`listArtifacts`. `components/renderers/{markdown,table,chart,diff,code,file,log,dashboard}.tsx` exist; dispatch via `components/renderers/index.tsx`. `/api/artifacts` GET/POST + `/app/artifacts/[id]` view page. **User must paste updated `supabase/schema.sql` into the Supabase SQL editor** before the table is reachable.
 - ~~**Streaming** — current chat polls every 2.5s during pending state.~~ Done (2026-05-23): SSE proxy at `app/api/opencode/session/[id]/stream/route.ts` filtered to the session, chat consumes via EventSource (no polling).
 - **Per-user MCP server exposing `features/`** — agent re-reads its own code each session.
 - **Bundled reference networks** — none. Workspace starts empty.
@@ -53,8 +53,9 @@ Everything past v0. See `ROADMAP.md` build order for the prioritized list. Highe
 
 ## What to do next (suggested)
 
-Per ROADMAP build order, item #3: **artifacts table + universal renderer**.
-Items #1 (streaming + tool-call cards) and #2 (workspace shell) shipped on 2026-05-23.
+Per ROADMAP build order, item #4: **per-user MCP server exposing `features/`**.
+Items #1 (streaming + tool-call cards), #2 (workspace shell), and #3 (artifacts
+table + universal renderer) shipped on 2026-05-23.
 
 Alternative starting points if user wants something else:
 - Item #4 per-user MCP server exposing `features/` (1–2 days).
@@ -64,5 +65,6 @@ Alternative starting points if user wants something else:
 
 - 2026-05-23 — streaming + tool-call cards landed. SSE proxy at `/api/opencode/session/[id]/stream` filters opencode `/event` to the requested sessionID and re-emits as SSE. Chat reducer maintains `messages: UiMessage[]` keyed by id; deltas accumulate into part fields. Login page now wraps `useSearchParams` in `<Suspense>` so `next build` passes (pre-existing issue surfaced when build was actually run).
 - 2026-05-23 — workspace shell landed. `components/shell/WorkspaceShell.tsx` composes LeftRail (collapsible, default sections per ROADMAP §11.5), CenterTabs (chat as default non-closable tab; new tabs would be closable), RightRail (collapsed by default — placeholder copy), and CommandPalette (Cmd/Ctrl+K toggles a modal; empty state for now). AppLayout was switched from `<div flex-1>{children}</div>` to mounting `<WorkspaceShell>{children}</WorkspaceShell>`; added `min-h-0` so the chat's nested flex sizing keeps working. Rail nav is in-memory `active` only — no routing yet.
+- 2026-05-23 — artifacts table + universal renderer landed. Schema: `public.artifacts(id, user_id, org_id, kind, name, slug, fs_path, storage_path, metadata jsonb, view_spec jsonb, parent_id, parent_session_id, status, created_at, updated_at)` with indexes on `(user_id, created_at desc)`, `kind`, `parent_id`. RLS: select-own + canonical-shared rows (user_id null + status='canonical') for ROADMAP §0 seeded networks; insert/update/delete restricted to `auth.uid() = user_id`. `lib/artifacts.ts` exposes `createArtifact`/`getArtifact`/`listArtifacts`. `components/renderers/{markdown,table,chart,diff,code,file,log,dashboard}.tsx` + a `types.ts` carrying `rendererFor()` (dispatch by `view_spec.renderer` → `kind` fallback → `file`). `components/renderers/index.tsx` is the universal `<ArtifactRenderer>`. Chart renderer ships a tiny inline bar preview + Vega-Lite spec inspector — Vega-Lite proper wasn't pulled in yet (no chart artifact to render through it). Diff is a simple line-by-line unified diff. Routes: `app/api/artifacts/route.ts` (GET list with `kind`/`status`/`session`/`limit` query params; POST create) and `app/app/artifacts/[id]/page.tsx` (uses `getArtifact` + `<ArtifactRenderer>`). Proxy gates `/api/artifacts` alongside `/api/opencode`. Public schema copy regenerated. The user must paste the updated `supabase/schema.sql` into the SQL editor before any insert/select succeeds against `public.artifacts`.
 
 Confirm with the user before diving in.

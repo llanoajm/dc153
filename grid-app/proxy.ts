@@ -30,7 +30,10 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const path = request.nextUrl.pathname
-  const isAppRoute = path.startsWith("/app") || path.startsWith("/api/opencode")
+  const isAppRoute =
+    path.startsWith("/app") ||
+    path.startsWith("/api/opencode") ||
+    path.startsWith("/api/artifacts")
   const isAuthRoute = path === "/login" || path === "/signup"
 
   if (!user && isAppRoute) {

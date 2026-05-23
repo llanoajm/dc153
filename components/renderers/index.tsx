@@ -7,6 +7,7 @@ import { CodeRenderer } from "./code"
 import { FileRenderer } from "./file"
 import { LogRenderer } from "./log"
 import { DashboardRenderer } from "./dashboard"
+import { NetworkGraphRenderer } from "./network-graph"
 import { rendererFor } from "./types"
 
 // Universal entry point. Pick a renderer by (1) explicit
@@ -29,6 +30,8 @@ export function ArtifactRenderer({ artifact }: { artifact: Artifact }) {
       return <LogRenderer artifact={artifact} />
     case "dashboard":
       return <DashboardRenderer artifact={artifact} />
+    case "network-graph":
+      return <NetworkGraphRenderer artifact={artifact} />
     case "file":
     default:
       return <FileRenderer artifact={artifact} />

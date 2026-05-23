@@ -21,6 +21,7 @@ export type RendererName =
   | "log"
   | "dashboard"
   | "network-graph"
+  | "geo-map"
 
 export const KIND_TO_RENDERER: Record<string, RendererName> = {
   source_document: "markdown",

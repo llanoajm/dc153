@@ -2,6 +2,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { getArtifact } from "@/lib/artifacts"
 import { ArtifactRenderer, rendererFor } from "@/components/renderers"
+import { LineageStrip } from "@/components/features/LineageStrip"
 
 export default async function ArtifactPage({
   params,
@@ -34,6 +35,8 @@ export default async function ArtifactPage({
             ← back to chat
           </Link>
         </div>
+
+        <LineageStrip artifact={artifact} />
 
         <ArtifactRenderer artifact={artifact} />
 

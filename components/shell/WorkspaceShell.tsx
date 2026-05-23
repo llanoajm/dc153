@@ -16,6 +16,7 @@ const RAIL_ROUTES: Record<string, string> = {
   networks: "/app/networks",
   runs: "/app/runs",
   glossary: "/app/glossary",
+  skills: "/app/features",
 }
 
 function currentRailKey(pathname: string): string {
@@ -23,6 +24,7 @@ function currentRailKey(pathname: string): string {
   if (pathname.startsWith("/app/networks")) return "networks"
   if (pathname.startsWith("/app/runs")) return "runs"
   if (pathname.startsWith("/app/glossary")) return "glossary"
+  if (pathname.startsWith("/app/features")) return "skills"
   if (pathname.startsWith("/app/artifacts/")) return "networks"
   return "chats"
 }
@@ -34,6 +36,7 @@ function primaryTabLabel(pathname: string): string {
   if (pathname.startsWith("/app/runs/")) return "Run"
   if (pathname === "/app/runs") return "Runs"
   if (pathname.startsWith("/app/glossary")) return "Glossary"
+  if (pathname.startsWith("/app/features")) return "Features"
   if (pathname.startsWith("/app/artifacts/")) return "Artifact"
   return "Chat"
 }

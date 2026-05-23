@@ -111,7 +111,7 @@ Legend: `- [ ]` pending · `- [x]` done & verified · `- [!]` blocked (see LOOP_
     - Diff view available when source updates
     - `npm run build` exits 0
 
-- [ ] 12. Candidate feature drafting from sources + approval flow (ROADMAP §4)
+- [x] 12. Candidate feature drafting from sources + approval flow (ROADMAP §4)
   - context: intake agent drafts features; user approves
   - acceptance:
     - When a document contains concrete enough math, an intake agent writes `<workspace>/features/<slug>.py` with `status='draft'` in artifacts

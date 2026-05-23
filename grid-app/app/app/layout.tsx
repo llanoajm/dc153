@@ -2,8 +2,9 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { ensureUserWorkspace } from "@/lib/user-workspace"
 import { syncOrgContextOverlays } from "@/lib/orgs"
+import { listPinnedDashboards } from "@/lib/dashboards"
 import { Lockup } from "@/components/lockup"
-import { WorkspaceShell } from "@/components/shell/WorkspaceShell"
+import { WorkspaceShell, type PinnedDashboard } from "@/components/shell/WorkspaceShell"
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -24,6 +25,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     console.warn("syncOrgContextOverlays failed", e)
   }
 
+  // Pinned dashboards surface in the left rail under their own section so a
+  // user (or the agent) can promote a composed layout to one-click access.
+  const pinnedDashboards: PinnedDashboard[] = (await listPinnedDashboards()).map((a) => ({
+    id: a.id,
+    name: a.name,
+  }))
+
   return (
     <div className="flex-1 flex flex-col bg-white text-black min-h-0">
       <header className="border-b border-black/10 px-6 py-3 flex items-center justify-between shrink-0">
@@ -37,7 +45,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </button>
         </form>
       </header>
-      <WorkspaceShell>{children}</WorkspaceShell>
+      <WorkspaceShell pinnedDashboards={pinnedDashboards}>{children}</WorkspaceShell>
     </div>
   )
 }

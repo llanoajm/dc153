@@ -35,12 +35,31 @@ const MAX_BUS_SERIES = 12
 const MAX_LINE_SERIES = 12
 
 export function RunView({ artifact, compact = false }: { artifact: Artifact; compact?: boolean }) {
-  const view = (artifact.view_spec ?? {}) as RunSpec
+  const view = (artifact.view_spec ?? {}) as RunSpec & { _controlled_hour_idx?: number; hours?: unknown }
   const meta = (artifact.metadata ?? {}) as Record<string, unknown>
 
-  const lmpSpec = useMemo(() => buildLmpSpec(view, compact ? 180 : 240), [view, compact])
-  const carrierSpec = useMemo(() => buildCarrierSpec(view, compact ? 180 : 240), [view, compact])
-  const flowSpec = useMemo(() => buildFlowSpec(view, compact ? 180 : 240), [view, compact])
+  // When mounted inside a dashboard with a shared time slider, the dashboard
+  // injects the index here. The run charts are full time-series, so we render
+  // a vertical highlight rule at the active hour rather than slicing data.
+  const controlledHourIdx =
+    typeof view._controlled_hour_idx === "number" ? Math.max(0, Math.floor(view._controlled_hour_idx)) : null
+  const controlledTimestamp = useMemo(
+    () => resolveControlledTimestamp(view, controlledHourIdx),
+    [view, controlledHourIdx],
+  )
+
+  const lmpSpec = useMemo(
+    () => withTimeRule(buildLmpSpec(view, compact ? 180 : 240), controlledTimestamp),
+    [view, compact, controlledTimestamp],
+  )
+  const carrierSpec = useMemo(
+    () => withTimeRule(buildCarrierSpec(view, compact ? 180 : 240), controlledTimestamp),
+    [view, compact, controlledTimestamp],
+  )
+  const flowSpec = useMemo(
+    () => withTimeRule(buildFlowSpec(view, compact ? 180 : 240), controlledTimestamp),
+    [view, compact, controlledTimestamp],
+  )
 
   const subtitle = [
     typeof meta.network_name === "string" ? (meta.network_name as string) : view.network_name,
@@ -156,6 +175,60 @@ function timeOrOrdinal(rows: RunSeries[]): string {
   if (typeof sample === "string" && Number.isNaN(Date.parse(sample))) return "ordinal"
   if (typeof sample === "number") return "ordinal"
   return "temporal"
+}
+
+// Resolve the controlled timestamp from `view_spec.hours[idx]` or by sampling
+// the first available time-series. Returns null if we can't anchor the rule.
+function resolveControlledTimestamp(
+  view: RunSpec & { hours?: unknown },
+  idx: number | null,
+): string | number | null {
+  if (idx === null) return null
+  const explicit = Array.isArray(view.hours) ? view.hours : null
+  if (explicit && idx < explicit.length) {
+    const v = explicit[idx]
+    if (typeof v === "string" || typeof v === "number") return v
+  }
+  for (const rows of [view.lmps, view.carriers, view.flows]) {
+    if (!Array.isArray(rows)) continue
+    const ts = collectUniqueTs(rows)
+    if (idx < ts.length) return ts[idx]
+  }
+  return null
+}
+
+function collectUniqueTs(rows: RunSeries[]): Array<string | number> {
+  const seen = new Set<string>()
+  const out: Array<string | number> = []
+  for (const r of rows) {
+    const t = r.t
+    if (typeof t !== "string" && typeof t !== "number") continue
+    const key = typeof t === "number" ? `n:${t}` : `s:${t}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(t)
+  }
+  return out
+}
+
+function withTimeRule(
+  spec: Record<string, unknown> | null,
+  ts: string | number | null,
+): Record<string, unknown> | null {
+  if (!spec || ts === null) return spec
+  const encoding = spec.encoding as Record<string, unknown> | undefined
+  if (!encoding || !encoding.x) return spec
+  const xType = (encoding.x as Record<string, unknown>).type
+  const ruleLayer = {
+    data: { values: [{ t: ts }] },
+    mark: { type: "rule", color: "#111", strokeDash: [4, 3], opacity: 0.55 },
+    encoding: { x: { field: "t", type: xType } },
+  }
+  const { mark, encoding: enc, ...rest } = spec
+  return {
+    ...rest,
+    layer: [{ mark, encoding: enc }, ruleLayer],
+  }
 }
 
 function topKeysByVariance(

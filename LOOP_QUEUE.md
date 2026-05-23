@@ -9,7 +9,7 @@ Legend: `- [ ]` pending · `- [x]` done & verified · `- [!]` blocked (see LOOP_
 
 ## Items
 
-- [ ] 1. Streaming + tool-call cards in the chat (ROADMAP §11)
+- [x] 1. Streaming + tool-call cards in the chat (ROADMAP §11)
   - context: replaces the 2.5s poll in `app/app/page.tsx`; first inline tool-call cards
   - acceptance:
     - `app/api/opencode/sessions/[id]/stream/route.ts` (or equivalent) returns `text/event-stream`

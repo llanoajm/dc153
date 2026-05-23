@@ -316,3 +316,87 @@ create policy "source_chunks insert own" on public.source_chunks
 drop policy if exists "source_chunks delete own" on public.source_chunks;
 create policy "source_chunks delete own" on public.source_chunks
   for delete using (auth.uid() = user_id);
+
+-- ============================================================================
+-- review_policies + audit_log  (ROADMAP §9)
+--
+-- Validation + safety. A reviewer agent (scripts/review_feature.py) runs on
+-- every new feature artifact, checks imports + signatures + a smoke call,
+-- then either flips status to 'canonical' or 'failed_validation' depending on
+-- the scope's policy:
+--   - auto_promote = true   -> reviewer promotes passing drafts to canonical
+--   - auto_promote = false  -> reviewer leaves passing drafts as 'draft'; the
+--                              user (or an org admin) approves manually.
+-- Failing reviews always flip to 'failed_validation' regardless of policy.
+--
+-- audit_log rows are written for every artifact mutation + every reviewer
+-- decision. Service-role writes only; users can read their own rows.
+-- ============================================================================
+create table if not exists public.review_policies (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  org_id uuid references public.orgs(id) on delete cascade,
+  auto_promote boolean not null default false,
+  updated_at timestamptz default now(),
+  check ((user_id is null) <> (org_id is null))
+);
+
+-- Exactly one row per scope. Partial unique indexes let us keep both columns
+-- nullable while still enforcing one personal row per user and one row per org.
+create unique index if not exists review_policies_user_idx
+  on public.review_policies (user_id) where org_id is null;
+create unique index if not exists review_policies_org_idx
+  on public.review_policies (org_id) where user_id is null;
+
+alter table public.review_policies enable row level security;
+
+drop policy if exists "review_policies select scope" on public.review_policies;
+create policy "review_policies select scope" on public.review_policies
+  for select using (
+    auth.uid() = user_id
+    or (org_id is not null and public.is_org_member(org_id))
+  );
+
+drop policy if exists "review_policies insert scope" on public.review_policies;
+create policy "review_policies insert scope" on public.review_policies
+  for insert with check (
+    (org_id is null and auth.uid() = user_id)
+    or (org_id is not null and public.has_org_role(org_id, array['owner', 'admin']))
+  );
+
+drop policy if exists "review_policies update scope" on public.review_policies;
+create policy "review_policies update scope" on public.review_policies
+  for update using (
+    (org_id is null and auth.uid() = user_id)
+    or (org_id is not null and public.has_org_role(org_id, array['owner', 'admin']))
+  );
+
+create table if not exists public.audit_log (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete set null,
+  org_id uuid references public.orgs(id) on delete set null,
+  artifact_id uuid references public.artifacts(id) on delete set null,
+  action text not null,
+  actor text not null default 'user',
+  payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz default now()
+);
+
+create index if not exists audit_log_user_created_idx
+  on public.audit_log (user_id, created_at desc);
+create index if not exists audit_log_artifact_idx
+  on public.audit_log (artifact_id, created_at desc);
+create index if not exists audit_log_org_created_idx
+  on public.audit_log (org_id, created_at desc);
+
+alter table public.audit_log enable row level security;
+
+-- Users see audit rows tied to themselves or to artifacts in their visible
+-- scope. Writes are service-role only (the reviewer script + server routes
+-- use the service key); no user-facing insert policy on purpose.
+drop policy if exists "audit_log select scope" on public.audit_log;
+create policy "audit_log select scope" on public.audit_log
+  for select using (
+    auth.uid() = user_id
+    or (org_id is not null and public.is_org_member(org_id))
+  );

@@ -26,6 +26,8 @@ export function FeaturesPanel() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingCode, setEditingCode] = useState("")
   const [pendingId, setPendingId] = useState<string | null>(null)
+  const [autoPromote, setAutoPromote] = useState<boolean>(false)
+  const [policyLoaded, setPolicyLoaded] = useState(false)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -41,9 +43,54 @@ export function FeaturesPanel() {
     }
   }, [])
 
+  const refreshPolicy = useCallback(async () => {
+    try {
+      const r = await fetch("/api/review-policy")
+      if (!r.ok) return
+      const j = await r.json()
+      setAutoPromote(Boolean(j.auto_promote))
+      setPolicyLoaded(true)
+    } catch {
+      // non-fatal — leave the toggle at its default
+    }
+  }, [])
+
   useEffect(() => {
     refresh()
-  }, [refresh])
+    refreshPolicy()
+  }, [refresh, refreshPolicy])
+
+  const togglePolicy = async () => {
+    const next = !autoPromote
+    setAutoPromote(next)
+    try {
+      const r = await fetch("/api/review-policy", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ auto_promote: next }),
+      })
+      if (!r.ok) throw new Error(`policy save failed: ${r.status}`)
+    } catch (e) {
+      setError(String(e))
+      setAutoPromote(!next)
+    }
+  }
+
+  const rerunReview = async (id: string) => {
+    setPendingId(id)
+    setError(null)
+    try {
+      const r = await fetch(`/api/features/${id}/review`, { method: "POST" })
+      if (!r.ok) throw new Error(`review failed: ${r.status}`)
+      // Reviewer runs detached; poll once after a short delay so the user
+      // sees the updated status/summary without a manual refresh.
+      setTimeout(refresh, 1500)
+    } catch (e) {
+      setError(String(e))
+    } finally {
+      setPendingId(null)
+    }
+  }
 
   const filtered = useMemo(() => {
     if (filter === "all") return artifacts
@@ -122,20 +169,36 @@ export function FeaturesPanel() {
           </p>
         </div>
 
-        <div className="flex items-center gap-1 text-[11px] font-mark tracking-wider">
-          {(["all", "draft", "canonical", "deprecated"] as StatusFilter[]).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 border ${
-                filter === f
-                  ? "border-black bg-black text-white"
-                  : "border-black/20 text-black/60 hover:border-black/40"
-              }`}
-            >
-              {f} ({counts[f]})
-            </button>
-          ))}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-1 text-[11px] font-mark tracking-wider">
+            {(["all", "draft", "canonical", "deprecated"] as StatusFilter[]).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-3 py-1.5 border ${
+                  filter === f
+                    ? "border-black bg-black text-white"
+                    : "border-black/20 text-black/60 hover:border-black/40"
+                }`}
+              >
+                {f} ({counts[f]})
+              </button>
+            ))}
+          </div>
+          <label
+            className={`flex items-center gap-2 text-[11px] font-mark tracking-wider px-3 py-1.5 border ${
+              policyLoaded ? "border-black/30 text-black/80" : "border-black/10 text-black/40"
+            } cursor-pointer select-none`}
+            title="When on, the reviewer auto-promotes passing drafts to canonical. When off, you approve manually here."
+          >
+            <input
+              type="checkbox"
+              checked={autoPromote}
+              onChange={togglePolicy}
+              className="accent-black"
+            />
+            auto-promote on review pass
+          </label>
         </div>
 
         {error ? <div className="text-xs text-red-600 font-mono">{error}</div> : null}
@@ -167,6 +230,7 @@ export function FeaturesPanel() {
                 onApprove={() => mutate(a.id, { status: "canonical" })}
                 onReject={() => mutate(a.id, { status: "deprecated" })}
                 onUnreject={() => mutate(a.id, { status: "draft" })}
+                onReview={() => rerunReview(a.id)}
               />
             ))}
           </ul>
@@ -188,6 +252,7 @@ function FeatureRow({
   onApprove,
   onReject,
   onUnreject,
+  onReview,
 }: {
   artifact: Artifact
   pending: boolean
@@ -200,6 +265,7 @@ function FeatureRow({
   onApprove: () => void
   onReject: () => void
   onUnreject: () => void
+  onReview: () => void
 }) {
   const [expanded, setExpanded] = useState(false)
   const meta = (artifact.metadata ?? {}) as Record<string, unknown>
@@ -211,6 +277,10 @@ function FeatureRow({
   const draftedBy = typeof meta.drafted_by === "string" ? meta.drafted_by : null
   const source = typeof view.source === "string" ? view.source : ""
   const filePath = typeof view.path === "string" ? view.path : artifact.fs_path ?? null
+  const lastReview =
+    meta.last_review && typeof meta.last_review === "object"
+      ? (meta.last_review as { outcome?: string; summary?: string; at?: string })
+      : null
 
   return (
     <li className="px-4 py-3 space-y-3">
@@ -238,6 +308,12 @@ function FeatureRow({
               )}
               {heading ? <span> · heading: <em>{heading}</em></span> : null}
               {draftedBy ? <span> · {draftedBy}</span> : null}
+            </div>
+          ) : null}
+          {lastReview && lastReview.outcome ? (
+            <div className="text-[11px] font-mono text-black/50 mt-1">
+              review: <ReviewBadge outcome={lastReview.outcome} />{" "}
+              <span>{lastReview.summary ?? ""}</span>
             </div>
           ) : null}
         </div>
@@ -288,6 +364,14 @@ function FeatureRow({
               edit
             </button>
           ) : null}
+          <button
+            disabled={pending}
+            onClick={onReview}
+            className="text-[11px] font-mark tracking-wider px-2 py-1 border border-black/20 text-black/70 hover:border-black/40 disabled:opacity-50"
+            title="Re-run the reviewer agent on this feature"
+          >
+            review
+          </button>
         </div>
       </div>
 
@@ -334,4 +418,16 @@ function StatusPill({ status }: { status: string }) {
           ? "bg-red-100 text-red-700"
           : "bg-amber-100 text-amber-800"
   return <span className={`text-[10px] font-mono px-2 py-0.5 ${tone}`}>{status}</span>
+}
+
+function ReviewBadge({ outcome }: { outcome: string }) {
+  const tone =
+    outcome === "passed"
+      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+      : outcome === "passed_with_warnings"
+        ? "bg-amber-50 text-amber-800 border border-amber-200"
+        : outcome === "failed"
+          ? "bg-red-50 text-red-700 border border-red-200"
+          : "bg-black/[0.04] text-black/60 border border-black/10"
+  return <span className={`px-1.5 py-0.5 text-[10px] ${tone}`}>{outcome}</span>
 }

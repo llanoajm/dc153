@@ -34,7 +34,8 @@ export async function proxy(request: NextRequest) {
     path.startsWith("/app") ||
     path.startsWith("/api/opencode") ||
     path.startsWith("/api/artifacts") ||
-    path.startsWith("/api/upload")
+    path.startsWith("/api/upload") ||
+    path.startsWith("/api/fetch")
   const isAuthRoute = path === "/login" || path === "/signup"
 
   if (!user && isAppRoute) {

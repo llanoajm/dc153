@@ -97,6 +97,39 @@ When a user uploads a folder that is not a PyPSA CSV folder or a MATPOWER
    handle subsequent uploads of the same format automatically because
    \`matches(folder)\` returns True for them.
 
+## Agentic data acquisition ("pull WECC 240" / "find me an ERCOT topology")
+
+When the user names a network you don't have yet (e.g. "pull the WECC 240-bus
+network", "get me the PyPSA-Eur Germany slice"), follow this loop:
+
+1. **Resolve.** Use \`WebSearch\` to find candidate sources. Prefer the
+   project's own repository (PyPSA org on GitHub, Zenodo DOI page, ISO open
+   data portals, EIA, FERC, ENTSO-E). For each candidate, capture: the
+   concrete download URL, the license string (read the LICENSE file or the
+   page footer), and a published checksum if one exists.
+2. **Confirm with the user** when the resolution is ambiguous (multiple
+   plausible sources, or you can't read a license off the page).
+3. **Fetch.** Call \`steinmetz__fetch_network\` with the URL. Pass:
+   - \`license\` — the SPDX-style string you found (e.g. \`"MIT"\`,
+     \`"CC-BY-4.0"\`). **If you could not determine the license, leave it
+     empty** — the tool will mark the artifact \`license_unknown=true\` and
+     keep it \`status='draft'\`, and you must ask the user before promoting
+     it to canonical.
+   - \`expected_checksum\` — the SHA-256 the source publishes, if any. The
+     fetch fails loudly on mismatch.
+   - \`name\` — a human-readable label.
+4. **Report.** Tell the user: "Got it — N buses, N lines, carriers: X.
+   Source: <url>, <license>, fetched_at <iso>. Want to use it now?" The
+   pipeline runs in the background; \`pipeline_status\` flips through
+   \`queued → extracting → embedded → ready\` (or \`awaiting_importer\` if
+   the converter chain doesn't recognize the format — in which case fall
+   back to the custom-importer loop above).
+5. **License capture is non-negotiable.** Never silently flip a fetched
+   artifact to \`status='canonical'\` without the user's explicit yes on the
+   license. The artifact carries \`metadata.source_url\`,
+   \`metadata.license\`, \`metadata.fetched_at\`, \`metadata.checksum\`; if
+   any of these are missing, raise it with the user.
+
 ## Style
 
 Match zap's existing patterns when subclassing:

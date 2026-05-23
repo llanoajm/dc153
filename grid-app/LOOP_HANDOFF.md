@@ -1,5 +1,5 @@
-## Current item (from LOOP_QUEUE.md line 12)
-- [ ] 1. Streaming + tool-call cards in the chat (ROADMAP §11)
+## Current item (from LOOP_QUEUE.md line 21)
+- [ ] 2. Workspace shell (ROADMAP §11.5)
 
 ## Attempt
 1 of 5
@@ -32,6 +32,7 @@
 - No emojis in code or UI unless explicitly requested.
 
 STATUS: done
-SUMMARY: Wired SSE streaming from opencode's /event into the chat and rendered Read/Edit/Write/Bash/Grep/Glob/WebFetch/WebSearch/Skill tool calls as inline cards (no more polling).
-ACCEPTANCE: all pass — (1) `app/api/opencode/session/[id]/stream/route.ts` returns `text/event-stream` filtered to the requested sessionID with SSE heartbeats; (2) `app/app/page.tsx` consumes the stream via EventSource and the 2.5s `setInterval` polling is gone; (3) `components/chat/ToolCallCard.tsx` dispatches into `components/chat/cards/{Read,Edit,Write,Bash,Grep,Glob,WebFetch,WebSearch,Skill}.tsx` with a Generic fallback; (4) `npm run build` exits 0 (also fixed a pre-existing Next 16 prerender error in `app/login/page.tsx` by wrapping `useSearchParams` in `<Suspense>`); (5) manual curl against `/api/opencode/session/<id>/stream` hits the route (redirects to /login when unauthenticated, as expected — proxy.ts auth-gates it). Note: queue text said `/sessions/[id]/stream` (plural) but the existing API is `/session/[id]/...` (singular); kept the singular convention so the new route matches its siblings.
+SUMMARY: Wrapped the authed area in a workspace shell — LeftRail (default sections per §11.5), CenterTabs (chat as default tab), RightRail (placeholder), and a Cmd/Ctrl+K CommandPalette — mounted from `app/app/layout.tsx`.
+ACCEPTANCE: all pass — (1) `components/shell/{LeftRail,CenterTabs,RightRail}.tsx` (plus `WorkspaceShell.tsx` and `CommandPalette.tsx`) exist; (2) `app/app/layout.tsx` renders `<WorkspaceShell>{children}</WorkspaceShell>` with the chat (`app/app/page.tsx`) wired as the default non-closable "Chat" tab; (3) LeftRail's default sections are Chats, Sources, Networks, Datasets, Runs, Reports, Skills / Features, Glossary — collapsible to a thin strip; (4) `CommandPalette.tsx` listens for Cmd/Ctrl+K (Escape to close) and opens an empty palette modal; (5) `npm run build` exits 0. Rail nav is in-memory active-state only — no routes wired yet, since the only surface that exists is the chat; future items will add real route targets.
+
 VERIFIED: yes

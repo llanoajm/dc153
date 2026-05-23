@@ -2,7 +2,7 @@
 - [ ] 17. Agentic view authoring v2: sandboxed custom panels (ROADMAP §11.8)
 
 ## Attempt
-2 of 5
+3 of 5
 
 ## Context to load before working
 - AGENTS.md         (project brief, harness-first principles, quick start)

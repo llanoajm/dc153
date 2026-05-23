@@ -7,3 +7,4 @@
 [2026-05-23T05:47:38+00:00] DONE: - [ ] 7. Heterogeneous upload + custom-importer skill loop (ROADMAP §1)
 [2026-05-23T05:56:36+00:00] DONE: - [ ] 8. Agentic data acquisition (web-fetch a named network) (ROADMAP §6.5)
 [2026-05-23T06:06:07+00:00] DONE: - [ ] 9. Geo-map renderer + LMP heatmap + time slider (ROADMAP §11.7)
+[2026-05-23T06:18:59+00:00] DONE: - [ ] 10. Runs panel + chart view spec for time series (ROADMAP §6)

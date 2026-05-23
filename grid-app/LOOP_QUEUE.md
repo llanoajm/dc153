@@ -101,7 +101,7 @@ Legend: `- [ ]` pending · `- [x]` done & verified · `- [!]` blocked (see LOOP_
     - "Compare two runs" view side-by-side
     - `npm run build` exits 0
 
-- [ ] 11. PDF source ingestion → glossary + context doc (ROADMAP §1, §3)
+- [x] 11. PDF source ingestion → glossary + context doc (ROADMAP §1, §3)
   - context: first taste of the company-context flywheel
   - acceptance:
     - PDF upload → text extraction + chunking + embedding (table `source_chunks` or similar)

@@ -478,6 +478,17 @@ def ingest_pdf(artifact_id: str, pdf_path: Path, workspace: Path) -> dict[str, A
     merge_glossary(glossary_path, terms, source_label)
     merge_context(context_path, blurb, source_label)
 
+    # Draft candidate features (ROADMAP §4 / LOOP_QUEUE item 12). Detected
+    # math blocks become draft `.py` stubs + matching `feature` artifact rows
+    # the user can approve/edit/reject from /app/features.
+    drafts = _draft_features_from_text(
+        env=env,
+        artifact=artifact,
+        workspace=workspace,
+        full_text=full_text,
+        source_label=source_label,
+    )
+
     # Diff view spec for re-uploads.
     view_spec_extra = build_diff_view_spec(env, artifact, full_text) or {}
 
@@ -491,6 +502,8 @@ def ingest_pdf(artifact_id: str, pdf_path: Path, workspace: Path) -> dict[str, A
             "extracted_at": datetime.now(timezone.utc).isoformat(),
             "extracted_text": full_text[:200_000],  # cap for sanity
             "glossary_terms_added": len(terms),
+            "feature_drafts": len(drafts),
+            "feature_draft_ids": [d["artifact_id"] for d in drafts],
             "embedding_dim": EMBEDDING_DIM,
             "embedding_kind": "hash-bow-v1",
         }
@@ -514,9 +527,84 @@ def ingest_pdf(artifact_id: str, pdf_path: Path, workspace: Path) -> dict[str, A
         "pages": len(per_page),
         "chunks": len(chunks),
         "terms": len(terms),
+        "drafts": len(drafts),
         "glossary": str(glossary_path),
         "context": str(context_path),
     }
+
+
+def _draft_features_from_text(
+    *,
+    env: dict[str, str],
+    artifact: dict[str, Any],
+    workspace: Path,
+    full_text: str,
+    source_label: str,
+) -> list[dict[str, Any]]:
+    """Detect math blocks, write draft files, and insert feature artifact rows.
+
+    Insertion uses the same service-role REST path as chunks; the artifact is
+    written with ``status='draft'``, ``parent_id`` pointing back to the source
+    document, and a ``code`` view_spec carrying the stub source so the
+    universal renderer shows it on /app/artifacts/<id>.
+    """
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from draft_features import find_candidates, write_drafts
+
+    candidates = find_candidates(full_text)
+    if not candidates:
+        return []
+
+    source_slug = artifact.get("slug") or "source"
+    user_id = artifact.get("user_id")
+
+    written = write_drafts(
+        workspace=workspace,
+        source_slug=source_slug,
+        source_name=source_label,
+        source_artifact_id=artifact["id"],
+        candidates=candidates,
+    )
+
+    results: list[dict[str, Any]] = []
+    for entry in written:
+        try:
+            code_source = Path(entry["path"]).read_text(encoding="utf-8")
+        except OSError:
+            code_source = ""
+        row = {
+            "user_id": user_id,
+            "kind": "feature",
+            "name": f"{entry['heading']} — draft",
+            "slug": entry["slug"],
+            "fs_path": entry["path"],
+            "status": "draft",
+            "parent_id": artifact["id"],
+            "parent_session_id": artifact.get("parent_session_id"),
+            "metadata": {
+                "drafted_at": datetime.now(timezone.utc).isoformat(),
+                "drafted_by": "ingest_pdf.draft_features",
+                "source_artifact_id": artifact["id"],
+                "source_label": source_label,
+                "heading": entry["heading"],
+                "excerpt": entry["excerpt"][:4000],
+                "char_offset": entry["char_offset"],
+            },
+            "view_spec": {
+                "renderer": "code",
+                "language": "python",
+                "path": f"features/{entry['slug']}.py",
+                "source": code_source,
+            },
+        }
+        try:
+            created = _supabase_request(env, "POST", "artifacts", row)
+            if created:
+                results.append({**entry, "artifact_id": created[0].get("id")})
+        except urllib.error.HTTPError as exc:
+            sys.stderr.write(f"draft feature insert failed for {entry['slug']}: {exc}\n")
+            continue
+    return results
 
 
 def _cli() -> int:

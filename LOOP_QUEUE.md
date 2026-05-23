@@ -92,7 +92,7 @@ Legend: `- [ ]` pending · `- [x]` done & verified · `- [!]` blocked (see LOOP_
     - Time slider scrubs dispatch hours
     - `npm run build` exits 0
 
-- [ ] 10. Runs panel + chart view spec for time series (ROADMAP §6)
+- [x] 10. Runs panel + chart view spec for time series (ROADMAP §6)
   - context: existing artifact renderer + saved filter
   - acceptance:
     - `app/app/runs/page.tsx` lists `kind='run'` artifacts

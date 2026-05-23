@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# build_networks.py source caches (downloaded MATPOWER files; reproducible)
+/data/_cache/
+scripts/__pycache__/

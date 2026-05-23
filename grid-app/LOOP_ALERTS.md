@@ -14,3 +14,4 @@
 [2026-05-23T07:15:07+00:00] DONE: - [ ] 14. Org scopes + shared glossary/skills/networks (ROADMAP §10)
 [2026-05-23T07:30:45+00:00] DONE: - [ ] 15. Reviewer agent validation pass + status workflow (ROADMAP §9)
 [2026-05-23T07:42:46+00:00] DONE: - [ ] 16. Agentic view authoring v1: dashboards as composed view specs (ROADMAP §11.8)
+[2026-05-23T07:51:34+00:00] PARTIAL: - [ ] 17. Agentic view authoring v2: sandboxed custom panels (ROADMAP §11.8) (attempt 1)

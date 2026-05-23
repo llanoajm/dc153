@@ -45,7 +45,7 @@ Legend: `- [ ]` pending · `- [x]` done & verified · `- [!]` blocked (see LOOP_
     - Add a sample `features/example.py` to a test workspace; the tool appears in the agent's tool list
     - `npm run build` exits 0
 
-- [ ] 5. Bundled reference networks (ROADMAP §0)
+- [x] 5. Bundled reference networks (ROADMAP §0)
   - context: canonical artifacts visible on first login
   - acceptance:
     - `data/networks/ieee-30/`, `data/networks/wecc-240/` (or `pypsa-usa/`), `data/networks/pypsa-eur-slice/` exist with required files

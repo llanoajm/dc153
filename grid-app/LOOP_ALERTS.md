@@ -9,3 +9,4 @@
 [2026-05-23T06:06:07+00:00] DONE: - [ ] 9. Geo-map renderer + LMP heatmap + time slider (ROADMAP §11.7)
 [2026-05-23T06:18:59+00:00] DONE: - [ ] 10. Runs panel + chart view spec for time series (ROADMAP §6)
 [2026-05-23T06:35:24+00:00] DONE: - [ ] 11. PDF source ingestion → glossary + context doc (ROADMAP §1, §3)
+[2026-05-23T06:51:26+00:00] DONE: - [ ] 12. Candidate feature drafting from sources + approval flow (ROADMAP §4)

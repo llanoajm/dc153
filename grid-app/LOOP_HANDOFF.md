@@ -1,5 +1,5 @@
-## Current item (from LOOP_QUEUE.md line 114)
-- [ ] 12. Candidate feature drafting from sources + approval flow (ROADMAP §4)
+## Current item (from LOOP_QUEUE.md line 123)
+- [ ] 13. Multi-modal extraction (PPTX, images, vision captioning) (ROADMAP §1)
 
 ## Attempt
 1 of 5
@@ -32,7 +32,7 @@
 - No emojis in code or UI unless explicitly requested.
 
 STATUS: done
-SUMMARY: PDF ingest now drafts features from concrete-math sections; new /app/features panel + /api/features endpoints let the user approve (canonical), reject (rename to _<slug>.py to hide from MCP), or edit drafts, with source<->feature lineage on the artifact viewer.
-ACCEPTANCE: all pass — (1) intake drafter in scripts/draft_features.py writes features/<slug>.py + inserts feature artifact rows with status='draft' and parent_id from ingest_pdf.py; (2) app/app/features/page.tsx + components/features/FeaturesPanel.tsx show approve/edit/reject per draft; (3) /api/features/<id> PATCH flips status to canonical/deprecated and reverse; (4) components/features/LineageStrip.tsx renders source -> feature drafts on /app/artifacts/<id>; (5) npm run build exits 0.
+SUMMARY: PPTX/image/audio ingestion shipped — new scripts ingest_pptx/_image/_audio share an OpenRouter vision+audio caption helper (with deterministic fallback), and a universal /api/upload/source route dispatches by mime so SourcesPanel handles all four kinds end-to-end.
+ACCEPTANCE: PPTX upload → text + slide images + per-slide captions: pass (ingest_pptx.py extracts slide text frames + picture shapes, captions via _caption.caption_image, surfaces in markdown view spec). Image upload → caption via vision model: pass (ingest_image.py calls OpenRouter when OPENROUTER_API_KEY present; deterministic fallback otherwise). Audio upload → transcript + speaker turns: pass (ingest_audio.py transcribes via multimodal model, per-turn chunking when Speaker N: prefix detected; fallback when no key). All extracted content surfaces in the Sources panel: pass (universal /api/upload/source route + SourcesPanel accepts the full mime set, renders type-aware subtitles). npm run build exits 0: pass.
 
 VERIFIED: yes

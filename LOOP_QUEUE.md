@@ -120,7 +120,7 @@ Legend: `- [ ]` pending · `- [x]` done & verified · `- [!]` blocked (see LOOP_
     - Lineage view shows source document → feature draft
     - `npm run build` exits 0
 
-- [ ] 13. Multi-modal extraction (PPTX, images, vision captioning) (ROADMAP §1)
+- [x] 13. Multi-modal extraction (PPTX, images, vision captioning) (ROADMAP §1)
   - context: extends ingestion beyond text PDFs
   - acceptance:
     - PPTX upload → text + slide images + per-slide captions

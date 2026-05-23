@@ -138,7 +138,7 @@ Legend: `- [ ]` pending · `- [x]` done & verified · `- [!]` blocked (see LOOP_
     - Onboarding flow: new member sees org's canonical features and glossary on first login
     - `npm run build` exits 0
 
-- [ ] 15. Reviewer agent validation pass + status workflow (ROADMAP §9)
+- [x] 15. Reviewer agent validation pass + status workflow (ROADMAP §9)
   - context: post-turn reviewer guards AI-generated objectives
   - acceptance:
     - Post-turn hook (opencode hook or server-side handler) invokes a reviewer agent on new feature artifacts

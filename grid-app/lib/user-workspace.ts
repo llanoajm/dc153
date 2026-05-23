@@ -177,28 +177,9 @@ extend, say so and ask — don't sprinkle the change across guesses.
   // up changes to the server script path (and so existing workspaces get the
   // user-features server without manual migration). `instructions` lists the
   // per-user glossary + company-context docs (ROADMAP §3 / LOOP_QUEUE item
-  // 11) so opencode auto-loads them into the session's system prompt.
-  const opencodeConfig = {
-    $schema: "https://opencode.ai/config.json",
-    provider: {},
-    mcp: {
-      "user-features": {
-        type: "local",
-        command: [PY_BIN, MCP_SERVER_SCRIPT],
-        environment: {
-          STEINMETZ_FEATURES_DIR: path.join(dir, "features"),
-          STEINMETZ_WORKSPACE_DIR: dir,
-        },
-      },
-    },
-    instructions: ["glossary.md", "company-context.md"],
-    permission: {},
-  }
-  await fs.writeFile(
-    path.join(dir, ".opencode", "opencode.jsonc"),
-    JSON.stringify(opencodeConfig, null, 2) + "\n",
-    "utf8",
-  )
+  // 11) so opencode auto-loads them into the session's system prompt. Org
+  // overlays (ROADMAP §10) are layered in via writeOpencodeConfig().
+  await writeOpencodeConfig(dir, [])
 
   // Stub the workspace-context files so opencode finds them on the very first
   // session, before any PDF has been ingested. Ingestion appends real content
@@ -260,4 +241,118 @@ async function writeIfMissing(p: string, content: string): Promise<void> {
 
 export function workspaceRoot(): string {
   return ROOT
+}
+
+// Org-overlay file naming. Each org membership lands in two files —
+// `glossary.org.<slug>.md` and `company-context.org.<slug>.md` — so the
+// agent can read which definitions came from which org. Listed first in
+// the opencode `instructions` array so personal files (`glossary.md` /
+// `company-context.md`) layer on top.
+const ORG_GLOSSARY_PREFIX = "glossary.org."
+const ORG_CONTEXT_PREFIX = "company-context.org."
+
+export async function writeOpencodeConfig(
+  workspaceDir: string,
+  orgOverlayFiles: string[],
+): Promise<void> {
+  const instructions = [
+    ...orgOverlayFiles,
+    "glossary.md",
+    "company-context.md",
+  ]
+  const opencodeConfig = {
+    $schema: "https://opencode.ai/config.json",
+    provider: {},
+    mcp: {
+      "user-features": {
+        type: "local",
+        command: [PY_BIN, MCP_SERVER_SCRIPT],
+        environment: {
+          STEINMETZ_FEATURES_DIR: path.join(workspaceDir, "features"),
+          STEINMETZ_WORKSPACE_DIR: workspaceDir,
+        },
+      },
+    },
+    instructions,
+    permission: {},
+  }
+  await fs.writeFile(
+    path.join(workspaceDir, ".opencode", "opencode.jsonc"),
+    JSON.stringify(opencodeConfig, null, 2) + "\n",
+    "utf8",
+  )
+}
+
+export interface OrgOverlay {
+  slug: string
+  // Optional content for each file. When omitted/empty, the file is still
+  // created with a brief stub so opencode doesn't error on a missing path.
+  glossary?: string
+  context?: string
+}
+
+// Materialize org overlay files into the workspace and update the opencode
+// instructions list so they load before the personal files. Idempotent:
+// removes stale `glossary.org.<slug>.md` / `company-context.org.<slug>.md`
+// files for orgs the user is no longer a member of.
+export async function applyOrgOverlays(
+  workspaceDir: string,
+  overlays: OrgOverlay[],
+): Promise<string[]> {
+  // 1. Drop overlay files for orgs that no longer apply.
+  const keepGlossary = new Set(overlays.map((o) => `${ORG_GLOSSARY_PREFIX}${o.slug}.md`))
+  const keepContext = new Set(overlays.map((o) => `${ORG_CONTEXT_PREFIX}${o.slug}.md`))
+  let entries: string[] = []
+  try {
+    entries = await fs.readdir(workspaceDir)
+  } catch {
+    entries = []
+  }
+  for (const name of entries) {
+    if (name.startsWith(ORG_GLOSSARY_PREFIX) && !keepGlossary.has(name)) {
+      await fs.rm(path.join(workspaceDir, name), { force: true })
+    }
+    if (name.startsWith(ORG_CONTEXT_PREFIX) && !keepContext.has(name)) {
+      await fs.rm(path.join(workspaceDir, name), { force: true })
+    }
+  }
+
+  // 2. Write each overlay's files.
+  const overlayFiles: string[] = []
+  for (const o of overlays) {
+    const glossaryName = `${ORG_GLOSSARY_PREFIX}${o.slug}.md`
+    const contextName = `${ORG_CONTEXT_PREFIX}${o.slug}.md`
+    await fs.writeFile(
+      path.join(workspaceDir, glossaryName),
+      o.glossary ?? stubOrgGlossary(o.slug),
+      "utf8",
+    )
+    await fs.writeFile(
+      path.join(workspaceDir, contextName),
+      o.context ?? stubOrgContext(o.slug),
+      "utf8",
+    )
+    overlayFiles.push(glossaryName, contextName)
+  }
+
+  // 3. Rewrite opencode.jsonc so the agent's next session loads org content
+  //    first, then the user's personal glossary/context on top.
+  await writeOpencodeConfig(workspaceDir, overlayFiles)
+  return overlayFiles
+}
+
+function stubOrgGlossary(slug: string): string {
+  return `# Org glossary — ${slug}
+
+Domain terms shared across this org. Org owners/admins maintain this. Your
+personal glossary in \`glossary.md\` layers on top.
+`
+}
+
+function stubOrgContext(slug: string): string {
+  return `# Org context — ${slug}
+
+Narrative system context shared across this org. Org owners/admins maintain
+this. Your personal context in \`company-context.md\` layers on top.
+`
 }

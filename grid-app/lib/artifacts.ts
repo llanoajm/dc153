@@ -58,6 +58,7 @@ export interface CreateArtifactInput {
   parent_id?: string | null
   parent_session_id?: string | null
   status?: ArtifactStatus
+  org_id?: string | null
 }
 
 export interface ListArtifactsOptions {
@@ -65,6 +66,11 @@ export interface ListArtifactsOptions {
   status?: ArtifactStatus
   parent_session_id?: string
   limit?: number
+  // `org_id` filters to a specific org. `scope` switches between personal
+  // (org_id is null) and all-visible (the default RLS view: own + bundled
+  // canonical + every org the user is a member of).
+  org_id?: string
+  scope?: "personal" | "all"
 }
 
 export async function createArtifact(input: CreateArtifactInput): Promise<Artifact> {
@@ -76,6 +82,7 @@ export async function createArtifact(input: CreateArtifactInput): Promise<Artifa
 
   const row = {
     user_id: user.id,
+    org_id: input.org_id ?? null,
     kind: input.kind,
     name: input.name,
     slug: input.slug ?? null,
@@ -114,6 +121,8 @@ export async function listArtifacts(opts: ListArtifactsOptions = {}): Promise<Ar
   if (opts.kind) q = q.eq("kind", opts.kind)
   if (opts.status) q = q.eq("status", opts.status)
   if (opts.parent_session_id) q = q.eq("parent_session_id", opts.parent_session_id)
+  if (opts.org_id) q = q.eq("org_id", opts.org_id)
+  if (opts.scope === "personal") q = q.is("org_id", null)
   if (opts.limit) q = q.limit(opts.limit)
   const { data, error } = await q
   if (error) throw new Error(error.message)

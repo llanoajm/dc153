@@ -19,6 +19,8 @@ export async function GET(req: NextRequest) {
   const status = url.searchParams.get("status") ?? undefined
   const session = url.searchParams.get("session") ?? undefined
   const limit = url.searchParams.get("limit")
+  const org_id = url.searchParams.get("org_id") ?? undefined
+  const scope = url.searchParams.get("scope") ?? undefined
 
   try {
     const rows = await listArtifacts({
@@ -26,6 +28,8 @@ export async function GET(req: NextRequest) {
       status: status as ArtifactStatus | undefined,
       parent_session_id: session,
       limit: limit ? Number(limit) : undefined,
+      org_id,
+      scope: scope === "personal" || scope === "all" ? scope : undefined,
     })
     return NextResponse.json(rows)
   } catch (e) {
@@ -69,6 +73,7 @@ export async function POST(req: NextRequest) {
       parent_session_id:
         typeof body.parent_session_id === "string" ? body.parent_session_id : null,
       status: isStatus(body.status) ? body.status : "draft",
+      org_id: typeof body.org_id === "string" ? body.org_id : null,
     })
     return NextResponse.json(created, { status: 201 })
   } catch (e) {

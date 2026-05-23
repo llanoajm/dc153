@@ -12,3 +12,4 @@
 [2026-05-23T06:51:26+00:00] DONE: - [ ] 12. Candidate feature drafting from sources + approval flow (ROADMAP §4)
 [2026-05-23T07:03:24+00:00] DONE: - [ ] 13. Multi-modal extraction (PPTX, images, vision captioning) (ROADMAP §1)
 [2026-05-23T07:15:07+00:00] DONE: - [ ] 14. Org scopes + shared glossary/skills/networks (ROADMAP §10)
+[2026-05-23T07:30:45+00:00] DONE: - [ ] 15. Reviewer agent validation pass + status workflow (ROADMAP §9)

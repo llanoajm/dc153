@@ -1,5 +1,5 @@
-## Current item (from LOOP_QUEUE.md line 151)
-- [ ] 16. Agentic view authoring v1: dashboards as composed view specs (ROADMAP §11.8)
+## Current item (from LOOP_QUEUE.md line 160)
+- [ ] 17. Agentic view authoring v2: sandboxed custom panels (ROADMAP §11.8)
 
 ## Attempt
 1 of 5
@@ -30,8 +30,3 @@
 - Don't modify zap source — features are user-space Python importing from zap.
 - Don't use opencode.ai hosted layer (no Big Pickle / Zen / Go free models).
 - No emojis in code or UI unless explicitly requested.
-
-STATUS: done
-SUMMARY: Roadmap item 16 — dashboard view spec + DashboardRenderer composing every built-in renderer with shared time-slider controls, plus pin-to-rail via metadata.pinned and /api/artifacts/[id]/pin.
-ACCEPTANCE: all pass — (1) schema documented in lib/view-specs/dashboard.ts with types + validator + defaults; (2) DashboardRenderer dispatches chart/table/network-graph/geo-map/run/etc and threads _controlled_hour_idx across panels (geo-map locks its slider, RunView gets a Vega rule overlay); (3) view_spec drives the layout purely from the artifact row so re-renders reproduce; (4) PinButton on /app/artifacts/[id] + /app/dashboards toggles metadata.pinned and the workspace shell surfaces a "Pinned" rail section threaded from listPinnedDashboards(); (5) npm run build exits 0.
-VERIFIED: yes

@@ -1,0 +1,7 @@
+name,bus,p_nom,carrier,marginal_cost
+gen_0,1,80.0,thermal,2.0
+gen_1,2,80.0,thermal,1.75
+gen_2,22,50.0,thermal,1.0
+gen_3,27,55.0,thermal,3.25
+gen_4,23,30.0,thermal,3.0
+gen_5,13,40.0,thermal,3.0

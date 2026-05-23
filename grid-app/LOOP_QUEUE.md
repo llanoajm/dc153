@@ -157,7 +157,7 @@ Legend: `- [ ]` pending · `- [x]` done & verified · `- [!]` blocked (see LOOP_
     - User can pin a dashboard to the workspace rail
     - `npm run build` exits 0
 
-- [ ] 17. Agentic view authoring v2: sandboxed custom panels (ROADMAP §11.8)
+- [!] 17. Agentic view authoring v2: sandboxed custom panels (ROADMAP §11.8)
   - context: small interactive JSX panels in a constrained subset
   - acceptance:
     - JSX subset spec documented (allowed components, no DOM access, no arbitrary JS)

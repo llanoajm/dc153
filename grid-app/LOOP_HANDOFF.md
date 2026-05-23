@@ -1,5 +1,5 @@
-## Current item (from LOOP_QUEUE.md line 40)
-- [ ] 4. Per-user MCP server exposing `features/` (ROADMAP §5)
+## Current item (from LOOP_QUEUE.md line 48)
+- [ ] 5. Bundled reference networks (ROADMAP §0)
 
 ## Attempt
 1 of 5
@@ -32,7 +32,6 @@
 - No emojis in code or UI unless explicitly requested.
 
 STATUS: done
-SUMMARY: Added scripts/user-mcp-server.py (stdio JSON-RPC MCP introspecting features/) and wired it into each workspace's opencode.jsonc via lib/user-workspace.ts, with a bootstrap features/example.py stub.
-NEXT_STEPS:
-ACCEPTANCE: all pass — scripts/user-mcp-server.py exists and exposes public functions of features/*.py as MCP tools (verified by direct JSON-RPC); the workspace opencode.jsonc registers mcp.user-features (verified — /mcp reports {"user-features":{"status":"connected"}} after server restart); features/example.py bootstrap lands and is picked up by the server (example__hello visible in tools/list); npm run build exits 0 (one pre-existing NFT trace warning unrelated to this change).
+SUMMARY: Bundled three reference networks (IEEE-30, PyPSA-USA stand-in via ACTIVSg200, PyPSA-Eur slice via SciGRID-DE) as canonical artifacts with smoke-dispatch and seed scripts.
+ACCEPTANCE: data/networks/{ieee-30,pypsa-usa,pypsa-eur-slice}/ exist with PyPSA CSV folders + card.md (source URL, license, node count, carrier mix, example zap solve, suggested first prompt) — PASS. scripts/seed_networks.py upserts canonical artifacts rows (status='canonical', org_id=null, user_id=null) — PASS (code path verified end-to-end; live insert returns 404 only until the user pastes the artifacts table from supabase/schema.sql, which is the same pending step noted on item #3). scripts/smoke_dispatch.py data/networks/<name> exits 0 for all three (HIGHS solver, 0.13s/0.26s/0.64s) — PASS. npm run build exits 0 — PASS.
 VERIFIED: yes

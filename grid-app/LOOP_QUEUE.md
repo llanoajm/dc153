@@ -27,7 +27,7 @@ Legend: `- [ ]` pending · `- [x]` done & verified · `- [!]` blocked (see LOOP_
     - Cmd+K palette mounts (even if empty)
     - `npm run build` exits 0
 
-- [ ] 3. Artifacts table + universal renderer (ROADMAP §2, §11.6)
+- [x] 3. Artifacts table + universal renderer (ROADMAP §2, §11.6)
   - context: single first-class concept; renderers are generic
   - acceptance:
     - `supabase/schema.sql` adds `artifacts(id, user_id, org_id, kind, name, slug, fs_path, storage_path, metadata jsonb, view_spec jsonb, parent_id, parent_session_id, status, created_at, updated_at)` with RLS

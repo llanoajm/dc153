@@ -1,5 +1,5 @@
-## Current item (from LOOP_QUEUE.md line 21)
-- [ ] 2. Workspace shell (ROADMAP §11.5)
+## Current item (from LOOP_QUEUE.md line 30)
+- [ ] 3. Artifacts table + universal renderer (ROADMAP §2, §11.6)
 
 ## Attempt
 1 of 5
@@ -32,7 +32,7 @@
 - No emojis in code or UI unless explicitly requested.
 
 STATUS: done
-SUMMARY: Wrapped the authed area in a workspace shell — LeftRail (default sections per §11.5), CenterTabs (chat as default tab), RightRail (placeholder), and a Cmd/Ctrl+K CommandPalette — mounted from `app/app/layout.tsx`.
-ACCEPTANCE: all pass — (1) `components/shell/{LeftRail,CenterTabs,RightRail}.tsx` (plus `WorkspaceShell.tsx` and `CommandPalette.tsx`) exist; (2) `app/app/layout.tsx` renders `<WorkspaceShell>{children}</WorkspaceShell>` with the chat (`app/app/page.tsx`) wired as the default non-closable "Chat" tab; (3) LeftRail's default sections are Chats, Sources, Networks, Datasets, Runs, Reports, Skills / Features, Glossary — collapsible to a thin strip; (4) `CommandPalette.tsx` listens for Cmd/Ctrl+K (Escape to close) and opens an empty palette modal; (5) `npm run build` exits 0. Rail nav is in-memory active-state only — no routes wired yet, since the only surface that exists is the chat; future items will add real route targets.
-
+SUMMARY: Artifacts table + RLS, lib/artifacts.ts CRUD, eight renderers + dispatcher, /api/artifacts GET+POST, /app/artifacts/[id] page; npm run build exits 0.
+NEXT_STEPS:
+ACCEPTANCE: schema.sql artifacts table with all required columns + RLS — pass; lib/artifacts.ts createArtifact/getArtifact/listArtifacts — pass; components/renderers/{markdown,table,chart,diff,code,file,log,dashboard}.tsx — pass; app/api/artifacts/route.ts GET (empty array when no rows) + POST create — pass; app/app/artifacts/[id]/page.tsx renders via matching renderer — pass; npm run build exits 0 — pass. NOTE: requires the user to paste updated supabase/schema.sql into the Supabase SQL editor before the table is reachable at runtime; build-time verification passes without DB access.
 VERIFIED: yes

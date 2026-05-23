@@ -63,7 +63,7 @@ Legend: `- [ ]` pending · `- [x]` done & verified · `- [!]` blocked (see LOOP_
     - Networks panel lists uploaded networks; click renders via network-graph
     - `npm run build` exits 0
 
-- [ ] 7. Heterogeneous upload + custom-importer skill loop (ROADMAP §1)
+- [x] 7. Heterogeneous upload + custom-importer skill loop (ROADMAP §1)
   - context: unknown CSV → agent inspects → writes a reusable importer feature
   - acceptance:
     - Standard converters tried first; on failure, agent gets a tool-call to inspect the file

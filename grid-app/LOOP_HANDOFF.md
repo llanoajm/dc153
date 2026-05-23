@@ -1,5 +1,5 @@
-## Current item (from LOOP_QUEUE.md line 57)
-- [ ] 6. Network-graph renderer + PyPSA folder ingest + smoke-dispatch on upload (ROADMAP §1, §6, §11.6)
+## Current item (from LOOP_QUEUE.md line 66)
+- [ ] 7. Heterogeneous upload + custom-importer skill loop (ROADMAP §1)
 
 ## Attempt
 1 of 5
@@ -32,6 +32,6 @@
 - No emojis in code or UI unless explicitly requested.
 
 STATUS: done
-SUMMARY: Network-graph SVG renderer + PyPSA folder upload route + detached smoke-dispatch pipeline (queued -> extracting -> embedded -> ready) wired through the Networks panel.
-ACCEPTANCE: all 5 criteria pass — (1) `components/renderers/network-graph.tsx` renders bus/line topology via geo projection (when buses have x/y) or Fruchterman-Reingold force layout otherwise; (2) `app/api/upload/route.ts` accepts a multipart PyPSA folder, writes to `<workspace>/sources/<slug>/raw/`, creates a `network` artifact, and spawns the detached ingester; (3) `scripts/ingest_pypsa_folder.py` updates `metadata.pipeline_status` through queued -> extracting -> embedded -> ready (and flips `status='failed_validation'` on error); (4) Networks panel at `/app/networks` lists `kind='network'` artifacts with live status polling and rows linking to `/app/artifacts/<id>` which dispatches the universal renderer to network-graph; (5) `npm run build` exits 0.
+SUMMARY: Upload pipeline now tries PyPSA → MATPOWER → per-user custom importers, parks unknown formats at pipeline_status='awaiting_importer' with a CSV fingerprint, and exposes list_pending_imports / inspect_upload / write_custom_importer MCP tools plus a /api/upload/reingest/[id] route so the agent can author and re-run an importer.
+ACCEPTANCE: all pass — standard converters tried first (PyPSA CSV folder then MATPOWER .m); inspection.json + awaiting_importer status surface to the agent via MCP; write_custom_importer writes features/import_<slug>.py + .opencode/skills/<slug>/SKILL.md; matching importer is auto-invoked on subsequent uploads via _try_custom_importers; hard parse failures still flip status='failed_validation'; npm run build exits 0.
 VERIFIED: yes

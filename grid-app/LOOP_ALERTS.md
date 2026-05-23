@@ -3,3 +3,4 @@
 [2026-05-23T04:49:56+00:00] DONE: - [ ] 3. Artifacts table + universal renderer (ROADMAP §2, §11.6)
 [2026-05-23T05:02:41+00:00] DONE: - [ ] 4. Per-user MCP server exposing `features/` (ROADMAP §5)
 [2026-05-23T05:22:33+00:00] DONE: - [ ] 5. Bundled reference networks (ROADMAP §0)
+[2026-05-23T05:37:35+00:00] DONE: - [ ] 6. Network-graph renderer + PyPSA folder ingest + smoke-dispatch on upload (ROADMAP §1, §6, §11.6)

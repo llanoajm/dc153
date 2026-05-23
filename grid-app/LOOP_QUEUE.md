@@ -37,7 +37,7 @@ Legend: `- [ ]` pending · `- [x]` done & verified · `- [!]` blocked (see LOOP_
     - `app/app/artifacts/[id]/page.tsx` renders an artifact through the matching renderer
     - `npm run build` exits 0
 
-- [ ] 4. Per-user MCP server exposing `features/` (ROADMAP §5)
+- [x] 4. Per-user MCP server exposing `features/` (ROADMAP §5)
   - context: agent sees per-user Python features as typed MCP tools
   - acceptance:
     - `lib/user-mcp.ts` (or `scripts/user-mcp-server.py`) introspects `<workspace>/features/` and exposes each public function as an MCP tool

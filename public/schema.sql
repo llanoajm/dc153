@@ -74,3 +74,61 @@ create policy "features update own" on public.features
 drop policy if exists "features delete own" on public.features;
 create policy "features delete own" on public.features
   for delete using (auth.uid() = user_id);
+
+-- ============================================================================
+-- artifacts
+--
+-- The single first-class concept (ROADMAP §2). Every harness output —
+-- documents, datasets, networks, runs, features, glossary entries, generated
+-- views — lands here with a declared `view_spec` so the universal renderer
+-- (components/renderers/*) can display it.
+--
+-- `org_id` is forward-compatible (multi-user posture, ROADMAP §10); it's
+-- nullable for personal artifacts. `parent_id` enables lineage; the row
+-- with `org_id is null` and `user_id is null` is reserved for canonical
+-- bundled rows (ROADMAP §0) — that combination is excluded from the RLS
+-- read policy on a per-user basis below by allowing it explicitly.
+-- ============================================================================
+create table if not exists public.artifacts (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  org_id uuid,
+  kind text not null,
+  name text not null,
+  slug text,
+  fs_path text,
+  storage_path text,
+  metadata jsonb not null default '{}'::jsonb,
+  view_spec jsonb not null default '{}'::jsonb,
+  parent_id uuid references public.artifacts(id) on delete set null,
+  parent_session_id text,
+  status text not null default 'draft',
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists artifacts_user_created_idx
+  on public.artifacts (user_id, created_at desc);
+create index if not exists artifacts_kind_idx
+  on public.artifacts (kind);
+create index if not exists artifacts_parent_idx
+  on public.artifacts (parent_id);
+
+alter table public.artifacts enable row level security;
+
+-- Users see their own rows + canonical-shared rows (user_id is null AND status='canonical').
+drop policy if exists "artifacts select own or canonical" on public.artifacts;
+create policy "artifacts select own or canonical" on public.artifacts
+  for select using (
+    auth.uid() = user_id
+    or (user_id is null and status = 'canonical')
+  );
+drop policy if exists "artifacts insert own" on public.artifacts;
+create policy "artifacts insert own" on public.artifacts
+  for insert with check (auth.uid() = user_id);
+drop policy if exists "artifacts update own" on public.artifacts;
+create policy "artifacts update own" on public.artifacts
+  for update using (auth.uid() = user_id);
+drop policy if exists "artifacts delete own" on public.artifacts;
+create policy "artifacts delete own" on public.artifacts
+  for delete using (auth.uid() = user_id);

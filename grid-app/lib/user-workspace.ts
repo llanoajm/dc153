@@ -57,6 +57,46 @@ objective"), follow this lifecycle:
 5. **Done.** Do not commit (this workspace is not a repo). Persistence is
    handled by the Steinmetz app, which syncs your features to durable storage.
 
+## Custom importers (heterogeneous uploads)
+
+When a user uploads a folder that is not a PyPSA CSV folder or a MATPOWER
+\`.m\` case, the ingestion pipeline leaves the artifact in
+\`pipeline_status='awaiting_importer'\` and writes a schema fingerprint to
+\`sources/<slug>/inspection.json\`. Your job, when asked:
+
+1. Call \`steinmetz__list_pending_imports\` (MCP tool) to discover slugs.
+2. Call \`steinmetz__inspect_upload(slug)\` to see the CSV columns + sample
+   rows. Use \`Read\` to peek at specific files in \`sources/<slug>/raw/\`
+   if you need more.
+3. Author a custom importer at \`features/import_<source-slug>.py\` exposing:
+
+   \`\`\`python
+   from pathlib import Path
+
+   def matches(folder: Path) -> bool:
+       """Return True if this importer can handle the upload at \`folder\`."""
+
+   def convert(folder: Path, dest: Path) -> None:
+       """Read raw upload at \`folder\` and write a PyPSA CSV folder to \`dest\`."""
+   \`\`\`
+
+   \`convert\` MUST write \`buses.csv\` (and ideally \`lines.csv\`,
+   \`generators.csv\`, \`loads.csv\`) into \`dest\`. The easiest path is to
+   build a \`pypsa.Network\` in memory and call
+   \`n.export_to_csv_folder(str(dest))\`.
+
+4. Register the importer as a skill at
+   \`.opencode/skills/<source-slug>/SKILL.md\` so it survives across sessions.
+
+   You can do steps 3+4 in one shot by calling
+   \`steinmetz__write_custom_importer(slug, python_source, skill_markdown)\`.
+
+5. Re-trigger ingestion by POSTing to
+   \`/api/upload/reingest/<artifact_id>\` (the user can do this from the
+   Networks panel button labeled "Retry"). The same importer will then
+   handle subsequent uploads of the same format automatically because
+   \`matches(folder)\` returns True for them.
+
 ## Style
 
 Match zap's existing patterns when subclassing:
@@ -112,6 +152,7 @@ extend, say so and ask — don't sprinkle the change across guesses.
         command: [PY_BIN, MCP_SERVER_SCRIPT],
         environment: {
           STEINMETZ_FEATURES_DIR: path.join(dir, "features"),
+          STEINMETZ_WORKSPACE_DIR: dir,
         },
       },
     },

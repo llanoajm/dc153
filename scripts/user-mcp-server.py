@@ -31,6 +31,22 @@ def features_dir() -> Path:
     return Path(os.environ.get("STEINMETZ_FEATURES_DIR") or "features").resolve()
 
 
+def workspace_dir() -> Path:
+    """Workspace root. Default: the parent of ``features_dir()``."""
+    explicit = os.environ.get("STEINMETZ_WORKSPACE_DIR")
+    if explicit:
+        return Path(explicit).resolve()
+    return features_dir().parent
+
+
+def sources_dir() -> Path:
+    return workspace_dir() / "sources"
+
+
+def skills_dir() -> Path:
+    return workspace_dir() / ".opencode" / "skills"
+
+
 def log(msg: str) -> None:
     sys.stderr.write(f"[user-mcp] {msg}\n")
     sys.stderr.flush()
@@ -68,6 +84,178 @@ def _load_module(slug: str, path: Path):
     return module
 
 
+def _builtin_tools() -> list[dict]:
+    """Built-in tools that don't come from feature files.
+
+    These ship with every workspace so the agent can drive the
+    heterogeneous-upload loop (ROADMAP §1, LOOP_QUEUE.md item 7):
+
+    * ``list_pending_imports`` — slugs in ``sources/`` whose ingestion left an
+      ``inspection.json`` because no standard or custom converter matched.
+    * ``inspect_upload`` — full inspection for one slug (CSV columns +
+      samples + raw file list). Lets the agent decide what to write.
+    * ``write_custom_importer`` — writes a ``features/import_<slug>.py`` and a
+      ``.opencode/skills/<slug>/SKILL.md`` from agent-supplied source.
+      Convenience wrapper around two file writes.
+    """
+    return [
+        {
+            "name": "steinmetz__list_pending_imports",
+            "description": (
+                "List uploads in this workspace that need a custom importer. "
+                "Returns one entry per source slug whose ingestion produced an "
+                "inspection.json (i.e. no standard / existing custom importer "
+                "matched). Use this to discover work; then call "
+                "steinmetz__inspect_upload(slug) for details."
+            ),
+            "inputSchema": {"type": "object", "properties": {}},
+            "_builtin": "list_pending_imports",
+        },
+        {
+            "name": "steinmetz__inspect_upload",
+            "description": (
+                "Return the schema fingerprint, CSV column lists, and a few "
+                "sample rows from an uploaded source folder. Use this before "
+                "writing a custom importer so you can see what the columns "
+                "actually mean."
+            ),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "slug": {
+                        "type": "string",
+                        "description": "Source slug (directory name under sources/).",
+                    }
+                },
+                "required": ["slug"],
+            },
+            "_builtin": "inspect_upload",
+        },
+        {
+            "name": "steinmetz__write_custom_importer",
+            "description": (
+                "Write features/import_<slug>.py and "
+                ".opencode/skills/<slug>/SKILL.md from agent-supplied source. "
+                "The Python module must expose matches(folder: Path) -> bool "
+                "and convert(folder: Path, dest: Path) -> None; convert() must "
+                "write a PyPSA-compatible CSV folder (with buses.csv) to dest. "
+                "After writing, ask the user to re-upload or hit "
+                "/api/upload/reingest/<artifact_id> to re-run the pipeline."
+            ),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "slug": {
+                        "type": "string",
+                        "description": "Importer slug. The file name becomes import_<slug>.py.",
+                    },
+                    "python_source": {
+                        "type": "string",
+                        "description": "Full body of features/import_<slug>.py.",
+                    },
+                    "skill_markdown": {
+                        "type": "string",
+                        "description": "Full body of .opencode/skills/<slug>/SKILL.md.",
+                    },
+                },
+                "required": ["slug", "python_source", "skill_markdown"],
+            },
+            "_builtin": "write_custom_importer",
+        },
+    ]
+
+
+def _builtin_list_pending_imports() -> str:
+    root = sources_dir()
+    if not root.exists():
+        return json.dumps({"pending": []}, indent=2)
+    pending: list[dict] = []
+    for child in sorted(root.iterdir()):
+        if not child.is_dir():
+            continue
+        inspection_path = child / "inspection.json"
+        if not inspection_path.exists():
+            continue
+        try:
+            inspection = json.loads(inspection_path.read_text())
+        except Exception as exc:
+            inspection = {"error": str(exc)}
+        files = inspection.get("csv_files") or []
+        pending.append(
+            {
+                "slug": child.name,
+                "fingerprint": inspection.get("fingerprint"),
+                "csv_file_count": len(files),
+                "csv_paths": [f.get("path") for f in files],
+                "hint": inspection.get("hint"),
+            }
+        )
+    return json.dumps({"pending": pending}, indent=2)
+
+
+def _builtin_inspect_upload(slug: str) -> str:
+    if not slug or "/" in slug or slug.startswith("."):
+        raise ValueError("invalid slug")
+    src = sources_dir() / slug
+    if not src.exists():
+        raise FileNotFoundError(f"no source folder for slug {slug!r}")
+    inspection_path = src / "inspection.json"
+    if inspection_path.exists():
+        return inspection_path.read_text()
+    # Fall back to a fresh introspection of raw/ if no inspection was written.
+    raw = src / "raw"
+    if not raw.exists():
+        raise FileNotFoundError(f"no raw/ subfolder for slug {slug!r}")
+    return json.dumps(_quick_inspect(raw), indent=2)
+
+
+def _quick_inspect(folder: Path) -> dict:
+    """Cheap fallback inspection — column lists, no samples."""
+    out: dict = {"csv_files": [], "other_files": []}
+    for path in sorted(folder.rglob("*")):
+        if not path.is_file():
+            continue
+        rel = str(path.relative_to(folder))
+        if path.suffix.lower() == ".csv":
+            try:
+                with open(path) as fh:
+                    header = fh.readline().strip()
+                cols = [c.strip() for c in header.split(",")] if header else []
+            except OSError as exc:
+                out["csv_files"].append({"path": rel, "error": str(exc)})
+                continue
+            out["csv_files"].append({"path": rel, "columns": cols})
+        else:
+            out["other_files"].append(rel)
+    return out
+
+
+def _builtin_write_custom_importer(
+    slug: str, python_source: str, skill_markdown: str
+) -> str:
+    if not slug or "/" in slug or slug.startswith(".") or " " in slug:
+        raise ValueError("invalid slug (no spaces, slashes, or leading dots)")
+    fdir = features_dir()
+    sdir = skills_dir() / slug
+    fdir.mkdir(parents=True, exist_ok=True)
+    sdir.mkdir(parents=True, exist_ok=True)
+    importer_path = fdir / f"import_{slug}.py"
+    skill_path = sdir / "SKILL.md"
+    importer_path.write_text(python_source)
+    skill_path.write_text(skill_markdown)
+    return json.dumps(
+        {
+            "wrote": [str(importer_path), str(skill_path)],
+            "slug": slug,
+            "next_step": (
+                "Trigger a re-ingest with POST /api/upload/reingest/<artifact_id> "
+                "for the awaiting_importer artifact, or ask the user to re-upload."
+            ),
+        },
+        indent=2,
+    )
+
+
 def discover_tools() -> list[dict]:
     """Return a list of tool entries discovered in the features dir.
 
@@ -76,10 +264,10 @@ def discover_tools() -> list[dict]:
     a call.
     """
     fdir = features_dir()
+    tools: list[dict] = list(_builtin_tools())
     if not fdir.exists():
         log(f"features dir does not exist: {fdir}")
-        return []
-    tools: list[dict] = []
+        return tools
     for path in sorted(fdir.glob("*.py")):
         if path.name.startswith("_"):
             continue
@@ -126,11 +314,30 @@ def discover_tools() -> list[dict]:
     return tools
 
 
+_BUILTIN_DISPATCH = {
+    "list_pending_imports": _builtin_list_pending_imports,
+    "inspect_upload": _builtin_inspect_upload,
+    "write_custom_importer": _builtin_write_custom_importer,
+}
+
+
 def call_tool(tool_name: str, arguments: dict | None) -> str:
     tools = discover_tools()
     target = next((t for t in tools if t["name"] == tool_name), None)
     if not target:
         raise ValueError(f"unknown tool: {tool_name}")
+    builtin = target.get("_builtin")
+    if builtin:
+        handler = _BUILTIN_DISPATCH.get(builtin)
+        if not handler:
+            raise ValueError(f"builtin handler missing: {builtin}")
+        result = handler(**(arguments or {}))
+        if isinstance(result, str):
+            return result
+        try:
+            return json.dumps(result, default=str, indent=2)
+        except Exception:
+            return repr(result)
     module = _load_module(target["_slug"] + "_call", Path(target["_path"]))
     fn = getattr(module, target["_function"])
     result = fn(**(arguments or {}))

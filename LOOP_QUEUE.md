@@ -82,7 +82,7 @@ Legend: `- [ ]` pending · `- [x]` done & verified · `- [!]` blocked (see LOOP_
     - Validation re-uses the upload pipeline
     - `npm run build` exits 0
 
-- [ ] 9. Geo-map renderer + LMP heatmap + time slider (ROADMAP §11.7)
+- [x] 9. Geo-map renderer + LMP heatmap + time slider (ROADMAP §11.7)
   - context: spatial network view, the way grid people think
   - acceptance:
     - `components/renderers/geo-map.tsx` uses MapLibre + OpenStreetMap tiles (no Mapbox token requirement for default)

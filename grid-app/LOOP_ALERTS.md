@@ -16,3 +16,4 @@
 [2026-05-23T07:42:46+00:00] DONE: - [ ] 16. Agentic view authoring v1: dashboards as composed view specs (ROADMAP §11.8)
 [2026-05-23T07:51:34+00:00] PARTIAL: - [ ] 17. Agentic view authoring v2: sandboxed custom panels (ROADMAP §11.8) (attempt 1)
 [2026-05-23T07:51:45+00:00] PARTIAL: - [ ] 17. Agentic view authoring v2: sandboxed custom panels (ROADMAP §11.8) (attempt 2)
+[2026-05-23T07:51:56+00:00] PARTIAL: - [ ] 17. Agentic view authoring v2: sandboxed custom panels (ROADMAP §11.8) (attempt 3)

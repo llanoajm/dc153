@@ -88,7 +88,8 @@ def _builtin_tools() -> list[dict]:
     """Built-in tools that don't come from feature files.
 
     These ship with every workspace so the agent can drive the
-    heterogeneous-upload loop (ROADMAP §1, LOOP_QUEUE.md item 7):
+    heterogeneous-upload loop (ROADMAP §1, LOOP_QUEUE.md item 7) and the
+    agentic data-acquisition loop (ROADMAP §6.5, LOOP_QUEUE item 8):
 
     * ``list_pending_imports`` — slugs in ``sources/`` whose ingestion left an
       ``inspection.json`` because no standard or custom converter matched.
@@ -97,6 +98,9 @@ def _builtin_tools() -> list[dict]:
     * ``write_custom_importer`` — writes a ``features/import_<slug>.py`` and a
       ``.opencode/skills/<slug>/SKILL.md`` from agent-supplied source.
       Convenience wrapper around two file writes.
+    * ``fetch_network`` — download a URL into the workspace, create a
+      ``network`` artifact with source/license/fetched_at/checksum metadata,
+      and kick off the standard upload pipeline.
     """
     return [
         {
@@ -161,6 +165,62 @@ def _builtin_tools() -> list[dict]:
                 "required": ["slug", "python_source", "skill_markdown"],
             },
             "_builtin": "write_custom_importer",
+        },
+        {
+            "name": "steinmetz__fetch_network",
+            "description": (
+                "Download a named network or dataset from a URL into the "
+                "user's workspace, create a `network` artifact, and run the "
+                "standard upload pipeline against it (queued → extracting → "
+                "embedded → ready). Use this after WebSearch / WebFetch has "
+                "identified a concrete URL (a PyPSA CSV folder zip, a "
+                "MATPOWER .m, a Zenodo release, etc.).\n\n"
+                "Required: `url`. Recommended: `name` (display label), "
+                "`license` (SPDX-style — leave empty if you couldn't "
+                "determine it; the artifact will be flagged "
+                "`license_unknown=true` and stay `status='draft'` so the "
+                "user must confirm before canonical promotion). Optional: "
+                "`slug` (defaults to a slug derived from the URL), "
+                "`expected_checksum` (SHA-256 hex with or without `sha256:` "
+                "prefix; the call fails if the download doesn't match), and "
+                "`session_id` to link the artifact to the current chat. "
+                "Returns the new artifact id."
+            ),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "HTTP(S) URL of the dataset to fetch.",
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "Display name for the artifact.",
+                    },
+                    "slug": {
+                        "type": "string",
+                        "description": "Optional slug; derived from the URL if omitted.",
+                    },
+                    "license": {
+                        "type": "string",
+                        "description": (
+                            "License string (e.g. 'MIT', 'CC-BY-4.0'). Leave "
+                            "empty if the source doesn't declare one — the "
+                            "artifact will be marked license_unknown=true."
+                        ),
+                    },
+                    "expected_checksum": {
+                        "type": "string",
+                        "description": "SHA-256 hex (with or without sha256: prefix).",
+                    },
+                    "session_id": {
+                        "type": "string",
+                        "description": "Opencode session id to link to.",
+                    },
+                },
+                "required": ["url"],
+            },
+            "_builtin": "fetch_network",
         },
     ]
 
@@ -314,10 +374,46 @@ def discover_tools() -> list[dict]:
     return tools
 
 
+def _builtin_fetch_network(
+    url: str,
+    name: str | None = None,
+    slug: str | None = None,
+    license: str | None = None,
+    expected_checksum: str | None = None,
+    session_id: str | None = None,
+) -> str:
+    """Bridge into ``scripts/fetch_url.fetch_to_workspace``."""
+    if not url or not isinstance(url, str):
+        raise ValueError("url is required")
+    if not url.startswith(("http://", "https://")):
+        raise ValueError("url must be http(s)")
+    # Import lazily so the MCP server starts even if the Supabase env isn't
+    # configured yet (e.g. during opencode bring-up in dev).
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from fetch_url import fetch_to_workspace, ChecksumMismatch, FetchError
+
+    try:
+        result = fetch_to_workspace(
+            workspace=workspace_dir(),
+            url=url,
+            name=name,
+            slug=slug,
+            license=license,
+            expected_checksum=expected_checksum,
+            session_id=session_id,
+        )
+    except ChecksumMismatch as exc:
+        return json.dumps({"error": "checksum_mismatch", "detail": str(exc)}, indent=2)
+    except FetchError as exc:
+        return json.dumps({"error": "fetch_failed", "detail": str(exc)}, indent=2)
+    return json.dumps(result, indent=2)
+
+
 _BUILTIN_DISPATCH = {
     "list_pending_imports": _builtin_list_pending_imports,
     "inspect_upload": _builtin_inspect_upload,
     "write_custom_importer": _builtin_write_custom_importer,
+    "fetch_network": _builtin_fetch_network,
 }
 
 

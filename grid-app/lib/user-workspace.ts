@@ -3,6 +3,10 @@ import fs from "node:fs/promises"
 import path from "node:path"
 
 const ROOT = process.env.GRID_WORKSPACE_ROOT || "/home/agent/grid-workspaces"
+const PY_BIN = process.env.STEINMETZ_PY || "/home/agent/zap/.venv/bin/python"
+const MCP_SERVER_SCRIPT =
+  process.env.STEINMETZ_MCP_SERVER ||
+  path.join(process.cwd(), "scripts", "user-mcp-server.py")
 
 // Per-user workspace dir. Materialized on first access so the opencode session
 // has somewhere to operate. Holds .opencode/, features/, skills/. The agent
@@ -96,16 +100,51 @@ extend, say so and ask — don't sprinkle the change across guesses.
 `,
   )
 
-  await writeIfMissing(
+  // Regenerate opencode.jsonc every materialization so the MCP config picks
+  // up changes to the server script path (and so existing workspaces get the
+  // user-features server without manual migration).
+  const opencodeConfig = {
+    $schema: "https://opencode.ai/config.json",
+    provider: {},
+    mcp: {
+      "user-features": {
+        type: "local",
+        command: [PY_BIN, MCP_SERVER_SCRIPT],
+        environment: {
+          STEINMETZ_FEATURES_DIR: path.join(dir, "features"),
+        },
+      },
+    },
+    permission: {},
+  }
+  await fs.writeFile(
     path.join(dir, ".opencode", "opencode.jsonc"),
-    `{
-  "$schema": "https://opencode.ai/config.json",
-  // Per-user workspace config for Steinmetz.
-  // Provider/model selected via the app UI.
-  "provider": {},
-  "mcp": {},
-  "permission": {}
-}
+    JSON.stringify(opencodeConfig, null, 2) + "\n",
+    "utf8",
+  )
+
+  await writeIfMissing(
+    path.join(dir, "features", "example.py"),
+    `"""Sample feature — exposed to the agent as MCP tools.
+
+Drop new feature modules into this directory; each public function (one
+that does not start with an underscore) becomes a typed MCP tool the agent
+can call by name. Type-annotated parameters get mapped to JSON Schema; the
+docstring becomes the tool description.
+
+This file is a stub. Delete it once you have a real feature, or keep it as
+a smoke-test that the per-user MCP server is wired up.
+"""
+
+
+def hello(name: str = "world") -> str:
+    """Return a greeting. Useful for confirming the MCP server is live."""
+    return f"hello, {name}, from your steinmetz workspace"
+
+
+def echo(message: str) -> str:
+    """Echo the supplied message back unchanged."""
+    return message
 `,
   )
 

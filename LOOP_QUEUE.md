@@ -148,7 +148,7 @@ Legend: `- [ ]` pending · `- [x]` done & verified · `- [!]` blocked (see LOOP_
     - Audit log row written for every artifact write + agent decision
     - `npm run build` exits 0
 
-- [ ] 16. Agentic view authoring v1: dashboards as composed view specs (ROADMAP §11.8)
+- [x] 16. Agentic view authoring v1: dashboards as composed view specs (ROADMAP §11.8)
   - context: agent composes multi-panel layouts; saved as artifacts
   - acceptance:
     - Dashboard view spec schema documented in `lib/view-specs/dashboard.ts`

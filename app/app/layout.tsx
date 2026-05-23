@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { ensureUserWorkspace } from "@/lib/user-workspace"
+import { syncOrgContextOverlays } from "@/lib/orgs"
 import { Lockup } from "@/components/lockup"
 import { WorkspaceShell } from "@/components/shell/WorkspaceShell"
 
@@ -11,8 +12,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   } = await supabase.auth.getUser()
   if (!user) redirect("/login")
 
-  // Materialize the user's workspace if it doesn't exist yet.
-  await ensureUserWorkspace(user.id)
+  // Materialize the user's workspace if it doesn't exist yet, then layer in
+  // any org overlays so the agent sees the user's org glossary/context before
+  // personal content (ROADMAP §10). syncOrgContextOverlays is a best-effort
+  // refresh — if Supabase is unreachable, fall back to the workspace as-is
+  // so chat still works.
+  const workspaceDir = await ensureUserWorkspace(user.id)
+  try {
+    await syncOrgContextOverlays(workspaceDir)
+  } catch (e) {
+    console.warn("syncOrgContextOverlays failed", e)
+  }
 
   return (
     <div className="flex-1 flex flex-col bg-white text-black min-h-0">

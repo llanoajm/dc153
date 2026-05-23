@@ -2,6 +2,7 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { ensureUserWorkspace } from "@/lib/user-workspace"
 import { Lockup } from "@/components/lockup"
+import { WorkspaceShell } from "@/components/shell/WorkspaceShell"
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -14,8 +15,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   await ensureUserWorkspace(user.id)
 
   return (
-    <div className="flex-1 flex flex-col bg-white text-black">
-      <header className="border-b border-black/10 px-6 py-3 flex items-center justify-between">
+    <div className="flex-1 flex flex-col bg-white text-black min-h-0">
+      <header className="border-b border-black/10 px-6 py-3 flex items-center justify-between shrink-0">
         <Lockup size="sm" />
         <form action="/auth/signout" method="POST">
           <button
@@ -26,7 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </button>
         </form>
       </header>
-      <div className="flex-1">{children}</div>
+      <WorkspaceShell>{children}</WorkspaceShell>
     </div>
   )
 }

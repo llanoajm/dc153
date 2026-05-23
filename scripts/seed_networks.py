@@ -39,7 +39,8 @@ import _pypsa_compat  # noqa: F401  must precede pypsa/zap
 
 import pypsa  # noqa: E402
 
-from smoke_dispatch import smoke_dispatch  # noqa: E402
+from smoke_dispatch import run_dispatch, smoke_dispatch  # noqa: E402
+from run_artifact import build_run_row  # noqa: E402
 
 NETWORKS_DIR = ROOT / "data" / "networks"
 ENV_FILE = ROOT / ".env.local"
@@ -149,7 +150,7 @@ def _supabase_request(env: dict, method: str, path: str, body=None):
         return resp.status, resp.read().decode()
 
 
-def _upsert(env: dict, row: dict, dry_run: bool):
+def _upsert(env: dict, row: dict, dry_run: bool) -> str | None:
     url = env.get("NEXT_PUBLIC_SUPABASE_URL")
     key = env.get("SUPABASE_SERVICE_ROLE_KEY")
     if dry_run or not url or not key:
@@ -157,7 +158,7 @@ def _upsert(env: dict, row: dict, dry_run: bool):
             f"[dry-run] would upsert canonical artifact: "
             f"slug={row['slug']} kind={row['kind']} buses={row['metadata']['buses']}"
         )
-        return
+        return None
     # Two-step upsert: check by (slug, user_id is null) since the table doesn't
     # have a unique constraint on slug. Canonical seeding is a low-frequency
     # admin operation so the extra round trip is fine.
@@ -173,16 +174,63 @@ def _upsert(env: dict, row: dict, dry_run: bool):
                 env, "PATCH", f"artifacts?id=eq.{existing_id}", row
             )
             print(f"  updated {slug}: id={existing_id}")
+            return existing_id
         else:
             _, body = _supabase_request(env, "POST", "artifacts", row)
             payload = json.loads(body) if body else []
-            new_id = payload[0]["id"] if payload else "?"
-            print(f"  inserted {slug}: id={new_id}")
+            new_id = payload[0]["id"] if payload else None
+            print(f"  inserted {slug}: id={new_id or '?'}")
+            return new_id
     except urllib.error.HTTPError as err:
         print(
             f"  ERROR upserting {slug}: HTTP {err.code} — "
             f"{err.read().decode()[:200]}"
         )
+        return None
+
+
+def _upsert_run(env: dict, row: dict, dry_run: bool) -> str | None:
+    """Insert (or refresh) a canonical run artifact tied to a network.
+
+    Identity for canonical runs is `(parent_id, hours, solver)` — re-running the
+    seed script shouldn't accumulate duplicate run rows for the same network.
+    """
+    url = env.get("NEXT_PUBLIC_SUPABASE_URL")
+    key = env.get("SUPABASE_SERVICE_ROLE_KEY")
+    if dry_run or not url or not key:
+        print(
+            f"  [dry-run] would upsert canonical run: "
+            f"slug={row['slug']} hours={row['metadata']['hours']} "
+            f"solver={row['metadata']['solver']}"
+        )
+        return None
+    parent_id = row.get("parent_id")
+    try:
+        if parent_id:
+            _, body = _supabase_request(
+                env,
+                "GET",
+                f"artifacts?kind=eq.run&user_id=is.null&parent_id=eq.{parent_id}&select=id",
+            )
+            existing = json.loads(body) if body else []
+            if existing:
+                existing_id = existing[0]["id"]
+                _supabase_request(
+                    env, "PATCH", f"artifacts?id=eq.{existing_id}", row
+                )
+                print(f"  updated run: id={existing_id}")
+                return existing_id
+        _, body = _supabase_request(env, "POST", "artifacts", row)
+        payload = json.loads(body) if body else []
+        new_id = payload[0]["id"] if payload else None
+        print(f"  inserted run: id={new_id or '?'}")
+        return new_id
+    except urllib.error.HTTPError as err:
+        print(
+            f"  ERROR upserting run for parent {parent_id}: HTTP {err.code} — "
+            f"{err.read().decode()[:200]}"
+        )
+        return None
 
 
 def main():
@@ -214,14 +262,38 @@ def main():
     for net_dir in folders:
         slug = net_dir.name
         print(f"- {slug}")
+        run_info = None
         if not args.skip_smoke:
             try:
-                smoke_dispatch(net_dir)
+                outcome, pnet, snapshots, used_solver, elapsed = run_dispatch(net_dir)
+                run_info = (outcome, pnet, snapshots, used_solver, elapsed)
+                print(
+                    f"  smoke ok: solver={used_solver} "
+                    f"prices_shape={getattr(outcome.prices, 'shape', None)} "
+                    f"elapsed={elapsed:.2f}s"
+                )
             except Exception as err:
                 print(f"  SKIP {slug}: smoke dispatch failed — {err}")
                 continue
         row = _build_row(slug, net_dir)
-        _upsert(env, row, args.dry_run)
+        network_id = _upsert(env, row, args.dry_run)
+
+        if run_info is not None:
+            outcome, pnet, snapshots, used_solver, elapsed = run_info
+            network_artifact = {"id": network_id, "user_id": None} if network_id else None
+            run_row = build_run_row(
+                network_artifact=network_artifact,
+                network_name=row["name"],
+                network_slug=slug,
+                net_dir=net_dir,
+                outcome=outcome,
+                pnet=pnet,
+                snapshots=snapshots,
+                used_solver=used_solver,
+                elapsed_s=elapsed,
+                canonical=True,
+            )
+            _upsert_run(env, run_row, args.dry_run)
 
 
 if __name__ == "__main__":

@@ -510,17 +510,66 @@ def _extract_topology(net_dir: Path) -> dict[str, Any]:
     }
 
 
-def _smoke_dispatch(net_dir: Path) -> dict[str, Any]:
-    from smoke_dispatch import smoke_dispatch
+def _smoke_dispatch(net_dir: Path):
+    """Run the 1-hour smoke and return ``(info_dict, dispatch_payload | None)``.
 
-    outcome = smoke_dispatch(net_dir)
-    info: dict[str, Any] = {"smoke_dispatch": "ok"}
+    ``info_dict`` is the metadata to merge onto the network artifact.
+    ``dispatch_payload`` is everything callers need to emit a run artifact
+    (outcome + pypsa network + snapshots + solver name + elapsed) — or None if
+    the dispatch failed unexpectedly.
+    """
+    from smoke_dispatch import run_dispatch
+
+    outcome, pnet, snapshots, used_solver, elapsed = run_dispatch(net_dir)
+    info: dict[str, Any] = {
+        "smoke_dispatch": "ok",
+        "smoke_solver": used_solver,
+        "smoke_elapsed_s": round(float(elapsed), 3),
+    }
     if outcome is not None and getattr(outcome, "prices", None) is not None:
         try:
             info["smoke_prices_shape"] = list(outcome.prices.shape)
         except Exception:
             pass
-    return info
+    return info, (outcome, pnet, snapshots, used_solver, elapsed)
+
+
+def _emit_run_artifact(
+    env: dict[str, str],
+    network_artifact: dict[str, Any],
+    net_dir: Path,
+    dispatch: tuple,
+) -> None:
+    """Insert a kind='run' artifact tied to ``network_artifact``.
+
+    Best-effort: any failure (missing zap helpers, malformed outcome, network
+    error to Supabase) is logged and swallowed so the network ingest still
+    completes.
+    """
+    try:
+        from run_artifact import build_run_row
+
+        outcome, pnet, snapshots, used_solver, elapsed = dispatch
+        row = build_run_row(
+            network_artifact=network_artifact,
+            network_name=network_artifact.get("name") or net_dir.name,
+            network_slug=network_artifact.get("slug"),
+            net_dir=net_dir,
+            outcome=outcome,
+            pnet=pnet,
+            snapshots=snapshots,
+            used_solver=used_solver,
+            elapsed_s=float(elapsed),
+            canonical=False,
+        )
+        # Preserve the owner's user_id for RLS even though we're using the
+        # service-role key — keeps cross-user reads honest.
+        if "user_id" not in row and network_artifact.get("user_id"):
+            row["user_id"] = network_artifact["user_id"]
+        _supabase_request(env, "POST", "artifacts", row)
+    except Exception:
+        sys.stderr.write("warn: failed to emit run artifact\n")
+        traceback.print_exc()
 
 
 def _resolve_network_dir(folder: Path) -> tuple[Path | None, dict[str, Any]]:
@@ -591,8 +640,15 @@ def ingest(artifact_id: str, folder: Path) -> None:
         if net_dir != folder:
             _patch_artifact(env, artifact_id, {"fs_path": str(net_dir)})
 
-        info = _smoke_dispatch(net_dir)
+        info, dispatch = _smoke_dispatch(net_dir)
         _set_pipeline_status(env, artifact_id, "ready", extra_metadata=info)
+
+        if dispatch is not None:
+            try:
+                network_artifact = _fetch_artifact(env, artifact_id)
+            except Exception:
+                network_artifact = {"id": artifact_id}
+            _emit_run_artifact(env, network_artifact, net_dir, dispatch)
     except Exception as err:
         message = "".join(traceback.format_exception(err))
         _set_failed(env, artifact_id, message)

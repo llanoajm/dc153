@@ -33,7 +33,13 @@ import zap  # noqa: E402
 SOLVER_FALLBACK = ("HIGHS", "CLARABEL", "SCS")
 
 
-def smoke_dispatch(net_dir: Path, hours: int = 1, solver: str | None = None):
+def run_dispatch(net_dir: Path, hours: int = 1, solver: str | None = None):
+    """Solve dispatch and return ``(outcome, pnet, snapshots, used_solver, elapsed)``.
+
+    Same solver-fallback logic as :func:`smoke_dispatch`, but exposes the pypsa
+    network and snapshot index so callers can extract per-bus/per-snapshot time
+    series for run artifacts (LMPs, dispatch by carrier, line flows).
+    """
     if not net_dir.exists():
         raise FileNotFoundError(f"network folder not found: {net_dir}")
     if not (net_dir / "buses.csv").exists():
@@ -46,7 +52,6 @@ def smoke_dispatch(net_dir: Path, hours: int = 1, solver: str | None = None):
     pnet.import_from_csv_folder(str(net_dir))
 
     if len(pnet.snapshots) == 0:
-        # network has no snapshot index — fall back to a synthetic 1-hour one
         pnet.set_snapshots(pd.date_range("2024-01-01", periods=1, freq="h"))
 
     snapshots = pnet.snapshots[:hours]
@@ -65,7 +70,6 @@ def smoke_dispatch(net_dir: Path, hours: int = 1, solver: str | None = None):
             break
         except Exception as err:
             last_err = err
-            # rebuild devices because zap mutates dispatch state on failure
             network, devices = zap.importers.load_pypsa_network(pnet, snapshots)
     if outcome is None:
         raise RuntimeError(
@@ -73,10 +77,16 @@ def smoke_dispatch(net_dir: Path, hours: int = 1, solver: str | None = None):
             f"last error: {last_err}"
         )
     elapsed = time.time() - t0
+    return outcome, pnet, snapshots, used_solver, elapsed
 
+
+def smoke_dispatch(net_dir: Path, hours: int = 1, solver: str | None = None):
+    outcome, pnet, snapshots, used_solver, elapsed = run_dispatch(
+        net_dir, hours=hours, solver=solver
+    )
     print(
-        f"OK  {net_dir.name}: {network.num_nodes} buses, "
-        f"{len(devices)} device-classes, {len(snapshots)} snapshot(s), "
+        f"OK  {net_dir.name}: {len(pnet.buses)} buses, "
+        f"{len(snapshots)} snapshot(s), "
         f"solver={used_solver}, solved in {elapsed:.2f}s"
     )
     if outcome.prices is not None:

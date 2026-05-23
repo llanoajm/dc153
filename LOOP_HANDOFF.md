@@ -1,5 +1,5 @@
-## Current item (from LOOP_QUEUE.md line 30)
-- [ ] 3. Artifacts table + universal renderer (ROADMAP §2, §11.6)
+## Current item (from LOOP_QUEUE.md line 40)
+- [ ] 4. Per-user MCP server exposing `features/` (ROADMAP §5)
 
 ## Attempt
 1 of 5
@@ -32,7 +32,7 @@
 - No emojis in code or UI unless explicitly requested.
 
 STATUS: done
-SUMMARY: Artifacts table + RLS, lib/artifacts.ts CRUD, eight renderers + dispatcher, /api/artifacts GET+POST, /app/artifacts/[id] page; npm run build exits 0.
+SUMMARY: Added scripts/user-mcp-server.py (stdio JSON-RPC MCP introspecting features/) and wired it into each workspace's opencode.jsonc via lib/user-workspace.ts, with a bootstrap features/example.py stub.
 NEXT_STEPS:
-ACCEPTANCE: schema.sql artifacts table with all required columns + RLS — pass; lib/artifacts.ts createArtifact/getArtifact/listArtifacts — pass; components/renderers/{markdown,table,chart,diff,code,file,log,dashboard}.tsx — pass; app/api/artifacts/route.ts GET (empty array when no rows) + POST create — pass; app/app/artifacts/[id]/page.tsx renders via matching renderer — pass; npm run build exits 0 — pass. NOTE: requires the user to paste updated supabase/schema.sql into the Supabase SQL editor before the table is reachable at runtime; build-time verification passes without DB access.
+ACCEPTANCE: all pass — scripts/user-mcp-server.py exists and exposes public functions of features/*.py as MCP tools (verified by direct JSON-RPC); the workspace opencode.jsonc registers mcp.user-features (verified — /mcp reports {"user-features":{"status":"connected"}} after server restart); features/example.py bootstrap lands and is picked up by the server (example__hello visible in tools/list); npm run build exits 0 (one pre-existing NFT trace warning unrelated to this change).
 VERIFIED: yes

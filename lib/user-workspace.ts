@@ -260,6 +260,17 @@ export async function writeOpencodeConfig(
     "glossary.md",
     "company-context.md",
   ]
+  // Per-workspace permission block. `external_directory: "deny"` is the load-
+  // bearing rule that stops the agent from touching files outside cwd; the
+  // per-tool maps tighten bash/edit to the workspace path (HARDENING §1.1).
+  const workspaceGlob = `${workspaceDir}/**`
+  const permission = {
+    bash: { "*": "ask", [workspaceGlob]: "allow" },
+    edit: { "*": "deny", [workspaceGlob]: "allow" },
+    external_directory: "deny",
+    webfetch: "ask",
+    websearch: "allow",
+  }
   const opencodeConfig = {
     $schema: "https://opencode.ai/config.json",
     provider: {},
@@ -274,7 +285,7 @@ export async function writeOpencodeConfig(
       },
     },
     instructions,
-    permission: {},
+    permission,
   }
   await fs.writeFile(
     path.join(workspaceDir, ".opencode", "opencode.jsonc"),

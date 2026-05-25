@@ -1,5 +1,6 @@
 import "server-only"
-import { ensureUserWorkspace } from "@/lib/user-workspace"
+import { ensureUserWorkspace, writeUserProviderConfig } from "@/lib/user-workspace"
+import { getUserProviderKeysMap } from "@/lib/provider-keys"
 
 // Fronted endpoint provisioned by scripts/opencode-proxy.ts (HARDENING §1.2).
 // Default points at the bearer-auth proxy on 4097, not raw opencode on 4096 —
@@ -22,8 +23,25 @@ function userHeaders(workspaceDir: string): HeadersInit {
   return opencodeHeaders(workspaceDir)
 }
 
+// Refresh the per-user provider key block in the workspace's opencode.jsonc
+// so the next opencode request bills against the user's own OpenRouter key
+// (HARDENING §1.4). opencode loads workspace-local `provider:` per request
+// and merges its `options.apiKey` over the env/auth key. When the user has
+// no per-user key set, we write an empty provider block, which transparently
+// falls back to the shared env key. Best-effort: a DB hiccup here must not
+// block the session call from going out.
+async function refreshProviderConfig(userId: string, dir: string): Promise<void> {
+  try {
+    const keys = await getUserProviderKeysMap(userId)
+    await writeUserProviderConfig(dir, keys)
+  } catch (e) {
+    console.warn(`refreshProviderConfig failed for user=${userId}:`, e)
+  }
+}
+
 export async function createSession(userId: string): Promise<{ id: string; directory: string }> {
   const dir = await ensureUserWorkspace(userId)
+  await refreshProviderConfig(userId, dir)
   const res = await fetch(`${OPENCODE_BASE_URL}/session`, {
     method: "POST",
     headers: userHeaders(dir),
@@ -50,6 +68,7 @@ export async function sendPrompt(
   opts: { agent?: string; providerID?: string; modelID?: string } = {},
 ) {
   const dir = await ensureUserWorkspace(userId)
+  await refreshProviderConfig(userId, dir)
   const body = {
     agent: opts.agent ?? "grid-engineer",
     model: {

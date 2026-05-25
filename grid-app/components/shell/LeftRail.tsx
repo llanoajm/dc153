@@ -20,6 +20,7 @@ const DEFAULT_SECTIONS: RailSection[] = [
   { key: "orgs", label: "Orgs" },
   { key: "dashboards", label: "Dashboards" },
   { key: "panels", label: "Panels" },
+  { key: "settings", label: "Settings" },
 ]
 
 export function LeftRail({

@@ -251,9 +251,52 @@ export function workspaceRoot(): string {
 const ORG_GLOSSARY_PREFIX = "glossary.org."
 const ORG_CONTEXT_PREFIX = "company-context.org."
 
+// Filename for the opencode workspace config, relative to .opencode/.
+const OPENCODE_CONFIG_FILE = "opencode.jsonc"
+
+function opencodeConfigPath(workspaceDir: string): string {
+  return path.join(workspaceDir, ".opencode", OPENCODE_CONFIG_FILE)
+}
+
+// Read the existing `provider:` block from the workspace's opencode.jsonc so
+// per-user provider keys (HARDENING §1.4) survive an org-overlay or workspace
+// re-materialization. Returns `{}` if the file is missing or unparseable.
+async function readExistingProviderBlock(
+  workspaceDir: string,
+): Promise<Record<string, unknown>> {
+  try {
+    const raw = await fs.readFile(opencodeConfigPath(workspaceDir), "utf8")
+    const parsed = JSON.parse(raw) as { provider?: unknown }
+    if (parsed.provider && typeof parsed.provider === "object" && !Array.isArray(parsed.provider)) {
+      return parsed.provider as Record<string, unknown>
+    }
+  } catch {
+    // Missing file / bad JSON — start from empty.
+  }
+  return {}
+}
+
+// Translate a `{ providerID: apiKey }` map into the opencode provider config
+// shape (`{ <id>: { options: { apiKey: <key> } } }`). opencode's config loader
+// merges workspace-local provider config over global / env (see
+// packages/opencode/src/provider/provider.ts), so writing this into a user's
+// workspace `.opencode/opencode.jsonc` causes that user's sessions to bill
+// against that user's key — no fork modification needed.
+function buildProviderBlock(
+  providerKeys: Record<string, string>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const [providerId, apiKey] of Object.entries(providerKeys)) {
+    if (!apiKey) continue
+    out[providerId] = { options: { apiKey } }
+  }
+  return out
+}
+
 export async function writeOpencodeConfig(
   workspaceDir: string,
   orgOverlayFiles: string[],
+  providerKeys?: Record<string, string>,
 ): Promise<void> {
   const instructions = [
     ...orgOverlayFiles,
@@ -271,9 +314,16 @@ export async function writeOpencodeConfig(
     webfetch: "ask",
     websearch: "allow",
   }
+  // If the caller passed explicit keys, use them; otherwise preserve whatever
+  // the current config file holds so we don't blow away per-user keys on a
+  // routine workspace re-materialization or org-overlay swap.
+  const provider =
+    providerKeys !== undefined
+      ? buildProviderBlock(providerKeys)
+      : await readExistingProviderBlock(workspaceDir)
   const opencodeConfig = {
     $schema: "https://opencode.ai/config.json",
-    provider: {},
+    provider,
     mcp: {
       "user-features": {
         type: "local",
@@ -288,10 +338,28 @@ export async function writeOpencodeConfig(
     permission,
   }
   await fs.writeFile(
-    path.join(workspaceDir, ".opencode", "opencode.jsonc"),
+    opencodeConfigPath(workspaceDir),
     JSON.stringify(opencodeConfig, null, 2) + "\n",
     "utf8",
   )
+}
+
+// Refresh only the `provider:` block of an existing workspace config without
+// touching overlays / permissions / mcp. Used after a per-user provider key
+// is added or removed via /api/settings/provider-keys.
+export async function writeUserProviderConfig(
+  workspaceDir: string,
+  providerKeys: Record<string, string>,
+): Promise<void> {
+  const p = opencodeConfigPath(workspaceDir)
+  let parsed: Record<string, unknown>
+  try {
+    parsed = JSON.parse(await fs.readFile(p, "utf8")) as Record<string, unknown>
+  } catch {
+    parsed = {}
+  }
+  parsed.provider = buildProviderBlock(providerKeys)
+  await fs.writeFile(p, JSON.stringify(parsed, null, 2) + "\n", "utf8")
 }
 
 export interface OrgOverlay {

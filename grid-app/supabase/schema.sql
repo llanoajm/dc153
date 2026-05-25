@@ -206,6 +206,56 @@ alter table public.profiles
   add column if not exists active_org_id uuid references public.orgs(id) on delete set null;
 
 -- ============================================================================
+-- provider_keys  (HARDENING §1.4)
+--
+-- Per-user provider API credentials. Today every opencode session bills
+-- against one shared OpenRouter key in opencode's env; a runaway loop bills
+-- the whole org. With this table, each user can paste their own key in
+-- /app/settings; grid-app writes it into their workspace's
+-- .opencode/opencode.jsonc under `provider.<id>.options.apiKey`, and opencode
+-- picks it up at request time (no fork modification required — opencode's
+-- config loader merges workspace-local `provider:` over global / env).
+--
+-- `encrypted_key` is NOT plaintext. grid-app encrypts the value with
+-- AES-256-GCM keyed off `STEINMETZ_PROVIDER_KEYS_SECRET` before insert; the
+-- format is `<iv-hex>:<tag-hex>:<ciphertext-hex>`. This is the interim path
+-- — Supabase Vault / pgsodium would let us drop the app-side secret, but
+-- enabling those extensions is a separate vault-setup workflow and out of
+-- scope for §1.4. RLS keeps the row pinned to the owning user; the
+-- app-secret encryption is a defense-in-depth layer for the case where
+-- someone exfiltrates a DB dump but doesn't have grid-app's .env.local.
+-- `key_hint` is the masked tail (e.g. "sk-or-...3a2f") so the settings page
+-- can show what's stored without round-tripping decryption to the browser.
+-- ============================================================================
+create table if not exists public.provider_keys (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  provider text not null,
+  encrypted_key text not null,
+  key_hint text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create unique index if not exists provider_keys_user_provider_idx
+  on public.provider_keys (user_id, provider);
+
+alter table public.provider_keys enable row level security;
+
+drop policy if exists "provider_keys select own" on public.provider_keys;
+create policy "provider_keys select own" on public.provider_keys
+  for select using (auth.uid() = user_id);
+drop policy if exists "provider_keys insert own" on public.provider_keys;
+create policy "provider_keys insert own" on public.provider_keys
+  for insert with check (auth.uid() = user_id);
+drop policy if exists "provider_keys update own" on public.provider_keys;
+create policy "provider_keys update own" on public.provider_keys
+  for update using (auth.uid() = user_id);
+drop policy if exists "provider_keys delete own" on public.provider_keys;
+create policy "provider_keys delete own" on public.provider_keys
+  for delete using (auth.uid() = user_id);
+
+-- ============================================================================
 -- artifacts
 --
 -- The single first-class concept (ROADMAP §2). Every harness output —

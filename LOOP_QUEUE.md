@@ -60,7 +60,7 @@ under three phase gates:
     - `lib/opencode-client.ts` `sendPrompt` (or equivalent session-config plumbing) fetches the user's key and passes it via per-session model config, falling back to the shared env key only when none is set.
     - `npm run build` exits 0.
 
-- [ ] 2.1 Per-user pip target (HARDENING_ROADMAP §2.1)
+- [x] 2.1 Per-user pip target (HARDENING_ROADMAP §2.1)
   - context: `pip install` from the agent's Bash currently lands in the shared `/home/agent/zap/.venv/`; isolate per user via `--target=<WORKSPACE>/.python_libs/` + `PYTHONPATH`.
   - acceptance:
     - Workspace `AGENTS.md` template (in `lib/user-workspace.ts`) documents `pip install --target=<WORKSPACE>/.python_libs <pkg>` as the convention.

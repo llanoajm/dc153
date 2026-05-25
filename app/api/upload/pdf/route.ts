@@ -5,6 +5,7 @@ import { spawn } from "node:child_process"
 import { createClient } from "@/lib/supabase/server"
 import { createArtifact } from "@/lib/artifacts"
 import { ensureUserWorkspace, pythonEnv } from "@/lib/user-workspace"
+import { acquireSlot, releaseTokenAsync } from "@/lib/proceed"
 
 const PY_BIN = process.env.STEINMETZ_PY || "/home/agent/zap/.venv/bin/python"
 
@@ -72,6 +73,28 @@ export async function POST(req: NextRequest) {
   const buf = Buffer.from(await file.arrayBuffer())
   await fs.writeFile(pdfPath, buf)
 
+  // HARDENING §2.2: gate the detached ingester. Slug + version are the only
+  // bits that matter for an args digest — the file content isn't worth
+  // hashing twice.
+  const admission = await acquireSlot({
+    userId: user.id,
+    tool: "upload__pdf",
+    args: { slug, version },
+  })
+  if (!admission.ok) {
+    return NextResponse.json(
+      {
+        error: "concurrency_limit",
+        reason: admission.reason,
+        retry_after: admission.retryAfter,
+      },
+      {
+        status: 429,
+        headers: { "Retry-After": String(admission.retryAfter) },
+      },
+    )
+  }
+
   const artifact = await createArtifact({
     kind: "source_document",
     name: nameInput,
@@ -93,12 +116,17 @@ export async function POST(req: NextRequest) {
     },
   })
 
-  spawnIngestion(artifact.id, pdfPath, workspace)
+  spawnIngestion(artifact.id, pdfPath, workspace, admission.token)
 
   return NextResponse.json(artifact, { status: 201 })
 }
 
-function spawnIngestion(artifactId: string, pdfPath: string, workspace: string) {
+function spawnIngestion(
+  artifactId: string,
+  pdfPath: string,
+  workspace: string,
+  proceedToken: string,
+) {
   const child = spawn(
     PY_BIN,
     [
@@ -117,6 +145,20 @@ function spawnIngestion(artifactId: string, pdfPath: string, workspace: string) 
       env: pythonEnv(workspace),
     },
   )
+  child.on("close", (code) => {
+    void releaseTokenAsync({
+      token: proceedToken,
+      status: code === 0 ? "ok" : "error",
+      error: code === 0 ? null : `ingester exited ${code}`,
+    })
+  })
+  child.on("error", (err) => {
+    void releaseTokenAsync({
+      token: proceedToken,
+      status: "error",
+      error: String(err),
+    })
+  })
   child.unref()
 }
 

@@ -459,3 +459,53 @@ create policy "audit_log select scope" on public.audit_log
     auth.uid() = user_id
     or (org_id is not null and public.is_org_member(org_id))
   );
+
+-- ============================================================================
+-- tool_runs  (HARDENING §2.2)
+--
+-- One row per `may_I_proceed()`-gated tool call. The per-user MCP server (and
+-- the detached-spawn upload routes) POST /api/internal/proceed before running
+-- a tool and /api/internal/release when it finishes; grid-app inserts the row
+-- on proceed and updates it on release. Powers the live-status view (which
+-- tool is each user running right now?) + audit + a future "cancel" button.
+--
+-- `token` is the in-memory slot token returned by lib/concurrency.ts. Status
+-- progresses running → ok | error | rejected | orphaned. Rejected rows are
+-- inserted by the proceed route when a 429 is returned (so we still have a
+-- record of attempted runs the bucket refused). Orphaned rows are written by
+-- the in-memory sweep when no release arrives before `expected_deadline +
+-- grace`.
+--
+-- All writes go through the service-role client; users get read-only access
+-- to their own rows for the live-status view.
+-- ============================================================================
+create table if not exists public.tool_runs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete set null,
+  tool text not null,
+  args_digest text,
+  token text not null unique,
+  started_at timestamptz not null default now(),
+  expected_deadline timestamptz,
+  ended_at timestamptz,
+  runtime_ms integer,
+  status text not null default 'running'
+    check (status in ('running', 'ok', 'error', 'rejected', 'orphaned')),
+  error text,
+  created_at timestamptz default now()
+);
+
+create index if not exists tool_runs_user_started_idx
+  on public.tool_runs (user_id, started_at desc);
+create index if not exists tool_runs_status_idx
+  on public.tool_runs (status);
+create index if not exists tool_runs_deadline_idx
+  on public.tool_runs (expected_deadline) where status = 'running';
+
+alter table public.tool_runs enable row level security;
+
+-- Users read their own runs (live-status panel). All writes (insert/update)
+-- are service-role only — the proceed/release routes use the service client.
+drop policy if exists "tool_runs select own" on public.tool_runs;
+create policy "tool_runs select own" on public.tool_runs
+  for select using (auth.uid() = user_id);

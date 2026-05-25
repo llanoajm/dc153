@@ -5,6 +5,7 @@ import { spawn } from "node:child_process"
 import { createClient } from "@/lib/supabase/server"
 import { createArtifact } from "@/lib/artifacts"
 import { ensureUserWorkspace, pythonEnv } from "@/lib/user-workspace"
+import { acquireSlot, releaseTokenAsync } from "@/lib/proceed"
 
 const PY_BIN = process.env.STEINMETZ_PY || "/home/agent/zap/.venv/bin/python"
 
@@ -159,6 +160,27 @@ export async function POST(req: NextRequest) {
   const buf = Buffer.from(await file.arrayBuffer())
   await fs.writeFile(filePath, buf)
 
+  // HARDENING §2.2: bucket-gated ingestion. Vision / audio captioning chews
+  // CPU + outbound OpenRouter quota, so the same caps apply.
+  const admission = await acquireSlot({
+    userId: user.id,
+    tool: `upload__${cfg.kind}`,
+    args: { slug, version, kind: cfg.kind },
+  })
+  if (!admission.ok) {
+    return NextResponse.json(
+      {
+        error: "concurrency_limit",
+        reason: admission.reason,
+        retry_after: admission.retryAfter,
+      },
+      {
+        status: 429,
+        headers: { "Retry-After": String(admission.retryAfter) },
+      },
+    )
+  }
+
   const artifact = await createArtifact({
     kind: "source_document",
     name: nameInput,
@@ -181,12 +203,18 @@ export async function POST(req: NextRequest) {
     },
   })
 
-  spawnIngestion(cfg, artifact.id, filePath, workspace)
+  spawnIngestion(cfg, artifact.id, filePath, workspace, admission.token)
 
   return NextResponse.json(artifact, { status: 201 })
 }
 
-function spawnIngestion(cfg: IngesterConfig, artifactId: string, filePath: string, workspace: string) {
+function spawnIngestion(
+  cfg: IngesterConfig,
+  artifactId: string,
+  filePath: string,
+  workspace: string,
+  proceedToken: string,
+) {
   const scriptPath = path.join(process.cwd(), "scripts", cfg.script)
   const child = spawn(
     PY_BIN,
@@ -198,6 +226,20 @@ function spawnIngestion(cfg: IngesterConfig, artifactId: string, filePath: strin
       env: pythonEnv(workspace),
     },
   )
+  child.on("close", (code) => {
+    void releaseTokenAsync({
+      token: proceedToken,
+      status: code === 0 ? "ok" : "error",
+      error: code === 0 ? null : `${cfg.kind} ingester exited ${code}`,
+    })
+  })
+  child.on("error", (err) => {
+    void releaseTokenAsync({
+      token: proceedToken,
+      status: "error",
+      error: String(err),
+    })
+  })
   child.unref()
 }
 

@@ -1,6 +1,12 @@
 import "server-only"
 import fs from "node:fs/promises"
 import path from "node:path"
+import { ensureLinuxAccount, shortUidFor } from "@/lib/linux-account"
+
+// Re-export so downstream items 3.2 (per-user opencode units) and 3.3
+// (per-user venvs) can resolve a Linux short-uid from a supabase uid via the
+// canonical workspace API.
+export { shortUidFor, linuxUserFor, linuxGroup } from "@/lib/linux-account"
 
 const ROOT = process.env.GRID_WORKSPACE_ROOT || "/home/agent/grid-workspaces"
 const PY_BIN = process.env.STEINMETZ_PY || "/home/agent/zap/.venv/bin/python"
@@ -13,6 +19,15 @@ const MCP_SERVER_SCRIPT =
 // works here; it does NOT modify the shared zap repo.
 export async function ensureUserWorkspace(userId: string): Promise<string> {
   const dir = path.join(ROOT, userId)
+
+  // HARDENING §3.1: once the workspace has been chowned to a per-user Linux
+  // account, grid-app (running as `agent`) can no longer enter the dir to
+  // mkdir/write — and shouldn't need to, because per-user opencode (3.2) and
+  // per-user Python (3.3) write everything from then on. Stat the dir to
+  // detect that hand-off without trying to read inside; if the uid is no
+  // longer ours, treat the workspace as already provisioned and return.
+  if (await isWorkspaceHandedOff(dir)) return dir
+
   await fs.mkdir(path.join(dir, ".opencode", "agent"), { recursive: true })
   await fs.mkdir(path.join(dir, ".opencode", "skills"), { recursive: true })
   await fs.mkdir(path.join(dir, "features"), { recursive: true })
@@ -250,7 +265,31 @@ def echo(message: str) -> str:
 `,
   )
 
+  // HARDENING §3.1: lock the workspace to a per-user Linux account *after*
+  // all bootstrap writes complete — once the dir is chowned + 700, grid-app
+  // (running as `agent`) can no longer create files inside. Gated on
+  // STEINMETZ_ENABLE_LINUX_ACCOUNTS=1 so dev / CI keep working; production
+  // flips the flag once item 3.2 ships and per-user opencode units take
+  // over workspace writes. Idempotent + fail-soft (see lib/linux-account.ts).
+  await ensureLinuxAccount(dir, userId)
+
   return dir
+}
+
+// HARDENING §3.1: detect that the workspace has already been chowned to a
+// per-user Linux account. We can stat the dir entry (we still have x on the
+// parent) even when mode 700 + alien owner would block any read/write inside.
+// Returns false on missing / stat error / still-owned-by-us; in those cases
+// the caller proceeds with the normal bootstrap path.
+async function isWorkspaceHandedOff(dir: string): Promise<boolean> {
+  const ours = typeof process.getuid === "function" ? process.getuid() : undefined
+  if (ours === undefined) return false
+  try {
+    const st = await fs.stat(dir)
+    return st.uid !== ours
+  } catch {
+    return false
+  }
 }
 
 async function writeIfMissing(p: string, content: string): Promise<void> {

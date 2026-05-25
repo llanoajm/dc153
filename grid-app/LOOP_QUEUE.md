@@ -79,7 +79,7 @@ under three phase gates:
     - `npm run build` exits 0.
     - Behavioural smoke (best-effort, document in handoff): two concurrent same-user `iesp__solve` calls — second returns 429 surfaced as an MCP tool error.
 
-- [ ] 2.3 Disk quotas + monitoring (HARDENING_ROADMAP §2.3)
+- [x] 2.3 Disk quotas + monitoring (HARDENING_ROADMAP §2.3)
   - context: keep one user's PPTX-heavy workspace from filling `/` and bricking the VM. Mostly ops-shaped work, but the app-side enforcement and the script need to land in this repo.
   - acceptance:
     - `scripts/quota_check.sh` exists; documents how `du -sh` per workspace is computed and how `profiles.over_quota=true` is flipped at the 80% mark.

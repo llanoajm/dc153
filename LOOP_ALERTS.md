@@ -31,3 +31,4 @@
 [2026-05-25T02:42:00+00:00] DONE: - [ ] 3.1 Per-user Linux account (HARDENING_ROADMAP §3.1)
 [2026-05-25T02:55:09+00:00] DONE: - [ ] 3.2 Per-user opencode server (HARDENING_ROADMAP §3.2)
 [2026-05-25T03:10:15+00:00] DONE: - [ ] 3.3 Per-user Python environment (HARDENING_ROADMAP §3.3)
+[2026-05-25T03:19:00+00:00] DONE: - [ ] 3.4 systemd resource limits per user (HARDENING_ROADMAP §3.4)

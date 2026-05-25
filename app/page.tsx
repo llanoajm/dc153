@@ -13,12 +13,6 @@ export default function LandingPage() {
           >
             Sign in
           </Link>
-          <Link
-            href="/signup"
-            className="px-5 py-2 hover:underline underline-offset-4"
-          >
-            Create account
-          </Link>
         </div>
       </div>
       <footer className="fixed bottom-6 inset-x-0 text-center font-serif-soft text-[13px] sm:text-[15px] leading-none">

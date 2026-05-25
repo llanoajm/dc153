@@ -76,11 +76,8 @@ function LoginForm() {
             {pending ? "Signing in…" : "Sign in"}
           </button>
         </form>
-        <p className="text-xs font-serif-soft">
-          No account?{" "}
-          <Link href="/signup" className="underline underline-offset-4">
-            Create one
-          </Link>
+        <p className="text-xs font-serif-soft text-black/60">
+          Closed beta — access by invitation only.
         </p>
       </div>
       <footer className="fixed bottom-6 inset-x-0 text-center font-serif-soft text-[13px]">

@@ -108,7 +108,7 @@ under three phase gates:
     - `npm run build` exits 0.
     - Behavioural smoke (best-effort, document in handoff): killing user A's unit doesn't affect user B's chat.
 
-- [ ] 3.3 Per-user Python environment (HARDENING_ROADMAP §3.3)
+- [x] 3.3 Per-user Python environment (HARDENING_ROADMAP §3.3)
   - context: per-user venv at `/home/steinmetz-<short-uid>/.venv/` (or under the workspace); zap stays system-wide, exposed read-only via `.pth` or sys.path injection.
   - acceptance:
     - `lib/user-workspace.ts` provisions a per-user venv on first session (idempotent) and exposes a `pyInterpreterFor(supabaseUid)` helper.

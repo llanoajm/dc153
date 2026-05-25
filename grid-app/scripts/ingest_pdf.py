@@ -140,8 +140,8 @@ def extract_pdf(pdf_path: Path) -> tuple[str, list[tuple[int, str]]]:
         import pypdf  # type: ignore
     except ImportError as exc:  # pragma: no cover
         raise RuntimeError(
-            "pypdf not installed in the venv — run "
-            "`pip install --target=/home/agent/zap/.venv/lib/python3.12/site-packages pypdf`"
+            "pypdf not installed — run "
+            "`<workspace>/.venv/bin/python -m pip install --target=<workspace>/.python_libs pypdf`"
         ) from exc
 
     reader = pypdf.PdfReader(str(pdf_path))

@@ -52,8 +52,8 @@ def _extract_slides(pptx_path: Path, images_dir: Path) -> list[dict[str, Any]]:
         from pptx import Presentation  # type: ignore
     except ImportError as exc:  # pragma: no cover
         raise RuntimeError(
-            "python-pptx not installed in the venv — run "
-            "`pip install --target=/home/agent/zap/.venv/lib/python3.12/site-packages python-pptx`"
+            "python-pptx not installed — run "
+            "`<workspace>/.venv/bin/python -m pip install --target=<workspace>/.python_libs python-pptx`"
         ) from exc
 
     pres = Presentation(str(pptx_path))

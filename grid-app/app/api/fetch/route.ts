@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server"
 import path from "node:path"
 import { spawn } from "node:child_process"
 import { createClient } from "@/lib/supabase/server"
-import { ensureUserWorkspace, pythonEnv } from "@/lib/user-workspace"
+import {
+  ensureUserWorkspace,
+  pyInterpreterForWorkspace,
+  pythonEnv,
+} from "@/lib/user-workspace"
 import { acquireSlot, releaseTokenAsync } from "@/lib/proceed"
-
-const PY_BIN = process.env.STEINMETZ_PY || "/home/agent/zap/.venv/bin/python"
 
 function fetchScriptPath(): string {
   if (process.env.STEINMETZ_FETCH_SCRIPT) return process.env.STEINMETZ_FETCH_SCRIPT
@@ -128,7 +130,7 @@ interface FetchResult {
 
 function runFetch(args: string[], workspace: string): Promise<FetchResult> {
   return new Promise((resolve) => {
-    const child = spawn(PY_BIN, args, {
+    const child = spawn(pyInterpreterForWorkspace(workspace), args, {
       cwd: process.cwd(),
       env: pythonEnv(workspace),
     })

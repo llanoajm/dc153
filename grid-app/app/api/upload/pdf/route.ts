@@ -4,11 +4,13 @@ import path from "node:path"
 import { spawn } from "node:child_process"
 import { createClient } from "@/lib/supabase/server"
 import { createArtifact } from "@/lib/artifacts"
-import { ensureUserWorkspace, pythonEnv } from "@/lib/user-workspace"
+import {
+  ensureUserWorkspace,
+  pyInterpreterForWorkspace,
+  pythonEnv,
+} from "@/lib/user-workspace"
 import { acquireSlot, releaseTokenAsync } from "@/lib/proceed"
 import { checkUserQuota } from "@/lib/quota"
-
-const PY_BIN = process.env.STEINMETZ_PY || "/home/agent/zap/.venv/bin/python"
 
 function ingestScriptPath(): string {
   if (process.env.STEINMETZ_INGEST_PDF_SCRIPT) return process.env.STEINMETZ_INGEST_PDF_SCRIPT
@@ -140,7 +142,7 @@ function spawnIngestion(
   proceedToken: string,
 ) {
   const child = spawn(
-    PY_BIN,
+    pyInterpreterForWorkspace(workspace),
     [
       ingestScriptPath(),
       "--artifact-id",

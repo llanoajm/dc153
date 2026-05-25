@@ -98,7 +98,7 @@ under three phase gates:
     - Documented host-side prereq (in STATE.md or AGENTS.md): grid-app must run in group `steinmetz`; sudoers / capability grant for `useradd`/`chown` recorded.
     - `npm run build` exits 0.
 
-- [ ] 3.2 Per-user opencode server (HARDENING_ROADMAP §3.2)
+- [x] 3.2 Per-user opencode server (HARDENING_ROADMAP §3.2)
   - context: one opencode unit per user, bound to a Unix socket; grid-app routes per-request based on the user's short-uid.
   - acceptance:
     - A systemd template unit (e.g. `infra/systemd/steinmetz-opencode@.service` or `deploy/systemd/...`) is committed; parameterised by `<short-uid>`, runs as `User=steinmetz-<short-uid>`, binds `/run/steinmetz/<short-uid>.sock` (mode 0660, group `steinmetz`).

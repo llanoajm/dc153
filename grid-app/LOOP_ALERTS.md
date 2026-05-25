@@ -28,3 +28,4 @@
 [2026-05-25T02:04:10+00:00] DONE: - [ ] 2.1 Per-user pip target (HARDENING_ROADMAP §2.1)
 [2026-05-25T02:19:31+00:00] DONE: - [ ] 2.2 Per-user solve concurrency limits + tool-run visibility (HARDENING_ROADMAP §2.2)
 [2026-05-25T02:32:01+00:00] DONE: - [ ] 2.3 Disk quotas + monitoring (HARDENING_ROADMAP §2.3)
+[2026-05-25T02:42:00+00:00] DONE: - [ ] 3.1 Per-user Linux account (HARDENING_ROADMAP §3.1)

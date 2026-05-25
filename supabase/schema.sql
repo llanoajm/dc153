@@ -49,6 +49,17 @@ create trigger on_auth_user_created
 alter table public.profiles
   add column if not exists over_quota boolean not null default false;
 
+-- HARDENING §3.4: per-user systemd resource tier. Null = default tier
+-- (MemoryMax=4G / CPUQuota=200% / IOWeight=100). Valid non-null values are
+-- mapped by lib/compute-tier.ts:resolveComputeTier (today: 'low' | 'default'
+-- | 'high'); unknown strings fall back to default rather than fail. The
+-- value is consumed by `ensureUserSlice` when it materialises the per-user
+-- slice unit file at workspace-create time — a tier change requires
+-- re-materialising the slice file (and a `systemctl daemon-reload`) before
+-- the new limits take effect.
+alter table public.profiles
+  add column if not exists compute_tier text;
+
 -- ============================================================================
 -- features
 -- ============================================================================

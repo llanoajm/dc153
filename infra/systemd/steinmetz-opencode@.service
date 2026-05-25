@@ -34,6 +34,16 @@ Type=simple
 User=steinmetz-%i
 Group=steinmetz
 
+# HARDENING §3.4 — every per-user opencode unit runs inside a per-user slice
+# so cgroup-enforced Memory/CPU/IO limits bound it. The slice unit file is
+# materialised at user-create time from `infra/systemd/steinmetz-%i.slice`
+# (see lib/compute-tier.ts + infra/systemd/README.md). If the slice file is
+# absent, systemd falls back to a transient slice with no resource caps —
+# the unit still starts, just unconstrained. Materialisation is gated on
+# STEINMETZ_PER_USER_SLICES=1 so dev environments without sudo continue to
+# work.
+Slice=steinmetz-%i.slice
+
 # Materialise /run/steinmetz with permissions that let the steinmetz group
 # traverse but only the per-user account create the socket file.
 RuntimeDirectory=steinmetz
@@ -54,9 +64,6 @@ ExecStart=/home/agent/.bun/bin/bun run /home/agent/grid-app/scripts/per-user-ope
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=30
-
-# §3.4 will fill in cgroup limits via Slice=steinmetz-%i.slice; this unit is
-# intentionally pure-identity-and-binding for §3.2.
 
 [Install]
 WantedBy=multi-user.target

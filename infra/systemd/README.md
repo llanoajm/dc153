@@ -132,6 +132,71 @@ The behavioural smoke (acceptance bullet) is documented as best-effort
 because this VM is not a multi-user host today; the verifier confirms
 the in-repo plumbing only.
 
+## Step 7 — per-user cgroup slices (HARDENING §3.4)
+
+Resource caps for each per-user opencode unit live in a sibling slice unit
+`steinmetz-<short-uid>.slice` (referenced by `Slice=` on the opencode
+template). Caps default to `MemoryMax=4G` / `CPUQuota=200%` / `IOWeight=100`
+and are tunable per user via `profiles.compute_tier` (`low` / `default` /
+`high`, resolved by `lib/compute-tier.ts:resolveComputeTier`).
+
+systemd does not instantiate `.slice` template units the way it instantiates
+`@.service` units, so the file `infra/systemd/steinmetz-%i.slice` is a
+*source* template that grid-app rewrites per user (substituting `%i` and the
+tier's limits) and installs at user-create time.
+
+### Materialisation
+
+`lib/user-workspace.ts:ensureUserWorkspace` calls
+`lib/compute-tier.ts:ensureUserSlice(userId)` after the workspace dir is
+provisioned. When `STEINMETZ_PER_USER_SLICES=1` that helper:
+
+1. Reads `infra/systemd/steinmetz-%i.slice` from the grid-app checkout.
+2. Substitutes `%i` for the short-uid (`sha256(supabase_uid)[:16]`) and
+   rewrites the `MemoryMax=` / `CPUQuota=` / `IOWeight=` lines with the
+   user's resolved tier parameters.
+3. `sudo install -m 0644 -o root -g root <tmp> /etc/systemd/system/steinmetz-<short-uid>.slice`.
+4. `sudo systemctl daemon-reload` so the new (or changed) limits become
+   live before the next `systemctl start` of the opencode unit.
+
+Manual materialisation (for an out-of-band tier change before the surface
+to edit it exists) — substitute `<short>` with the user's short-uid and
+edit the limits to taste:
+
+```bash
+sed 's/%i/<short>/g' infra/systemd/steinmetz-%i.slice \
+  | sudo tee /etc/systemd/system/steinmetz-<short>.slice
+sudo systemctl daemon-reload
+# If the user's opencode is already running, restart it so it joins the
+# updated slice; otherwise the next session-start picks it up automatically.
+sudo systemctl restart steinmetz-opencode@<short>.service
+```
+
+Sudoers entry on the VM (`/etc/sudoers.d/steinmetz-hardening`, mode 0440):
+
+```
+agent ALL=(root) NOPASSWD: /usr/bin/install -m 0644 -o root -g root /tmp/* /etc/systemd/system/steinmetz-*.slice
+agent ALL=(root) NOPASSWD: /usr/bin/systemctl daemon-reload
+```
+
+### Verifying the cap
+
+```bash
+systemctl status steinmetz-<short>.slice
+# expect: MemoryMax=4.0G  CPUQuota=200%  IOWeight=100
+
+# Provoke an OOM inside the slice; the VM and other slices stay up.
+sudo -u steinmetz-<short> systemd-run --slice=steinmetz-<short>.slice \
+     /bin/sh -c 'python3 -c "x=bytearray(8*1024**3)"'
+journalctl -u steinmetz-<short>.slice --since '5 min ago' | grep -i oom
+```
+
+If the slice file is absent (flag off, sudo missing, install failure)
+systemd creates a transient slice for the opencode unit with no caps. The
+unit still starts — observable in `systemctl status steinmetz-<short>.slice`
+as "Loaded: not-found" — so the failure mode is "no isolation," not "no
+chat."
+
 ## Anti-goals
 
 - **No per-user TCP port exposure beyond loopback.** The supervisor binds

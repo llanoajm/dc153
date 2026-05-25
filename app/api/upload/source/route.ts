@@ -4,11 +4,13 @@ import path from "node:path"
 import { spawn } from "node:child_process"
 import { createClient } from "@/lib/supabase/server"
 import { createArtifact } from "@/lib/artifacts"
-import { ensureUserWorkspace, pythonEnv } from "@/lib/user-workspace"
+import {
+  ensureUserWorkspace,
+  pyInterpreterForWorkspace,
+  pythonEnv,
+} from "@/lib/user-workspace"
 import { acquireSlot, releaseTokenAsync } from "@/lib/proceed"
 import { checkUserQuota } from "@/lib/quota"
-
-const PY_BIN = process.env.STEINMETZ_PY || "/home/agent/zap/.venv/bin/python"
 
 // Universal source-document upload (ROADMAP §1, LOOP_QUEUE item 13).
 // Accepts PDF, PPTX, image (PNG/JPEG/GIF/WEBP), and audio (MP3/WAV/M4A/OGG/
@@ -228,7 +230,7 @@ function spawnIngestion(
 ) {
   const scriptPath = path.join(process.cwd(), "scripts", cfg.script)
   const child = spawn(
-    PY_BIN,
+    pyInterpreterForWorkspace(workspace),
     [scriptPath, "--artifact-id", artifactId, cfg.flag, filePath, "--workspace", workspace],
     {
       detached: true,

@@ -47,7 +47,21 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent.parent
 ENV_FILE = ROOT / ".env.local"
 INGEST_SCRIPT = ROOT / "scripts" / "ingest_pypsa_folder.py"
-PY_BIN = os.environ.get("STEINMETZ_PY") or "/home/agent/zap/.venv/bin/python"
+
+
+def _py_bin_for_workspace(workspace: Path) -> str:
+    """Resolve the per-user interpreter (HARDENING §3.3).
+
+    The workspace's own venv at ``<workspace>/.venv/bin/python`` is created
+    on first session by ``lib/user-workspace.ts:ensurePerUserVenv``. Fall
+    back to ``sys.executable`` only if the venv hasn't been materialized
+    yet — this script always runs under the per-user interpreter in normal
+    operation, so ``sys.executable`` is the right fallback.
+    """
+    candidate = workspace / ".venv" / "bin" / "python"
+    if candidate.exists():
+        return str(candidate)
+    return sys.executable
 
 
 class FetchError(RuntimeError):
@@ -230,7 +244,14 @@ def fetch_to_workspace(
     # download is a .zip, run the converter chain (PyPSA → MATPOWER → custom),
     # write the network-graph view_spec, and run a 1-hour smoke dispatch.
     subprocess.Popen(
-        [PY_BIN, str(INGEST_SCRIPT), "--artifact-id", artifact["id"], "--folder", str(raw_dir)],
+        [
+            _py_bin_for_workspace(workspace),
+            str(INGEST_SCRIPT),
+            "--artifact-id",
+            artifact["id"],
+            "--folder",
+            str(raw_dir),
+        ],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         cwd=str(ROOT),

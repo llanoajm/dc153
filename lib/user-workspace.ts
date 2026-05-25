@@ -1,6 +1,8 @@
 import "server-only"
 import fs from "node:fs/promises"
 import path from "node:path"
+import { execFile } from "node:child_process"
+import { promisify } from "node:util"
 import { ensureLinuxAccount, shortUidFor } from "@/lib/linux-account"
 
 // Re-export so downstream items 3.2 (per-user opencode units) and 3.3
@@ -9,10 +11,38 @@ import { ensureLinuxAccount, shortUidFor } from "@/lib/linux-account"
 export { shortUidFor, linuxUserFor, linuxGroup } from "@/lib/linux-account"
 
 const ROOT = process.env.GRID_WORKSPACE_ROOT || "/home/agent/grid-workspaces"
-const PY_BIN = process.env.STEINMETZ_PY || "/home/agent/zap/.venv/bin/python"
 const MCP_SERVER_SCRIPT =
   process.env.STEINMETZ_MCP_SERVER ||
   path.join(process.cwd(), "scripts", "user-mcp-server.py")
+
+// HARDENING §3.3 — per-user Python venv.
+//
+// Each workspace gets its own venv at `<workspace>/.venv/`. The venv has an
+// isolated site-packages so user-installed packages (`pip install` into
+// either the venv or `.python_libs/`) stay scoped to one user — they cannot
+// shadow another user's `import requests`, and they cannot poison the shared
+// zap install. zap itself is exposed read-only to every per-user venv via a
+// `.pth` file that prepends the shared zap source dir + the shared venv's
+// site-packages onto sys.path. Result: both users can `import zap` and pick
+// up the same already-installed deps (numpy, torch, pypsa, …), but their
+// own `pip install`s land in their own venv and are invisible to each
+// other.
+//
+// Seed interpreter (`VENV_SOURCE_PYTHON`) is used solely by
+// `python -m venv --without-pip` to spawn a new venv. We deliberately do
+// *not* expose a global `STEINMETZ_PY` knob anymore — production callers
+// must resolve the per-user interpreter via `pyInterpreterFor(supabaseUid)`
+// or `pyInterpreterForWorkspace(workspaceDir)`.
+const VENV_SOURCE_PYTHON =
+  process.env.STEINMETZ_VENV_SEED_PYTHON ||
+  "/home/agent/zap/.venv/bin/python"
+const SHARED_ZAP_SOURCE_DIR =
+  process.env.STEINMETZ_ZAP_SOURCE_DIR || "/home/agent/zap"
+const SHARED_ZAP_SITE_PACKAGES =
+  process.env.STEINMETZ_ZAP_SITE_PACKAGES ||
+  "/home/agent/zap/.venv/lib/python3.12/site-packages"
+
+const execFileP = promisify(execFile)
 
 // Per-user workspace dir. Materialized on first access so the opencode session
 // has somewhere to operate. Holds .opencode/, features/, skills/. The agent
@@ -37,6 +67,11 @@ export async function ensureUserWorkspace(userId: string): Promise<string> {
   // is just an install — no mkdir surprises.
   await fs.mkdir(pythonLibsDir(dir), { recursive: true })
 
+  // HARDENING §3.3: provision the per-user venv. Must happen *before*
+  // ensureLinuxAccount() chmods the workspace 700 — once that fires,
+  // grid-app (running as `agent`) can no longer write into `.venv/`.
+  await ensurePerUserVenv(dir)
+
   // Bootstrap idempotently.
   await writeIfMissing(
     path.join(dir, "AGENTS.md"),
@@ -57,25 +92,31 @@ zap library.
   or composition.
 - **Your skills dir** (\`.opencode/skills/<slug>/SKILL.md\`): metadata about each
   feature so the agent rediscovers them in future sessions.
-- **The shared venv**: \`/home/agent/zap/.venv/bin/python\` has zap installed.
-  Use it for any Python you run.
+- **Your per-user venv**: \`.venv/bin/python\` (inside this workspace). zap is
+  exposed read-only via a .pth file, so \`import zap\` works out of the box.
+  Use this interpreter for any Python you run.
 - **Your pip target** (\`.python_libs/\`): when you need a package that isn't
-  in the shared venv, install it here so it's scoped to your workspace and
-  can't shadow zap or another user's installs.
+  in your venv or the shared zap install, install it here so it's scoped to
+  your workspace.
 
 ## Installing Python packages
 
-The shared venv is **read-only** for end-user-mode agents — do NOT
-\`pip install\` into \`/home/agent/zap/.venv\`. Instead, install per-workspace:
+The shared zap install is **read-only** for end-user-mode agents — do NOT
+try to write into \`/home/agent/zap\`. Install per-workspace into your own
+venv or pip target:
 
 \`\`\`bash
-/home/agent/zap/.venv/bin/python -m pip install --target=.python_libs <pkg>
+# Option A: install into your venv (preferred — survives across sessions)
+.venv/bin/python -m ensurepip --upgrade
+.venv/bin/python -m pip install <pkg>
+
+# Option B: install into the workspace pip target
+.venv/bin/python -m pip install --target=.python_libs <pkg>
 \`\`\`
 
-(\`.python_libs\` is a directory inside this workspace; \`--target\` puts the
-package files there instead of into the shared venv.) The Steinmetz harness
-adds \`.python_libs\` to \`PYTHONPATH\` for every subprocess it spawns on your
-behalf, so the install is visible from your MCP tools and feature modules.
+The Steinmetz harness adds \`.python_libs\` to \`PYTHONPATH\` for every
+subprocess it spawns on your behalf, so either install path is visible from
+your MCP tools and feature modules.
 
 ## Shipping a feature
 
@@ -87,7 +128,7 @@ objective"), follow this lifecycle:
    for device types). Do not modify zap source.
 2. **Implement** the feature as \`features/<slug>.py\` — a single module that
    imports from zap and defines the new thing.
-3. **Verify** with \`/home/agent/zap/.venv/bin/python -c "import sys; sys.path.insert(0, '.'); from features.<slug> import *"\`
+3. **Verify** with \`.venv/bin/python -c "import sys; sys.path.insert(0, '.'); from features.<slug> import *"\`
    to confirm the module loads.
 4. **Register** as a skill: write \`.opencode/skills/<slug>/SKILL.md\` with
    frontmatter \`{ name, description }\` and a body covering usage.
@@ -198,7 +239,9 @@ Read \`AGENTS.md\` at the workspace root before starting work. Critical rules:
   or composition.
 - **One feature = one \`features/<slug>.py\` + one \`.opencode/skills/<slug>/SKILL.md\`.**
   Don't sprawl a feature across multiple files unless it's genuinely needed.
-- **Always use \`/home/agent/zap/.venv/bin/python\`** for any Python invocation.
+- **Always use \`.venv/bin/python\`** (the per-user venv at the root of this
+  workspace) for any Python invocation. zap is exposed read-only via a .pth
+  file; do not try to write into \`/home/agent/zap\`.
 - **Verify before declaring done.** At minimum, import the module you just
   wrote and confirm it loads without exception. If the feature is differentiable,
   do a tiny finite-difference check.
@@ -310,6 +353,96 @@ export function workspaceRoot(): string {
 // visible to that user's runs only and never leaks into the shared venv.
 export function pythonLibsDir(workspaceDir: string): string {
   return path.join(workspaceDir, ".python_libs")
+}
+
+// Per-user venv dir (HARDENING §3.3).
+export function pyVenvDir(workspaceDir: string): string {
+  return path.join(workspaceDir, ".venv")
+}
+
+// Per-user interpreter path, addressed by workspace directory. Most callers
+// already hold the workspace path returned by `ensureUserWorkspace`, so this
+// avoids re-deriving it. Does NOT check existence; pair with
+// `ensureUserWorkspace` (which calls `ensurePerUserVenv`).
+export function pyInterpreterForWorkspace(workspaceDir: string): string {
+  return path.join(workspaceDir, ".venv", "bin", "python")
+}
+
+// Per-user interpreter, addressed by supabase uid. Equivalent to
+// `pyInterpreterForWorkspace(<ROOT>/<supabaseUid>)`.
+export function pyInterpreterFor(supabaseUid: string): string {
+  return pyInterpreterForWorkspace(path.join(ROOT, supabaseUid))
+}
+
+// Idempotently provision the per-user venv. Called from `ensureUserWorkspace`
+// before `ensureLinuxAccount` so the venv ends up owned by the per-user
+// Linux account along with the rest of the workspace contents. zap is
+// exposed read-only via a `.pth` file in the venv's site-packages: one line
+// for the zap source dir (so `import zap` resolves) and one for the shared
+// venv's site-packages (so zap's already-installed deps — numpy, torch,
+// pypsa, … — are reachable without re-installing them per user).
+//
+// `--without-pip` avoids the `ensurepip` data dependency that Debian
+// fragments out of the base python3 package (see venv test in §3.3); the
+// AGENTS.md template tells the agent to run `python -m ensurepip --upgrade`
+// on demand if they want pip in the venv itself.
+export async function ensurePerUserVenv(workspaceDir: string): Promise<void> {
+  const venvDir = pyVenvDir(workspaceDir)
+  const interpreter = pyInterpreterForWorkspace(workspaceDir)
+  let exists = false
+  try {
+    await fs.access(interpreter)
+    exists = true
+  } catch {
+    exists = false
+  }
+  if (!exists) {
+    try {
+      await execFileP(VENV_SOURCE_PYTHON, ["-m", "venv", "--without-pip", venvDir])
+    } catch (e) {
+      console.warn(
+        `[hardening 3.3] failed to create per-user venv at ${venvDir}:`,
+        e,
+      )
+      return
+    }
+  }
+  // Always re-write the .pth file. Cheap, and lets a host-side bump of the
+  // shared zap install location (rare, but possible during upgrades) take
+  // effect on the next session.
+  await writeZapPth(venvDir)
+}
+
+async function writeZapPth(venvDir: string): Promise<void> {
+  const siteDir = await resolveVenvSitePackages(venvDir)
+  if (!siteDir) return
+  // site.py processes any *.pth file in site-packages on interpreter start:
+  // each line that names an existing directory is appended to sys.path.
+  // Naming this `_zap_shared.pth` keeps it alphabetically before most
+  // package metadata files (so the order is deterministic).
+  const pthPath = path.join(siteDir, "_zap_shared.pth")
+  const body = `# Steinmetz HARDENING §3.3 — expose shared zap install read-only.\n${SHARED_ZAP_SOURCE_DIR}\n${SHARED_ZAP_SITE_PACKAGES}\n`
+  try {
+    await fs.writeFile(pthPath, body, "utf8")
+  } catch (e) {
+    console.warn(`[hardening 3.3] failed to write ${pthPath}:`, e)
+  }
+}
+
+async function resolveVenvSitePackages(venvDir: string): Promise<string | null> {
+  // `python -m venv` lays down lib/python<MAJOR.MINOR>/site-packages. Glob
+  // the single child rather than hardcoding the version so we survive a
+  // Python upgrade on the host.
+  const libDir = path.join(venvDir, "lib")
+  let entries: string[]
+  try {
+    entries = await fs.readdir(libDir)
+  } catch {
+    return null
+  }
+  const pyDir = entries.find((e) => e.startsWith("python"))
+  if (!pyDir) return null
+  return path.join(libDir, pyDir, "site-packages")
 }
 
 // Build a child-process env that includes PYTHONPATH pointing at the user's
@@ -428,7 +561,7 @@ export async function writeOpencodeConfig(
     mcp: {
       "user-features": {
         type: "local",
-        command: [PY_BIN, MCP_SERVER_SCRIPT],
+        command: [pyInterpreterForWorkspace(workspaceDir), MCP_SERVER_SCRIPT],
         environment: mcpEnv,
       },
     },

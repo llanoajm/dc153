@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server"
 import path from "node:path"
 import { spawn } from "node:child_process"
 import { createClient } from "@/lib/supabase/server"
-import { ensureUserWorkspace, pythonEnv } from "@/lib/user-workspace"
-
-const PY_BIN = process.env.STEINMETZ_PY || "/home/agent/zap/.venv/bin/python"
+import {
+  ensureUserWorkspace,
+  pyInterpreterForWorkspace,
+  pythonEnv,
+} from "@/lib/user-workspace"
 
 function ingestScriptPath(): string {
   if (process.env.STEINMETZ_INGEST_SCRIPT) return process.env.STEINMETZ_INGEST_SCRIPT
@@ -76,7 +78,7 @@ function resolveRawDir(fsPath: string | null): string | null {
 
 function spawnIngestion(artifactId: string, folder: string, workspace: string) {
   const child = spawn(
-    PY_BIN,
+    pyInterpreterForWorkspace(workspace),
     [ingestScriptPath(), "--artifact-id", artifactId, "--folder", folder],
     {
       detached: true,

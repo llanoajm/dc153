@@ -1,0 +1,43 @@
+# Steinmetz per-user cgroup slice (HARDENING_ROADMAP §3.4).
+#
+# One instance per Steinmetz user: %i is the short-uid (sha256(supabase_uid)
+# truncated to 16 hex chars). This file is a TEMPLATE — systemd does not
+# instantiate `.slice` files the way it instantiates `@.service` files, so
+# `lib/compute-tier.ts:ensureUserSlice` substitutes %i for the short-uid (and
+# rewrites MemoryMax / CPUQuota / IOWeight per the user's compute_tier) and
+# `sudo install`s the result into /etc/systemd/system/steinmetz-<short>.slice
+# at user-create time.
+#
+# The matching opencode unit (`steinmetz-opencode@<short>.service`) declares
+# `Slice=steinmetz-%i.slice`; with this file in place the slice's limits
+# apply. Without it systemd creates a transient slice with no caps — the
+# unit still starts (so dev environments without sudo keep working) but a
+# runaway allocation can OOM the VM.
+#
+# Defaults below assume the "default" compute tier. The tier resolver in
+# lib/compute-tier.ts maps `profiles.compute_tier` to alternative parameter
+# triples ("low" / "default" / "high"); a fresh user with no tier set lands
+# on these values.
+#
+# Install (handled by grid-app's ensureUserSlice when
+# STEINMETZ_PER_USER_SLICES=1; manual fallback shown for reference):
+#   sed 's/%i/<short-uid>/g' infra/systemd/steinmetz-%i.slice \
+#     | sudo tee /etc/systemd/system/steinmetz-<short-uid>.slice
+#   sudo systemctl daemon-reload
+
+[Unit]
+Description=Steinmetz per-user resource slice (%i)
+Before=steinmetz-opencode@%i.service
+
+[Slice]
+# Hard memory ceiling — the kernel OOM-kills processes in this slice when
+# they cross this line, leaving the rest of the VM untouched.
+MemoryMax=4G
+
+# CPU bandwidth. 200% = two cores' worth (100% = one full core). Bursts above
+# this rate are throttled, not killed.
+CPUQuota=200%
+
+# Block-IO weight relative to other slices. 100 = default; higher gets more
+# bandwidth when the disk is contended.
+IOWeight=100

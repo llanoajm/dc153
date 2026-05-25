@@ -104,6 +104,44 @@ Everything past v0. See `ROADMAP.md` build order for the prioritized list. Highe
     through the proxy in per-user mode — grid-app talks to sockets
     directly via the transport — but external curl/debug clients can.
 
+- **`STEINMETZ_PER_USER_SLICES=1`** — engages HARDENING §3.4 (per-user
+  cgroup slices). Default off because the slice unit only does something
+  when §3.2's per-user opencode unit is also running (the unit declares
+  `Slice=steinmetz-%i.slice`); without a backing opencode service the
+  slice is just inert. Flip on alongside `STEINMETZ_ENABLE_LINUX_ACCOUNTS=1`
+  and `STEINMETZ_PER_USER_OPENCODE=1` in production.
+  - **Host prereqs** before flipping on (see `infra/systemd/README.md`
+    Step 7):
+    - `/etc/sudoers.d/steinmetz-hardening` (mode 0440) grants the `agent`
+      user NOPASSWD on the two commands `ensureUserSlice` runs:
+      ```
+      agent ALL=(root) NOPASSWD: /usr/bin/install -m 0644 -o root -g root /tmp/* /etc/systemd/system/steinmetz-*.slice
+      agent ALL=(root) NOPASSWD: /usr/bin/systemctl daemon-reload
+      ```
+  - **What the flag does** on each `ensureUserWorkspace(userId)`:
+    1. Reads the in-repo template `infra/systemd/steinmetz-%i.slice`.
+    2. Substitutes `%i` for the short-uid and rewrites
+       `MemoryMax=`/`CPUQuota=`/`IOWeight=` per the user's resolved
+       compute tier (`profiles.compute_tier`; null → "default").
+    3. `sudo install` the rendered body to
+       `/etc/systemd/system/steinmetz-<short>.slice`, then `sudo
+       systemctl daemon-reload`.
+  - **Tier resolver**: `lib/compute-tier.ts` exports `COMPUTE_TIERS`
+    (`low` / `default` / `high`) + `resolveComputeTier(tier?)`. Default
+    tier mirrors the slice template defaults: 4G mem / 200% CPU /
+    IOWeight=100. Unknown tier strings fall back to "default" rather
+    than fail.
+  - **Schema**: `supabase/schema.sql` adds `profiles.compute_tier text`
+    (nullable). User has to paste the updated schema into Supabase
+    before the column is reachable; until then everyone resolves to
+    "default" (no error — the resolver treats null as default).
+  - **Failure mode**: if the flag is off, sudo is missing, or `install`
+    fails, the slice file is absent. `systemctl start steinmetz-opencode@`
+    still works but systemd creates a transient slice with no resource
+    caps — observable as `Loaded: not-found` on `systemctl status
+    steinmetz-<short>.slice`. The chat keeps working; resource
+    isolation is what's lost.
+
 ## Known operational gotchas
 
 - The OpenRouter key was pasted in chat earlier; **user should rotate it**. Same for the Supabase service-role key.

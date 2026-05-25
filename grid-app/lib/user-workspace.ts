@@ -4,6 +4,7 @@ import path from "node:path"
 import { execFile } from "node:child_process"
 import { promisify } from "node:util"
 import { ensureLinuxAccount, shortUidFor } from "@/lib/linux-account"
+import { ensureUserSlice } from "@/lib/compute-tier"
 
 // Re-export so downstream items 3.2 (per-user opencode units) and 3.3
 // (per-user venvs) can resolve a Linux short-uid from a supabase uid via the
@@ -315,6 +316,13 @@ def echo(message: str) -> str:
   // flips the flag once item 3.2 ships and per-user opencode units take
   // over workspace writes. Idempotent + fail-soft (see lib/linux-account.ts).
   await ensureLinuxAccount(dir, userId)
+
+  // HARDENING §3.4: materialise the per-user cgroup slice before the first
+  // session-start triggers `systemctl start steinmetz-opencode@<short>.service`.
+  // Default tier; tier changes (when `profiles.compute_tier` is set later via
+  // an admin surface) re-run `ensureUserSlice` with the resolved tier name.
+  // Gated on STEINMETZ_PER_USER_SLICES=1 (see lib/compute-tier.ts).
+  await ensureUserSlice(userId)
 
   return dir
 }

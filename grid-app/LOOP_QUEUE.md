@@ -116,7 +116,7 @@ under three phase gates:
     - zap is exposed to every per-user venv read-only (documented mechanism: pth file, sys.path prepend, or system site-packages mount).
     - `npm run build` exits 0.
 
-- [ ] 3.4 systemd resource limits per user (HARDENING_ROADMAP §3.4)
+- [x] 3.4 systemd resource limits per user (HARDENING_ROADMAP §3.4)
   - context: every per-user opencode unit runs inside `Slice=steinmetz-<short-uid>.slice` with sane Memory / CPU / IO defaults; per-user tunable via `profiles.compute_tier`.
   - acceptance:
     - The systemd template from 3.2 references a per-user slice (e.g. `Slice=steinmetz-%i.slice`).

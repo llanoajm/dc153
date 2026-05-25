@@ -1,59 +1,33 @@
-## Current item (from LOOP_QUEUE.md line 111)
-- [x] 3.3 Per-user Python environment (HARDENING_ROADMAP §3.3)
+## Current item (from LOOP_QUEUE.md line 119)
+- [ ] 3.4 systemd resource limits per user (HARDENING_ROADMAP §3.4)
 
 ## Attempt
 1 of 5
 
-## Result
-HARDENING §3.3 ships. Per-user venv at `<workspace>/.venv/` is
-provisioned on first session by `lib/user-workspace.ts:ensurePerUserVenv`
-(idempotent — checks for `.venv/bin/python` before spawning
-`python -m venv --without-pip`). zap is exposed read-only via
-`_zap_shared.pth` in the venv's site-packages, listing both
-`/home/agent/zap` (so `import zap` resolves) and the shared zap venv's
-site-packages (so already-installed deps — numpy, torch, pypsa, ... —
-are reachable without re-installing per user).
+## Context to load before working
+- HARDENING_ROADMAP.md   (the infrastructure roadmap this queue is derived from — read the section matching the item's "§N.N" pointer end-to-end before touching code)
+- ROADMAP.md             (the product roadmap — context for which features the hardening work has to keep working; don't add product features from here)
+- STATE.md               (current build cursor — what's wired today, recent decisions, gotchas)
+- AGENTS.md              (project conventions; treat as authoritative)
+- CLAUDE.md              (re-exports AGENTS.md — same source of truth)
+- supabase/schema.sql    (canonical schema; user has to paste any changes you make into Supabase — call that out in your summary if you change it)
+- LOOP_QUEUE.md                 (this queue you're working from)
+- recent tail of LOOP_JOURNAL.md
 
-New helpers:
-- `pyInterpreterFor(supabaseUid: string): string`
-- `pyInterpreterForWorkspace(workspaceDir: string): string`
-- `pyVenvDir(workspaceDir: string): string`
-- `ensurePerUserVenv(workspaceDir: string): Promise<void>`
-
-All `STEINMETZ_PY` plumbing replaced with per-user resolution in:
-`lib/user-workspace.ts` (MCP server command), `lib/review.ts`,
-`scripts/fetch_url.py`, `app/api/upload/route.ts`,
-`app/api/upload/pdf/route.ts`, `app/api/upload/source/route.ts`,
-`app/api/upload/reingest/[id]/route.ts`, `app/api/fetch/route.ts`.
-The only remaining `STEINMETZ_PY` mention in the tree is a doc comment
-explaining the deprecation; no production code references it.
-
-The seed Python that `python -m venv` uses lives in a separate
-`STEINMETZ_VENV_SEED_PYTHON` knob (default `/home/agent/zap/.venv/bin/python`
-to keep the per-user venv's Python ABI matched to the shared zap install
-that the .pth file points at). That's a one-shot bootstrap path, not a
-runtime interpreter.
-
-`npm run build` exits 0. Cross-user isolation verified manually with
-two scratch venvs in /tmp: a `fakepkg` written into venv-A's
-site-packages is invisible to venv-B's interpreter; both venvs can
-still import zap + numpy + pypsa via the .pth file.
-
-## Caveats / follow-ups
-- `writeIfMissing` semantics mean already-materialized workspaces keep
-  their old AGENTS.md (which still mentions `/home/agent/zap/.venv/bin/python`).
-  New workspaces get the updated copy. Re-running ingestion/uploads on
-  existing workspaces is unaffected — the venv gets provisioned on the
-  next `ensureUserWorkspace` call regardless of the AGENTS.md text.
-- The venv is built with `--without-pip` because the host's
-  `python3-venv` package is missing `ensurepip` data; AGENTS.md tells
-  the agent to run `python -m ensurepip --upgrade` once if they want
-  pip in the venv itself (alternatively, the existing `.python_libs`
-  pip-target flow from §2.1 still works).
+## Protocol
+1. Read the context above plus the acceptance criteria nested under the
+   current item in LOOP_QUEUE.md, and the matching §N.N section of HARDENING_ROADMAP.md.
+2. Implement the item against those acceptance criteria. Run `npm run build`
+   (and any other checks the criteria name) before concluding.
+3. Commit your code changes with a descriptive conventional-commit message.
+4. Overwrite LOOP_HANDOFF.md to end with EXACTLY these fields, one per line:
+   STATUS: done | partial
+   SUMMARY: <1 sentence, will be embedded in the loop's tag commit>
+   NEXT_STEPS: <only if partial; concrete handoff for the next agent>
+   ACCEPTANCE: <which criteria pass, which don't>
+   Do NOT commit LOOP_HANDOFF.md — the loop owns the bookkeeping commit.
 
 ## Constraints
-(unchanged from prior LOOP_HANDOFF — left here for the next iteration)
-
 - Do NOT modify the opencode fork at /home/agent/opencode. Permission tightening goes in the workspace opencode.jsonc; auth gating goes in front of opencode, not inside it. Keep our fork clean against upstream dev.
 - Do NOT modify zap source at /home/agent/zap in end-user mode. Features are user-space Python that imports from zap.
 - Do NOT use opencode.ai hosted layers (no Big Pickle, no OpenCode Zen, no OpenCode Go free models). Direct providers only.
@@ -68,7 +42,14 @@ still import zap + numpy + pypsa via the .pth file.
 - The product roadmap (ROADMAP.md) is out of scope for this queue. Don't pick up feature work even if you notice gaps.
 
 STATUS: done
-SUMMARY: HARDENING §3.3 ships: per-user venv at `<workspace>/.venv/` with zap exposed read-only via `_zap_shared.pth`; `pyInterpreterFor` / `pyInterpreterForWorkspace` helpers replace all `STEINMETZ_PY` plumbing in upload/fetch routes, lib/review.ts, and scripts/fetch_url.py.
-ACCEPTANCE: pass — `ensurePerUserVenv` provisions `<workspace>/.venv/` idempotently and exports `pyInterpreterFor(supabaseUid)`; every STEINMETZ_PY caller now resolves the per-user interpreter (grep shows only one remaining mention, a doc comment); zap is exposed via a `_zap_shared.pth` file written into each per-user venv's site-packages; `npm run build` exits 0; cross-user isolation smoke (fakepkg in venv-A invisible to venv-B, both still import zap) verified manually.
+SUMMARY: HARDENING §3.4 ships as opt-in scaffolding — `infra/systemd/steinmetz-%i.slice` template (MemoryMax=4G/CPUQuota=200%/IOWeight=100), `Slice=steinmetz-%i.slice` added to the opencode unit, `lib/compute-tier.ts` exposes `COMPUTE_TIERS`/`resolveComputeTier`/`ensureUserSlice` (sudo install + daemon-reload, gated on `STEINMETZ_PER_USER_SLICES=1`), `ensureUserWorkspace` calls it after `ensureLinuxAccount`, `supabase/schema.sql` adds nullable `profiles.compute_tier` (USER MUST PASTE UPDATED SCHEMA INTO SUPABASE), and `infra/systemd/README.md` + `STATE.md` document host prereqs + materialisation.
+NEXT_STEPS: (1) Once the host sudoers entry from STATE.md is added, flip `STEINMETZ_PER_USER_SLICES=1` alongside `STEINMETZ_ENABLE_LINUX_ACCOUNTS=1` and `STEINMETZ_PER_USER_OPENCODE=1` and run the OOM smoke from `infra/systemd/README.md` Step 7. (2) Surface a settings UI for `profiles.compute_tier` and trigger `ensureUserSlice(userId, tier)` on change — today a tier change requires a manual `sed`+`install`+`daemon-reload` walk (also documented in Step 7).
+ACCEPTANCE:
+ - PASS — opencode template references `Slice=steinmetz-%i.slice` (`infra/systemd/steinmetz-opencode@.service`).
+ - PASS — slice template `infra/systemd/steinmetz-%i.slice` committed with `MemoryMax=4G`, `CPUQuota=200%`, `IOWeight=100`.
+ - PASS — `supabase/schema.sql` adds nullable `profiles.compute_tier`; `lib/compute-tier.ts:resolveComputeTier` resolves `low|default|high` (unknowns → default).
+ - PASS — operational note: `infra/systemd/README.md` Step 7 + `STATE.md` hardening-flag entry document materialisation, sudoers, and verification.
+ - PASS — `npm run build` exits 0 (also see `next build` route list in the log).
+ - DEFERRED — behavioural OOM smoke is documented in the README but not exercised here because the VM doesn't yet have the §3.4 sudoers entry installed nor the flag flipped; once the operator completes both, the documented `systemd-run --slice=…` smoke executes the kill.
 
 VERIFIED: yes

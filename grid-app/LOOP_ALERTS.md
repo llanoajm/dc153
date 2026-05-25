@@ -24,3 +24,4 @@
 [2026-05-25T01:14:14+00:00] DONE: - [ ] 1.1 Tighten Bash / Edit / external_directory permissions (HARDENING_ROADMAP §1.1)
 [2026-05-25T01:28:07+00:00] DONE: - [ ] 1.2 Lock opencode behind an auth token (HARDENING_ROADMAP §1.2)
 [2026-05-25T01:36:48+00:00] DONE: - [ ] 1.3 Fix org-overlay stacking bug (HARDENING_ROADMAP §1.3)
+[2026-05-25T01:54:00+00:00] DONE: - [ ] 1.4 Per-user OpenRouter key (HARDENING_ROADMAP §1.4)

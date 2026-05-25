@@ -1,26 +1,36 @@
 import "server-only"
 import { ensureUserWorkspace, writeUserProviderConfig } from "@/lib/user-workspace"
 import { getUserProviderKeysMap } from "@/lib/provider-keys"
+import {
+  opencodeFetch,
+  opencodeHeadersForTarget,
+  opencodeTargetFor,
+  perUserOpencodeEnabled,
+} from "@/lib/opencode-transport"
 
-// Fronted endpoint provisioned by scripts/opencode-proxy.ts (HARDENING §1.2).
-// Default points at the bearer-auth proxy on 4097, not raw opencode on 4096 —
-// raw 4096 is shell-level admin and must never be reached from app code.
+// HARDENING §1.2 — TCP transport defaults to the bearer-auth fronting proxy
+// on 4097, not raw opencode on 4096. raw 4096 is shell-level admin and must
+// never be reached from app code.
+//
+// HARDENING §3.2 — when STEINMETZ_PER_USER_OPENCODE=1 the request routes to
+// /run/steinmetz/<short-uid>.sock instead (one opencode unit per user). The
+// transport selection lives in lib/opencode-transport.ts; this module is just
+// the typed-call layer that grid-app uses.
 export const OPENCODE_BASE_URL =
   process.env.STEINMETZ_OPENCODE_URL || "http://127.0.0.1:4097"
 
-const OPENCODE_TOKEN = process.env.STEINMETZ_OPENCODE_TOKEN || ""
-
+// Back-compat: callers (the SSE proxy route) used to import opencodeHeaders().
+// The single-user TCP shape is still valid when per-user mode is off; in
+// per-user mode the header set is computed inside opencodeFetch() per request.
 export function opencodeHeaders(workspaceDir?: string): Record<string, string> {
-  const headers: Record<string, string> = {
-    "content-type": "application/json",
-  }
-  if (workspaceDir) headers["x-opencode-directory"] = workspaceDir
-  if (OPENCODE_TOKEN) headers["authorization"] = `Bearer ${OPENCODE_TOKEN}`
-  return headers
-}
-
-function userHeaders(workspaceDir: string): HeadersInit {
-  return opencodeHeaders(workspaceDir)
+  // We can compute headers without a user id only in TCP mode (the bearer
+  // token is shared). In socket mode there's no useful "user-less" header
+  // set — return the workspace-directory header and let the caller add the
+  // rest via opencodeFetch.
+  const target = perUserOpencodeEnabled()
+    ? { kind: "socket" as const, socketPath: "" }
+    : opencodeTargetFor("__shared__")
+  return opencodeHeadersForTarget(target, workspaceDir)
 }
 
 // Refresh the per-user provider key block in the workspace's opencode.jsonc
@@ -42,9 +52,8 @@ async function refreshProviderConfig(userId: string, dir: string): Promise<void>
 export async function createSession(userId: string): Promise<{ id: string; directory: string }> {
   const dir = await ensureUserWorkspace(userId)
   await refreshProviderConfig(userId, dir)
-  const res = await fetch(`${OPENCODE_BASE_URL}/session`, {
+  const res = await opencodeFetch(userId, dir, "/session", {
     method: "POST",
-    headers: userHeaders(dir),
     body: "{}",
   })
   if (!res.ok) throw new Error(`createSession failed: ${res.status} ${await res.text()}`)
@@ -54,9 +63,7 @@ export async function createSession(userId: string): Promise<{ id: string; direc
 
 export async function getMessages(userId: string, sessionId: string) {
   const dir = await ensureUserWorkspace(userId)
-  const res = await fetch(`${OPENCODE_BASE_URL}/session/${sessionId}/message`, {
-    headers: userHeaders(dir),
-  })
+  const res = await opencodeFetch(userId, dir, `/session/${sessionId}/message`)
   if (!res.ok) throw new Error(`getMessages failed: ${res.status} ${await res.text()}`)
   return res.json()
 }
@@ -77,9 +84,8 @@ export async function sendPrompt(
     },
     parts: [{ type: "text", text }],
   }
-  const res = await fetch(`${OPENCODE_BASE_URL}/session/${sessionId}/message`, {
+  const res = await opencodeFetch(userId, dir, `/session/${sessionId}/message`, {
     method: "POST",
-    headers: userHeaders(dir),
     body: JSON.stringify(body),
   })
   if (!res.ok) throw new Error(`sendPrompt failed: ${res.status} ${await res.text()}`)
@@ -88,9 +94,8 @@ export async function sendPrompt(
 
 export async function abortSession(userId: string, sessionId: string) {
   const dir = await ensureUserWorkspace(userId)
-  const res = await fetch(`${OPENCODE_BASE_URL}/session/${sessionId}/abort`, {
+  const res = await opencodeFetch(userId, dir, `/session/${sessionId}/abort`, {
     method: "POST",
-    headers: userHeaders(dir),
   })
   return res.ok
 }

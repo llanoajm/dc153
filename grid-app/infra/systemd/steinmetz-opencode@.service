@@ -1,0 +1,62 @@
+# Steinmetz per-user opencode server (HARDENING_ROADMAP §3.2).
+#
+# One instance per Steinmetz user: %i is the short-uid (sha256(supabase_uid)
+# truncated to 16 hex chars) produced by lib/linux-account.ts:shortUidFor.
+# The unit runs scripts/per-user-opencode.ts under Bun as the matching
+# per-user Linux account `steinmetz-%i` (HARDENING §3.1). The supervisor
+# spawns the opencode HTTP server bound to 127.0.0.1:<deterministic-port>
+# and exposes /run/steinmetz/%i.sock (mode 0660, group steinmetz) so
+# grid-app (running as `agent`, supplementary group steinmetz) can connect.
+#
+# Install:
+#   sudo cp infra/systemd/steinmetz-opencode@.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#
+# Manual start (grid-app does this automatically on first session create):
+#   sudo systemctl start steinmetz-opencode@<short-uid>
+#
+# Sudoers entry required for grid-app to start units on demand:
+#   agent ALL=(root) NOPASSWD: /usr/bin/systemctl start steinmetz-opencode@*.service
+#
+# Idle eviction is handled by the supervisor itself: when no socket traffic
+# arrives for STEINMETZ_OPENCODE_IDLE_TIMEOUT seconds (default 1800 = 30 min)
+# it exits cleanly. Restart=on-failure means a clean idle exit stays stopped;
+# the next session-create call re-issues `systemctl start` and the unit spins
+# back up.
+
+[Unit]
+Description=Steinmetz per-user opencode server (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=steinmetz-%i
+Group=steinmetz
+
+# Materialise /run/steinmetz with permissions that let the steinmetz group
+# traverse but only the per-user account create the socket file.
+RuntimeDirectory=steinmetz
+RuntimeDirectoryMode=0750
+RuntimeDirectoryPreserve=yes
+
+WorkingDirectory=/home/agent/opencode
+
+Environment=STEINMETZ_SHORT_UID=%i
+Environment=PATH=/home/agent/.bun/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# OPENROUTER_API_KEY and other secrets live here; create with 0640 root:steinmetz
+# and chmod the directory 0750 so only privileged code can read it.
+EnvironmentFile=-/etc/steinmetz/opencode.env
+
+ExecStart=/home/agent/.bun/bin/bun run /home/agent/grid-app/scripts/per-user-opencode.ts
+
+# Clean idle exit reports success (exit 0); only crashes trigger restart.
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+
+# §3.4 will fill in cgroup limits via Slice=steinmetz-%i.slice; this unit is
+# intentionally pure-identity-and-binding for §3.2.
+
+[Install]
+WantedBy=multi-user.target

@@ -67,6 +67,43 @@ Everything past v0. See `ROADMAP.md` build order for the prioritized list. Highe
     `lib/user-workspace.ts` (re-exported from `lib/linux-account.ts`) for
     items 3.2 (systemd template parameter) and 3.3 (per-user venv path).
 
+- **`STEINMETZ_PER_USER_OPENCODE=1`** — engages HARDENING §3.2 (per-user
+  opencode server). Default off because §3.1's chmod 700 + per-user Linux
+  account must be live first; without it the systemd unit
+  `steinmetz-opencode@<short-uid>` has no user to drop privileges to. Flip
+  on (alongside `STEINMETZ_ENABLE_LINUX_ACCOUNTS=1`) once both items are
+  ready in production.
+  - **Host prereqs** before flipping on (see `infra/systemd/README.md`):
+    - `sudo cp infra/systemd/steinmetz-opencode@.service /etc/systemd/system/ && sudo systemctl daemon-reload`
+    - `/etc/sudoers.d/steinmetz-opencode` granting the `agent` user
+      NOPASSWD on `/usr/bin/systemctl start steinmetz-opencode@*.service`
+      (and `... status ...` for diagnostics).
+    - Optional `/etc/steinmetz/opencode.env` (root:steinmetz 0640) for
+      the fallback OpenRouter key + other shared opencode env.
+  - **What the flag does** on each opencode request:
+    1. `lib/opencode-transport.ts:ensurePerUserOpencode(userId)` issues
+       `sudo systemctl start steinmetz-opencode@<short-uid>.service`
+       (idempotent — no-op when already active).
+    2. Waits up to `STEINMETZ_OPENCODE_SOCKET_WAIT_MS` (default 15 s)
+       for `/run/steinmetz/<short-uid>.sock` to appear.
+    3. Dials the socket via `node:http` (Unix-socket transport) instead
+       of the §1.2 TCP fronting proxy. Filesystem perms (0660 socket
+       owned by `steinmetz-<short-uid>:steinmetz`) are the auth layer.
+  - **Per-user supervisor**: `scripts/per-user-opencode.ts` runs under the
+    systemd template. Spawns opencode on a deterministic loopback port
+    derived from the short-uid (range 41000-60999) and forwards bytes
+    between the socket and that port.
+  - **Idle eviction**: the supervisor exits 0 after
+    `STEINMETZ_OPENCODE_IDLE_TIMEOUT` seconds (default 1800 = 30 min) of
+    no socket activity. `Restart=on-failure` leaves the unit stopped; the
+    next request boots it back up.
+  - **§1.2 fronting proxy**: still required for the shared-opencode
+    fallback. Under `STEINMETZ_PER_USER_OPENCODE=1` it additionally
+    accepts an `X-Steinmetz-Short-Uid` header and forwards to the matching
+    per-user socket (Bun's `fetch({ unix })`). In-app traffic does NOT go
+    through the proxy in per-user mode — grid-app talks to sockets
+    directly via the transport — but external curl/debug clients can.
+
 ## Known operational gotchas
 
 - The OpenRouter key was pasted in chat earlier; **user should rotate it**. Same for the Supabase service-role key.

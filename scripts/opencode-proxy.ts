@@ -17,13 +17,25 @@
 //   STEINMETZ_OPENCODE_PROXY_PORT    default 4097
 //   STEINMETZ_OPENCODE_PROXY_HOST    default 127.0.0.1
 //   OPENCODE_UPSTREAM_URL            default http://127.0.0.1:4096
+//   STEINMETZ_PER_USER_OPENCODE      "1" routes per-request to a Unix socket
+//                                    at /run/steinmetz/<short>.sock based on
+//                                    an X-Steinmetz-Short-Uid request header.
+//                                    Used for external clients (curl/debug);
+//                                    grid-app talks to sockets directly via
+//                                    lib/opencode-transport.ts.
+//   STEINMETZ_OPENCODE_RUN_DIR       default /run/steinmetz
 //
 // HARDENING_ROADMAP.md §1.2 — Phase 1 hardening, do not skip before user #2.
+// HARDENING_ROADMAP.md §3.2 — per-user routing (opt-in via the env flag).
 
 const TOKEN = process.env.STEINMETZ_OPENCODE_TOKEN
 const PORT = Number(process.env.STEINMETZ_OPENCODE_PROXY_PORT ?? 4097)
 const HOSTNAME = process.env.STEINMETZ_OPENCODE_PROXY_HOST ?? "127.0.0.1"
 const UPSTREAM = (process.env.OPENCODE_UPSTREAM_URL ?? "http://127.0.0.1:4096").replace(/\/$/, "")
+const PER_USER = process.env.STEINMETZ_PER_USER_OPENCODE === "1"
+const RUN_DIR = process.env.STEINMETZ_OPENCODE_RUN_DIR ?? "/run/steinmetz"
+const SHORT_UID_HEADER = "x-steinmetz-short-uid"
+const SHORT_UID_RE = /^[0-9a-f]{4,32}$/
 
 if (!TOKEN) {
   console.error("opencode-proxy: STEINMETZ_OPENCODE_TOKEN is required (see HARDENING_ROADMAP.md §1.2)")
@@ -87,21 +99,40 @@ Bun.serve({
     }
 
     const inbound = new URL(req.url)
-    const upstreamUrl = `${UPSTREAM}${inbound.pathname}${inbound.search}`
     const method = req.method.toUpperCase()
     const hasBody = method !== "GET" && method !== "HEAD"
 
-    const init: RequestInit & { duplex?: "half" } = {
+    // Per-user mode: route to /run/steinmetz/<short>.sock based on the
+    // X-Steinmetz-Short-Uid header. Reject requests without it so we never
+    // accidentally fan a per-user-scope call out to the shared upstream.
+    let upstreamUrl: string
+    const init: RequestInit & { duplex?: "half"; unix?: string } = {
       method,
-      headers: filterHeaders(req.headers, ["authorization"]),
+      headers: filterHeaders(req.headers, ["authorization", SHORT_UID_HEADER]),
       body: hasBody ? req.body : undefined,
       redirect: "manual",
     }
     if (hasBody) init.duplex = "half"
 
+    if (PER_USER) {
+      const short = (req.headers.get(SHORT_UID_HEADER) ?? "").trim().toLowerCase()
+      if (!SHORT_UID_RE.test(short)) {
+        return new Response(
+          JSON.stringify({ error: `per-user mode requires ${SHORT_UID_HEADER} header (hex 4-32 chars)` }),
+          { status: 400, headers: { "content-type": "application/json" } },
+        )
+      }
+      // Bun.fetch honours the `unix` option to dial a Unix socket. The URL's
+      // host is ignored when unix is set; we still pass the path/search.
+      upstreamUrl = `http://unix${inbound.pathname}${inbound.search}`
+      init.unix = `${RUN_DIR}/${short}.sock`
+    } else {
+      upstreamUrl = `${UPSTREAM}${inbound.pathname}${inbound.search}`
+    }
+
     let upstream: Response
     try {
-      upstream = await fetch(upstreamUrl, init)
+      upstream = await fetch(upstreamUrl, init as RequestInit)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       return new Response(JSON.stringify({ error: `upstream: ${msg}` }), {
@@ -122,6 +153,9 @@ Bun.serve({
   },
 })
 
+const routing = PER_USER
+  ? `per-user (sockets under ${RUN_DIR}/<short>.sock)`
+  : UPSTREAM
 console.log(
-  `opencode-proxy listening on http://${HOSTNAME}:${PORT} → ${UPSTREAM} (token len=${TOKEN.length})`,
+  `opencode-proxy listening on http://${HOSTNAME}:${PORT} → ${routing} (token len=${TOKEN.length})`,
 )

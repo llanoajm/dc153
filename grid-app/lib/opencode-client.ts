@@ -1,18 +1,30 @@
 import "server-only"
 import { ensureUserWorkspace } from "@/lib/user-workspace"
 
-const OC_URL = process.env.OPENCODE_SERVER_URL || "http://127.0.0.1:4096"
+// Fronted endpoint provisioned by scripts/opencode-proxy.ts (HARDENING §1.2).
+// Default points at the bearer-auth proxy on 4097, not raw opencode on 4096 —
+// raw 4096 is shell-level admin and must never be reached from app code.
+export const OPENCODE_BASE_URL =
+  process.env.STEINMETZ_OPENCODE_URL || "http://127.0.0.1:4097"
+
+const OPENCODE_TOKEN = process.env.STEINMETZ_OPENCODE_TOKEN || ""
+
+export function opencodeHeaders(workspaceDir?: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+  }
+  if (workspaceDir) headers["x-opencode-directory"] = workspaceDir
+  if (OPENCODE_TOKEN) headers["authorization"] = `Bearer ${OPENCODE_TOKEN}`
+  return headers
+}
 
 function userHeaders(workspaceDir: string): HeadersInit {
-  return {
-    "content-type": "application/json",
-    "x-opencode-directory": workspaceDir,
-  }
+  return opencodeHeaders(workspaceDir)
 }
 
 export async function createSession(userId: string): Promise<{ id: string; directory: string }> {
   const dir = await ensureUserWorkspace(userId)
-  const res = await fetch(`${OC_URL}/session`, {
+  const res = await fetch(`${OPENCODE_BASE_URL}/session`, {
     method: "POST",
     headers: userHeaders(dir),
     body: "{}",
@@ -24,7 +36,7 @@ export async function createSession(userId: string): Promise<{ id: string; direc
 
 export async function getMessages(userId: string, sessionId: string) {
   const dir = await ensureUserWorkspace(userId)
-  const res = await fetch(`${OC_URL}/session/${sessionId}/message`, {
+  const res = await fetch(`${OPENCODE_BASE_URL}/session/${sessionId}/message`, {
     headers: userHeaders(dir),
   })
   if (!res.ok) throw new Error(`getMessages failed: ${res.status} ${await res.text()}`)
@@ -46,7 +58,7 @@ export async function sendPrompt(
     },
     parts: [{ type: "text", text }],
   }
-  const res = await fetch(`${OC_URL}/session/${sessionId}/message`, {
+  const res = await fetch(`${OPENCODE_BASE_URL}/session/${sessionId}/message`, {
     method: "POST",
     headers: userHeaders(dir),
     body: JSON.stringify(body),
@@ -57,7 +69,7 @@ export async function sendPrompt(
 
 export async function abortSession(userId: string, sessionId: string) {
   const dir = await ensureUserWorkspace(userId)
-  const res = await fetch(`${OC_URL}/session/${sessionId}/abort`, {
+  const res = await fetch(`${OPENCODE_BASE_URL}/session/${sessionId}/abort`, {
     method: "POST",
     headers: userHeaders(dir),
   })

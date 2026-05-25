@@ -37,18 +37,24 @@ When in doubt, pick the design that lets the agent do something we didn't think 
 If services aren't running (check `ss -tlnp | grep -E ':3000|:4096'`):
 
 ```bash
-# opencode server (the harness)
+# opencode server (the harness) — binds 127.0.0.1:4096
 cd /home/agent/opencode
 OPENROUTER_API_KEY='sk-or-...' PATH="$HOME/.bun/bin:$PATH" nohup bun dev serve > /tmp/oc-server.log 2>&1 & disown
 
-# Next.js dev (this app)
+# Bearer-auth fronting proxy (HARDENING §1.2) — binds 127.0.0.1:4097.
+# Token must match STEINMETZ_OPENCODE_TOKEN in grid-app/.env.local.
 cd /home/agent/grid-app
+STEINMETZ_OPENCODE_TOKEN="$(grep '^STEINMETZ_OPENCODE_TOKEN=' .env.local | cut -d= -f2-)" \
+  PATH="$HOME/.bun/bin:$PATH" nohup bun run scripts/opencode-proxy.ts > /tmp/oc-proxy.log 2>&1 & disown
+
+# Next.js dev (this app)
 nohup npm run dev > /tmp/nx-dev.log 2>&1 & disown
 ```
 
 URLs (the VM is remote; user connects via SSH tunnel `-L 3000:localhost:3000`):
 - App: `http://localhost:3000`
-- opencode API: `http://localhost:4096`
+- opencode (via proxy, bearer-auth): `http://localhost:4097`
+- opencode (raw upstream — never call from outside the VM): `http://localhost:4096`
 - Roadmap (via tunnel): `http://localhost:3000/ROADMAP.md`
 - Schema (via tunnel): `http://localhost:3000/schema.sql`
 

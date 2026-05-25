@@ -1,8 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { ensureUserWorkspace } from "@/lib/user-workspace"
-
-const OC_URL = process.env.OPENCODE_SERVER_URL || "http://127.0.0.1:4096"
+import { OPENCODE_BASE_URL, opencodeHeaders } from "@/lib/opencode-client"
 
 // Event types we forward to the client. Anything emitted by the opencode
 // server for *this* workspace that doesn't carry a sessionID matching the
@@ -34,9 +33,9 @@ export async function GET(
   const { id: sessionId } = await params
   const workspaceDir = await ensureUserWorkspace(user.id)
 
-  const upstreamUrl = `${OC_URL}/event?directory=${encodeURIComponent(workspaceDir)}`
+  const upstreamUrl = `${OPENCODE_BASE_URL}/event?directory=${encodeURIComponent(workspaceDir)}`
   const upstream = await fetch(upstreamUrl, {
-    headers: { accept: "text/event-stream" },
+    headers: { ...opencodeHeaders(workspaceDir), accept: "text/event-stream" },
     signal: request.signal,
   })
   if (!upstream.ok || !upstream.body) {

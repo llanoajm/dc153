@@ -14,17 +14,30 @@ features show up in the agent's tool palette without restarting the server.
 """
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import inspect
 import json
 import os
 import sys
+import time
 import traceback
 import typing
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 PROTOCOL_VERSION = "2025-06-18"
 SERVER_INFO = {"name": "steinmetz-features", "version": "0.1.0"}
+
+# HARDENING §2.2 — `may_I_proceed()` admission. The MCP server posts to
+# grid-app before invoking a feature, and again when it finishes. If the env
+# is unconfigured (dev / smoke), the wrapper is a no-op and tool calls run
+# unmetered — that's the legacy behavior, preserved on purpose so launching
+# the MCP server outside of opencode (e.g. in tests) still works.
+PROCEED_URL_PATH = "/api/internal/proceed"
+RELEASE_URL_PATH = "/api/internal/release"
+DEFAULT_GRID_APP_URL = "http://127.0.0.1:3000"
 
 
 def features_dir() -> Path:
@@ -445,6 +458,108 @@ def call_tool(tool_name: str, arguments: dict | None) -> str:
         return repr(result)
 
 
+class ProceedDenied(Exception):
+    """Raised when grid-app's token bucket refuses admission (HTTP 429)."""
+
+    def __init__(self, retry_after: int, reason: str) -> None:
+        super().__init__(f"proceed denied: {reason} (retry_after={retry_after}s)")
+        self.retry_after = retry_after
+        self.reason = reason
+
+
+def _grid_app_url() -> str:
+    return os.environ.get("STEINMETZ_GRID_APP_URL") or DEFAULT_GRID_APP_URL
+
+
+def _proceed_args_digest(arguments: dict | None) -> str:
+    try:
+        canonical = json.dumps(arguments or {}, sort_keys=True, default=str)
+    except Exception:
+        canonical = repr(arguments)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:32]
+
+
+def _proceed_request(tool_name: str, arguments: dict | None) -> str | None:
+    """Reserve a concurrency slot for `tool_name`. Returns a release token
+    when grid-app admits the call, raises ProceedDenied on 429, returns None
+    when the admission endpoint isn't configured (so the call runs unmetered).
+    """
+    token = os.environ.get("STEINMETZ_INTERNAL_TOKEN")
+    user_id = os.environ.get("STEINMETZ_USER_ID")
+    if not token or not user_id:
+        return None
+    payload = json.dumps(
+        {
+            "user_id": user_id,
+            "tool": tool_name,
+            "args_digest": _proceed_args_digest(arguments),
+        }
+    ).encode("utf-8")
+    req = urllib.request.Request(
+        _grid_app_url().rstrip("/") + PROCEED_URL_PATH,
+        method="POST",
+        data=payload,
+        headers={
+            "content-type": "application/json",
+            "authorization": f"Bearer {token}",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            body = json.loads(resp.read().decode("utf-8") or "{}")
+            return str(body.get("token") or "") or None
+    except urllib.error.HTTPError as exc:
+        if exc.code == 429:
+            try:
+                body = json.loads(exc.read().decode("utf-8") or "{}")
+            except Exception:
+                body = {}
+            raise ProceedDenied(
+                retry_after=int(body.get("retry_after") or 5),
+                reason=str(body.get("reason") or "rate_limited"),
+            ) from exc
+        log(f"proceed HTTP error {exc.code}: {exc.reason}")
+        return None
+    except Exception as exc:
+        log(f"proceed call failed: {exc}")
+        return None
+
+
+def _release_request(
+    proceed_token: str | None,
+    *,
+    status: str,
+    runtime_ms: int,
+    error: str | None = None,
+) -> None:
+    if not proceed_token:
+        return
+    bearer = os.environ.get("STEINMETZ_INTERNAL_TOKEN")
+    if not bearer:
+        return
+    payload: dict = {
+        "token": proceed_token,
+        "status": status,
+        "runtime_ms": runtime_ms,
+    }
+    if error:
+        payload["error"] = error[:4000]
+    req = urllib.request.Request(
+        _grid_app_url().rstrip("/") + RELEASE_URL_PATH,
+        method="POST",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "content-type": "application/json",
+            "authorization": f"Bearer {bearer}",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            resp.read()
+    except Exception as exc:
+        log(f"release call failed: {exc}")
+
+
 def _send(obj: dict) -> None:
     sys.stdout.write(json.dumps(obj) + "\n")
     sys.stdout.flush()
@@ -493,17 +608,43 @@ def handle(req: dict) -> None:
     if method == "tools/call":
         name = params.get("name")
         args = params.get("arguments") or {}
+        # HARDENING §2.2: ask grid-app for a slot before running the tool. If
+        # the bucket is full we surface the 429 to the agent as an MCP tool
+        # error (`isError: true`) — same shape it sees for any other failure,
+        # so the agent can decide to retry or pick a different tool.
+        proceed_token: str | None = None
         try:
-            text = call_tool(name, args)
+            proceed_token = _proceed_request(name or "", args)
+        except ProceedDenied as denied:
             _respond(
                 msg_id,
                 result={
-                    "content": [{"type": "text", "text": text}],
-                    "isError": False,
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": (
+                                f"concurrency limit reached ({denied.reason}); "
+                                f"retry in ~{denied.retry_after}s"
+                            ),
+                        }
+                    ],
+                    "isError": True,
                 },
             )
+            return
+
+        start_ns = time.monotonic_ns()
+        try:
+            text = call_tool(name, args)
         except Exception as exc:
             tb = traceback.format_exc()
+            runtime_ms = max(0, (time.monotonic_ns() - start_ns) // 1_000_000)
+            _release_request(
+                proceed_token,
+                status="error",
+                runtime_ms=int(runtime_ms),
+                error=str(exc),
+            )
             _respond(
                 msg_id,
                 result={
@@ -511,6 +652,17 @@ def handle(req: dict) -> None:
                     "isError": True,
                 },
             )
+            return
+
+        runtime_ms = max(0, (time.monotonic_ns() - start_ns) // 1_000_000)
+        _release_request(proceed_token, status="ok", runtime_ms=int(runtime_ms))
+        _respond(
+            msg_id,
+            result={
+                "content": [{"type": "text", "text": text}],
+                "isError": False,
+            },
+        )
         return
 
     if msg_id is not None:

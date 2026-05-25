@@ -365,6 +365,24 @@ export async function writeOpencodeConfig(
     providerKeys !== undefined
       ? buildProviderBlock(providerKeys)
       : await readExistingProviderBlock(workspaceDir)
+  // HARDENING §2.2: pass through the proceed/release knobs to the MCP server
+  // so its `tools/call` wrapper can gate every feature call through grid-app's
+  // in-memory token bucket. user_id is the workspace dir basename (supabase
+  // uid); we send it explicitly so the MCP server doesn't have to parse paths.
+  const mcpEnv: Record<string, string> = {
+    STEINMETZ_FEATURES_DIR: path.join(workspaceDir, "features"),
+    STEINMETZ_WORKSPACE_DIR: workspaceDir,
+    STEINMETZ_USER_ID: path.basename(workspaceDir),
+    // HARDENING §2.1: per-user pip target. The MCP server (and any feature
+    // modules it imports) sees this user's .python_libs/ first so
+    // `pip install --target=...` installs are visible only here.
+    PYTHONPATH: pythonLibsDir(workspaceDir),
+  }
+  const internalToken = process.env.STEINMETZ_INTERNAL_TOKEN
+  if (internalToken) mcpEnv.STEINMETZ_INTERNAL_TOKEN = internalToken
+  const gridAppUrl = process.env.STEINMETZ_GRID_APP_URL
+  if (gridAppUrl) mcpEnv.STEINMETZ_GRID_APP_URL = gridAppUrl
+
   const opencodeConfig = {
     $schema: "https://opencode.ai/config.json",
     provider,
@@ -372,14 +390,7 @@ export async function writeOpencodeConfig(
       "user-features": {
         type: "local",
         command: [PY_BIN, MCP_SERVER_SCRIPT],
-        environment: {
-          STEINMETZ_FEATURES_DIR: path.join(workspaceDir, "features"),
-          STEINMETZ_WORKSPACE_DIR: workspaceDir,
-          // HARDENING §2.1: per-user pip target. The MCP server (and any
-          // feature modules it imports) sees this user's .python_libs/ first
-          // so `pip install --target=...` installs are visible only here.
-          PYTHONPATH: pythonLibsDir(workspaceDir),
-        },
+        environment: mcpEnv,
       },
     },
     instructions,

@@ -3,6 +3,7 @@ import path from "node:path"
 import { spawn } from "node:child_process"
 import { createClient } from "@/lib/supabase/server"
 import { ensureUserWorkspace, pythonEnv } from "@/lib/user-workspace"
+import { acquireSlot, releaseTokenAsync } from "@/lib/proceed"
 
 const PY_BIN = process.env.STEINMETZ_PY || "/home/agent/zap/.venv/bin/python"
 
@@ -65,10 +66,52 @@ export async function POST(req: NextRequest) {
   if (body.checksum) args.push("--checksum", body.checksum)
   if (body.session) args.push("--session-id", body.session)
 
+  // HARDENING §2.2: gate the fetch through the same per-user / global bucket
+  // as the upload routes. The synchronous portion of the script holds the
+  // slot; the detached ingest it kicks off at the very end runs unmetered
+  // (acceptable — the agent can't queue another via this endpoint until the
+  // sync part has released).
+  const admission = await acquireSlot({
+    userId: user.id,
+    tool: "fetch_network",
+    args: { url, slug: body.slug ?? null },
+  })
+  if (!admission.ok) {
+    return NextResponse.json(
+      {
+        error: "concurrency_limit",
+        reason: admission.reason,
+        retry_after: admission.retryAfter,
+      },
+      {
+        status: 429,
+        headers: { "Retry-After": String(admission.retryAfter) },
+      },
+    )
+  }
+
   // Wait on the fetch script — it does the download synchronously and only
   // spawns the long-running ingest at the very end. Typical run is seconds
   // for a single CSV / .m file, up to ~30s for a moderate zip.
-  const result = await runFetch(args, workspace)
+  let result: FetchResult
+  try {
+    result = await runFetch(args, workspace)
+  } catch (e) {
+    await releaseTokenAsync({
+      token: admission.token,
+      status: "error",
+      error: String(e),
+    })
+    throw e
+  }
+  await releaseTokenAsync({
+    token: admission.token,
+    status: result.status === 0 ? "ok" : "error",
+    error:
+      result.status === 0
+        ? null
+        : String(result.payload?.error || `fetch exited ${result.status}`),
+  })
   if (result.status !== 0) {
     return NextResponse.json(
       { error: result.payload?.error || "fetch_failed", detail: result.payload },

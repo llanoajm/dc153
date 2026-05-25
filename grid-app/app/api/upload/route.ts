@@ -5,6 +5,7 @@ import { spawn } from "node:child_process"
 import { createClient } from "@/lib/supabase/server"
 import { createArtifact } from "@/lib/artifacts"
 import { ensureUserWorkspace, pythonEnv } from "@/lib/user-workspace"
+import { acquireSlot, releaseTokenAsync } from "@/lib/proceed"
 
 const PY_BIN = process.env.STEINMETZ_PY || "/home/agent/zap/.venv/bin/python"
 
@@ -49,6 +50,28 @@ export async function POST(req: NextRequest) {
   const rawDir = path.join(workspace, "sources", slug, "raw")
   await fs.mkdir(rawDir, { recursive: true })
 
+  // HARDENING §2.2: gate the detached ingestion against the per-user / global
+  // bucket so a user can't queue up 100 zip uploads in parallel. Reject loudly
+  // (429) instead of silently dropping the request.
+  const admission = await acquireSlot({
+    userId: user.id,
+    tool: "upload__pypsa_folder",
+    args: { slug, files: files.map((f) => f.name) },
+  })
+  if (!admission.ok) {
+    return NextResponse.json(
+      {
+        error: "concurrency_limit",
+        reason: admission.reason,
+        retry_after: admission.retryAfter,
+      },
+      {
+        status: 429,
+        headers: { "Retry-After": String(admission.retryAfter) },
+      },
+    )
+  }
+
   // Write each uploaded file directly into rawDir. We trust the file names
   // because they came from the user's drag-and-drop and are scoped to their
   // own workspace; sanitize the basename to avoid path traversal.
@@ -83,13 +106,19 @@ export async function POST(req: NextRequest) {
   })
 
   // Fire and forget — the ingestion script self-updates the artifact row via
-  // the Supabase service-role key.
-  spawnIngestion(artifact.id, rawDir, workspace)
+  // the Supabase service-role key. The release(token) call fires from the
+  // child's `close` handler so the bucket reflects real lifetime.
+  spawnIngestion(artifact.id, rawDir, workspace, admission.token)
 
   return NextResponse.json(artifact, { status: 201 })
 }
 
-function spawnIngestion(artifactId: string, folder: string, workspace: string) {
+function spawnIngestion(
+  artifactId: string,
+  folder: string,
+  workspace: string,
+  proceedToken: string,
+) {
   const child = spawn(
     PY_BIN,
     [ingestScriptPath(), "--artifact-id", artifactId, "--folder", folder],
@@ -100,6 +129,20 @@ function spawnIngestion(artifactId: string, folder: string, workspace: string) {
       env: pythonEnv(workspace),
     },
   )
+  child.on("close", (code) => {
+    void releaseTokenAsync({
+      token: proceedToken,
+      status: code === 0 ? "ok" : "error",
+      error: code === 0 ? null : `ingester exited ${code}`,
+    })
+  })
+  child.on("error", (err) => {
+    void releaseTokenAsync({
+      token: proceedToken,
+      status: "error",
+      error: String(err),
+    })
+  })
   child.unref()
 }
 

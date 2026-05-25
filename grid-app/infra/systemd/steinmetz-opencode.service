@@ -1,0 +1,19 @@
+[Unit]
+Description=Steinmetz opencode HTTP server (our fork; binds 127.0.0.1:4096)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=agent
+Group=agent
+WorkingDirectory=/home/agent/opencode
+EnvironmentFile=/etc/steinmetz/opencode.env
+ExecStart=/home/agent/grid-app/scripts/systemd/run-opencode.sh
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

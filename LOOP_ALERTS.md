@@ -21,3 +21,4 @@
 [2026-05-23T07:52:18+00:00] PARTIAL: - [ ] 17. Agentic view authoring v2: sandboxed custom panels (ROADMAP §11.8) (attempt 5)
 [2026-05-23T07:52:23+00:00] BLOCKED: - [ ] 17. Agentic view authoring v2: sandboxed custom panels (ROADMAP §11.8) (max attempts)
 [2026-05-23T19:21:18+00:00] DONE: - [ ] 17. Agentic view authoring v2: sandboxed custom panels (ROADMAP §11.8)
+[2026-05-25T01:14:14+00:00] DONE: - [ ] 1.1 Tighten Bash / Edit / external_directory permissions (HARDENING_ROADMAP §1.1)

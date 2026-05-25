@@ -32,7 +32,7 @@ under three phase gates:
     - `npm run build` exits 0.
     - Manual cross-user smoke (best-effort, document in handoff if not runnable): asking the agent to `cat /home/agent/grid-workspaces/<otherUid>/glossary.md` is denied or prompts for permission; agents do not access another user's workspace silently.
 
-- [ ] 1.2 Lock opencode behind an auth token (HARDENING_ROADMAP §1.2)
+- [x] 1.2 Lock opencode behind an auth token (HARDENING_ROADMAP §1.2)
   - context: opencode currently binds 127.0.0.1:4096 with no auth; anyone with shell on the VM gets full session takeover. Front it with a bearer-token proxy; do not modify the opencode fork.
   - acceptance:
     - A new fronting process exists (e.g. `scripts/opencode-proxy.ts` or a Caddy/nginx unit under `infra/` or `deploy/`); the file is committed.

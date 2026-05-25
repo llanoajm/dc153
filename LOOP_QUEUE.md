@@ -68,7 +68,7 @@ under three phase gates:
     - zap stays read-only in the shared venv (no edits to zap source; no zap install paths changed).
     - `npm run build` exits 0.
 
-- [ ] 2.2 Per-user solve concurrency limits + tool-run visibility (HARDENING_ROADMAP §2.2)
+- [x] 2.2 Per-user solve concurrency limits + tool-run visibility (HARDENING_ROADMAP §2.2)
   - context: implement the `may_I_proceed()` honest-broker pattern between `scripts/user-mcp-server.py` and grid-app, with per-user and global slot caps and a `tool_runs` audit table.
   - acceptance:
     - `lib/concurrency.ts` exists with an in-memory token bucket (per-user default 1, global default 3).

@@ -1,18 +1,4 @@
 STATUS: done
-SUMMARY: Per-user pip target (`<workspace>/.python_libs/`) wired into the MCP server env, lib/review.ts, and all upload + fetch route Python spawn sites via a new pythonEnv() helper; workspace AGENTS.md documents `pip install --target=.python_libs` as the convention.
-NEXT_STEPS:
-ACCEPTANCE:
-- pass: workspace AGENTS.md template documents `pip install --target=<WORKSPACE>/.python_libs <pkg>` (lib/user-workspace.ts in the "Installing Python packages" section).
-- pass: every Python subprocess spawn site prepends `<WORKSPACE>/.python_libs/` to PYTHONPATH — verified by `rg PYTHONPATH lib app`:
-    * lib/user-workspace.ts MCP server env block sets PYTHONPATH to pythonLibsDir(workspaceDir)
-    * lib/review.ts reviewFeatureDetached uses pythonEnv(workspace)
-    * app/api/upload/route.ts spawnIngestion uses pythonEnv(workspace)
-    * app/api/upload/pdf/route.ts spawnIngestion uses pythonEnv(workspace)
-    * app/api/upload/source/route.ts spawnIngestion uses pythonEnv(workspace)
-    * app/api/upload/reingest/[id]/route.ts spawnIngestion uses pythonEnv(workspace) (workspace now derived via ensureUserWorkspace(user.id))
-    * app/api/fetch/route.ts runFetch uses pythonEnv(workspace)
-- pass: zap stays read-only in the shared venv — no edits to /home/agent/zap, no changes to zap install paths, STEINMETZ_PY still resolves to /home/agent/zap/.venv/bin/python.
-- pass: `npm run build` exits 0 (Next 16, Turbopack default; all routes compile).
-- note: PYTHONPATH only prepends — any pre-existing PYTHONPATH from the parent env is preserved, so the shared zap install (resolved via the interpreter's site-packages) keeps working regardless.
-- note: ensureUserWorkspace now mkdir -p's `<workspace>/.python_libs` on first materialization so PYTHONPATH always points at a real directory before the user's first pip install.
+SUMMARY: HARDENING §2.2 ships: lib/concurrency.ts token bucket, /api/internal/{proceed,release} (bearer-gated), tool_runs RLS schema, MCP-server may_I_proceed wrapper, and proceed/release wiring in upload + fetch routes — user must paste the new tool_runs table from supabase/schema.sql into Supabase before inserts will succeed.
+ACCEPTANCE: lib/concurrency.ts in-memory bucket (per-user default 1, global 3, env-tunable) PASS. app/api/internal/proceed/route.ts + release/route.ts bearer-gated by STEINMETZ_INTERNAL_TOKEN (401 without it) PASS. supabase/schema.sql gains tool_runs(id, user_id, tool, args_digest, token, started_at, expected_deadline, ended_at, runtime_ms, status, error) + own-row RLS PASS. scripts/user-mcp-server.py wraps tools/call with proceed/release; upload + fetch routes call acquireSlot/releaseTokenAsync via in-process lib/proceed.ts (same policy) PASS. Hang detection via sweep() on every proceed/release call, plus the partial index on (expected_deadline) where status='running' for future cron sweeps PASS. npm run build exits 0 PASS. Behavioural smoke for two concurrent same-user iesp__solve calls NOT EXERCISED — needs a running opencode session + paste of the new schema; protocol matches roadmap (429 returned by /api/internal/proceed becomes ProceedDenied which surfaces as MCP isError=true).
 VERIFIED: yes

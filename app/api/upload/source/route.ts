@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createArtifact } from "@/lib/artifacts"
 import { ensureUserWorkspace, pythonEnv } from "@/lib/user-workspace"
 import { acquireSlot, releaseTokenAsync } from "@/lib/proceed"
+import { checkUserQuota } from "@/lib/quota"
 
 const PY_BIN = process.env.STEINMETZ_PY || "/home/agent/zap/.venv/bin/python"
 
@@ -119,6 +120,16 @@ export async function POST(req: NextRequest) {
   }
   if (file.size === 0) {
     return NextResponse.json({ error: "empty file" }, { status: 400 })
+  }
+
+  // HARDENING §2.3: reject uploads from over-quota users before any disk
+  // write or detached spawn.
+  const quota = await checkUserQuota(user.id)
+  if (!quota.ok) {
+    return NextResponse.json(
+      { error: quota.reason, message: quota.message },
+      { status: 507 },
+    )
   }
 
   const kind = detectKind(file)

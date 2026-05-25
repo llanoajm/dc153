@@ -41,6 +41,14 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
+-- HARDENING §2.3: per-user disk-quota tripwire. Flipped to true by
+-- scripts/quota_check.sh when a user crosses 80% of their soft cap; flipped
+-- back to false once they free space. Upload routes consult this column and
+-- reject with HTTP 507 while it's true. Declared as an alter so existing
+-- profile rows pick up the column on a schema re-paste.
+alter table public.profiles
+  add column if not exists over_quota boolean not null default false;
+
 -- ============================================================================
 -- features
 -- ============================================================================

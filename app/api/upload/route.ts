@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createArtifact } from "@/lib/artifacts"
 import { ensureUserWorkspace, pythonEnv } from "@/lib/user-workspace"
 import { acquireSlot, releaseTokenAsync } from "@/lib/proceed"
+import { checkUserQuota } from "@/lib/quota"
 
 const PY_BIN = process.env.STEINMETZ_PY || "/home/agent/zap/.venv/bin/python"
 
@@ -43,6 +44,17 @@ export async function POST(req: NextRequest) {
 
   if (files.length === 0) {
     return NextResponse.json({ error: "no files in upload" }, { status: 400 })
+  }
+
+  // HARDENING §2.3: block uploads when the caller is over their disk quota.
+  // scripts/quota_check.sh flips profiles.over_quota at the 80% mark; the
+  // user has to free space before we'll write more bytes to their workspace.
+  const quota = await checkUserQuota(user.id)
+  if (!quota.ok) {
+    return NextResponse.json(
+      { error: quota.reason, message: quota.message },
+      { status: 507 },
+    )
   }
 
   const slug = slugify(slugInput || name) || `network-${Date.now()}`

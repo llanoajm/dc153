@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import path from "node:path"
 import { spawn } from "node:child_process"
 import { createClient } from "@/lib/supabase/server"
-import { ensureUserWorkspace } from "@/lib/user-workspace"
+import { ensureUserWorkspace, pythonEnv } from "@/lib/user-workspace"
 
 const PY_BIN = process.env.STEINMETZ_PY || "/home/agent/zap/.venv/bin/python"
 
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
   // Wait on the fetch script — it does the download synchronously and only
   // spawns the long-running ingest at the very end. Typical run is seconds
   // for a single CSV / .m file, up to ~30s for a moderate zip.
-  const result = await runFetch(args)
+  const result = await runFetch(args, workspace)
   if (result.status !== 0) {
     return NextResponse.json(
       { error: result.payload?.error || "fetch_failed", detail: result.payload },
@@ -83,11 +83,11 @@ interface FetchResult {
   payload: Record<string, unknown> | null
 }
 
-function runFetch(args: string[]): Promise<FetchResult> {
+function runFetch(args: string[], workspace: string): Promise<FetchResult> {
   return new Promise((resolve) => {
     const child = spawn(PY_BIN, args, {
       cwd: process.cwd(),
-      env: { ...process.env },
+      env: pythonEnv(workspace),
     })
     let stdout = ""
     let stderr = ""

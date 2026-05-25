@@ -4,7 +4,7 @@ import path from "node:path"
 import { spawn } from "node:child_process"
 import { createClient } from "@/lib/supabase/server"
 import { createArtifact } from "@/lib/artifacts"
-import { ensureUserWorkspace } from "@/lib/user-workspace"
+import { ensureUserWorkspace, pythonEnv } from "@/lib/user-workspace"
 
 const PY_BIN = process.env.STEINMETZ_PY || "/home/agent/zap/.venv/bin/python"
 
@@ -195,7 +195,7 @@ function spawnIngestion(cfg: IngesterConfig, artifactId: string, filePath: strin
       detached: true,
       stdio: "ignore",
       cwd: process.cwd(),
-      env: { ...process.env },
+      env: pythonEnv(workspace),
     },
   )
   child.unref()

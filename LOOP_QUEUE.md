@@ -89,7 +89,7 @@ under three phase gates:
     - Mount + `quotaon` instructions documented in this repo (e.g. `infra/QUOTA.md` or a section in STATE.md / AGENTS.md) — runtime config the user has to apply on the VM is allowed to be doc-only, but the doc must be committed.
     - `npm run build` exits 0.
 
-- [ ] 3.1 Per-user Linux account (HARDENING_ROADMAP §3.1)
+- [x] 3.1 Per-user Linux account (HARDENING_ROADMAP §3.1)
   - context: kernel-enforced isolation begins here; spin a per-user OS account on signup, chown the workspace to it, run grid-app in a group that can still read workspace metadata. **VERIFIER NOTE: this item touches the host system (useradd/chown). The verify phase must focus on the in-repo plumbing, not on actually creating Linux users — document any OS-side actions in the handoff rather than executing them.**
   - acceptance:
     - `lib/user-workspace.ts` `ensureUserWorkspace` calls a helper that derives a short-uid (hash of supabase uid, length ≤ 32 chars) and runs `useradd --system --no-create-home --home <workspace> steinmetz-<short-uid>` (idempotent — second call is a no-op).

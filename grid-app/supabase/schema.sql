@@ -196,6 +196,15 @@ $$;
 revoke all on function public.create_org(text, text) from public;
 grant execute on function public.create_org(text, text) to authenticated;
 
+-- active_org_id: which org's context overlays load into the agent's session
+-- (HARDENING §1.3). Null = personal mode, no org overlays. Membership is
+-- re-validated at session-creation time; setting this to an org the caller
+-- isn't in is rejected by the server route, not by the column. Declared here
+-- (instead of inline on `profiles`) because `orgs` is defined after
+-- `profiles` and the FK target must exist first.
+alter table public.profiles
+  add column if not exists active_org_id uuid references public.orgs(id) on delete set null;
+
 -- ============================================================================
 -- artifacts
 --

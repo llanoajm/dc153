@@ -2,7 +2,7 @@ import fs from "node:fs/promises"
 import path from "node:path"
 import { createClient } from "@/lib/supabase/server"
 import { ensureUserWorkspace } from "@/lib/user-workspace"
-import { listMyOrgs, syncOrgContextOverlays } from "@/lib/orgs"
+import { getActiveOrgId, listMyOrgs, syncOrgContextOverlays } from "@/lib/orgs"
 import { MarkdownRenderer } from "@/components/renderers/markdown"
 import { redirect } from "next/navigation"
 
@@ -27,6 +27,8 @@ export default async function GlossaryPage() {
     // best-effort
   }
   const memberships = await listMyOrgs()
+  const activeOrgId = await getActiveOrgId()
+  const activeMembership = memberships.find((m) => m.org_id === activeOrgId) ?? null
   const glossaryPath = path.join(workspace, "glossary.md")
   const contextPath = path.join(workspace, "company-context.md")
   const [glossary, context] = await Promise.all([
@@ -34,14 +36,27 @@ export default async function GlossaryPage() {
     readSafely(contextPath),
   ])
 
-  const orgPanes = await Promise.all(
-    memberships.map(async (m) => {
-      const gp = path.join(workspace, `glossary.org.${m.org.slug}.md`)
-      const cp = path.join(workspace, `company-context.org.${m.org.slug}.md`)
-      const [g, c] = await Promise.all([readSafely(gp), readSafely(cp)])
-      return { slug: m.org.slug, name: m.org.name, glossaryPath: gp, contextPath: cp, glossary: g, context: c }
-    }),
-  )
+  // Only the active org's overlay is loaded into the agent session (HARDENING
+  // §1.3), so this viewer only shows that one. The org switcher in the
+  // workspace header flips which org is active.
+  const orgPanes = activeMembership
+    ? await (async () => {
+        const m = activeMembership
+        const gp = path.join(workspace, `glossary.org.${m.org.slug}.md`)
+        const cp = path.join(workspace, `company-context.org.${m.org.slug}.md`)
+        const [g, c] = await Promise.all([readSafely(gp), readSafely(cp)])
+        return [
+          {
+            slug: m.org.slug,
+            name: m.org.name,
+            glossaryPath: gp,
+            contextPath: cp,
+            glossary: g,
+            context: c,
+          },
+        ]
+      })()
+    : []
 
   return (
     <div className="h-full overflow-y-auto">

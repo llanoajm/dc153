@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { ensureUserWorkspace } from "@/lib/user-workspace"
-import { syncOrgContextOverlays } from "@/lib/orgs"
+import { getActiveOrgId, listMyOrgs, syncOrgContextOverlays } from "@/lib/orgs"
 import { listPinnedDashboards } from "@/lib/dashboards"
 import { Lockup } from "@/components/lockup"
+import { OrgSwitcher } from "@/components/orgs/OrgSwitcher"
 import { WorkspaceShell, type PinnedDashboard } from "@/components/shell/WorkspaceShell"
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -14,13 +15,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!user) redirect("/login")
 
   // Materialize the user's workspace if it doesn't exist yet, then layer in
-  // any org overlays so the agent sees the user's org glossary/context before
-  // personal content (ROADMAP §10). syncOrgContextOverlays is a best-effort
-  // refresh — if Supabase is unreachable, fall back to the workspace as-is
-  // so chat still works.
+  // the active org's overlays so the agent sees that one org's
+  // glossary/context before personal content (ROADMAP §10, HARDENING §1.3 —
+  // overlays must NOT stack across every membership). syncOrgContextOverlays
+  // is a best-effort refresh — if Supabase is unreachable, fall back to the
+  // workspace as-is so chat still works.
   const workspaceDir = await ensureUserWorkspace(user.id)
+  const [memberships, activeOrgId] = await Promise.all([
+    listMyOrgs().catch(() => []),
+    getActiveOrgId().catch(() => null),
+  ])
   try {
-    await syncOrgContextOverlays(workspaceDir)
+    await syncOrgContextOverlays(workspaceDir, { activeOrgId })
   } catch (e) {
     console.warn("syncOrgContextOverlays failed", e)
   }
@@ -36,14 +42,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="flex-1 flex flex-col bg-white text-black min-h-0">
       <header className="border-b border-black/10 px-6 py-3 flex items-center justify-between shrink-0">
         <Lockup size="sm" />
-        <form action="/auth/signout" method="POST">
-          <button
-            type="submit"
-            className="text-xs font-mark tracking-wider text-black/60 hover:text-black"
-          >
-            Sign out
-          </button>
-        </form>
+        <div className="flex items-center gap-6">
+          <OrgSwitcher memberships={memberships} activeOrgId={activeOrgId} />
+          <form action="/auth/signout" method="POST">
+            <button
+              type="submit"
+              className="text-xs font-mark tracking-wider text-black/60 hover:text-black"
+            >
+              Sign out
+            </button>
+          </form>
+        </div>
       </header>
       <WorkspaceShell pinnedDashboards={pinnedDashboards}>{children}</WorkspaceShell>
     </div>

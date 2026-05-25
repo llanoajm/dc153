@@ -102,53 +102,101 @@ export async function addMember(
   if (error) throw new Error(error.message)
 }
 
-// Pull each org's canonical glossary + context_doc artifacts and write them
-// into the workspace as overlay files. Org content loads first; personal
-// content layers on top (ROADMAP §10). Called from the app layout on every
-// /app request so memberships changing mid-session pick up next visit.
-export async function syncOrgContextOverlays(workspaceDir: string): Promise<string[]> {
+// Active-org state lives on `profiles.active_org_id` (HARDENING §1.3). Null =
+// personal mode, no org overlay. Reading is RLS-gated to the caller's own row.
+export async function getActiveOrgId(): Promise<string | null> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return null
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("active_org_id")
+    .eq("id", user.id)
+    .maybeSingle()
+  if (error) throw new Error(error.message)
+  return (data?.active_org_id as string | null | undefined) ?? null
+}
+
+// Set the caller's active org, validating membership first. Pass `null` to
+// drop back to personal mode. Throws on non-membership so the calling route
+// can return 403.
+export async function setActiveOrgId(orgId: string | null): Promise<void> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error("unauthorized")
+  if (orgId !== null) {
+    const role = await getMyRoleIn(orgId)
+    if (role === null) throw new Error("forbidden: not a member of that org")
+  }
+  const { error } = await supabase
+    .from("profiles")
+    .update({ active_org_id: orgId })
+    .eq("id", user.id)
+  if (error) throw new Error(error.message)
+}
+
+// Pull the *active* org's canonical glossary + context_doc artifacts and
+// write them into the workspace as overlay files. Org content loads first;
+// personal content layers on top (ROADMAP §10). Non-active overlay files for
+// other orgs the user belongs to are dropped — see HARDENING §1.3 (a user in
+// multiple orgs must not leak context across them).
+//
+// `activeOrgId` is optional: when omitted, it's read from
+// `profiles.active_org_id` for the current user. When the active id is null
+// (personal mode), no overlay files are written and any stale ones are
+// removed.
+export async function syncOrgContextOverlays(
+  workspaceDir: string,
+  opts: { activeOrgId?: string | null } = {},
+): Promise<string[]> {
+  const activeOrgId =
+    opts.activeOrgId === undefined ? await getActiveOrgId() : opts.activeOrgId
+
+  if (!activeOrgId) {
+    return applyOrgOverlays(workspaceDir, [])
+  }
+
+  // Validate that the active org is still one the caller belongs to. If not
+  // (e.g. they were removed mid-session), drop back to personal mode rather
+  // than stacking the now-unauthorized overlay.
   const memberships = await listMyOrgs()
-  if (memberships.length === 0) {
+  const active = memberships.find((m) => m.org_id === activeOrgId)
+  if (!active) {
     return applyOrgOverlays(workspaceDir, [])
   }
 
   const supabase = await createClient()
-  const orgIds = memberships.map((m) => m.org_id)
   const { data, error } = await supabase
     .from("artifacts")
-    .select("org_id, kind, name, view_spec, metadata, status, updated_at")
-    .in("org_id", orgIds)
+    .select("kind, view_spec, metadata, updated_at")
+    .eq("org_id", activeOrgId)
     .in("kind", ["glossary", "context_doc"])
     .eq("status", "canonical")
     .order("updated_at", { ascending: false })
   if (error) throw new Error(error.message)
 
-  const byOrg = new Map<string, { glossary?: string; context?: string }>()
+  let glossary: string | undefined
+  let context: string | undefined
   for (const row of (data ?? []) as Array<{
-    org_id: string
     kind: string
     view_spec: Record<string, unknown> | null
     metadata: Record<string, unknown> | null
   }>) {
-    const slot = byOrg.get(row.org_id) ?? {}
     const text =
       (typeof row.view_spec?.text === "string" && row.view_spec.text) ||
       (typeof row.metadata?.text === "string" && row.metadata.text) ||
       ""
-    if (row.kind === "glossary" && !slot.glossary) slot.glossary = text
-    if (row.kind === "context_doc" && !slot.context) slot.context = text
-    byOrg.set(row.org_id, slot)
+    if (row.kind === "glossary" && glossary === undefined) glossary = text
+    if (row.kind === "context_doc" && context === undefined) context = text
   }
 
-  const overlays: OrgOverlay[] = memberships.map((m) => {
-    const slot = byOrg.get(m.org_id) ?? {}
-    return {
-      slug: m.org.slug,
-      glossary: slot.glossary,
-      context: slot.context,
-    }
-  })
-  return applyOrgOverlays(workspaceDir, overlays)
+  return applyOrgOverlays(workspaceDir, [
+    { slug: active.org.slug, glossary, context },
+  ])
 }
 
 export function slugify(s: string): string {

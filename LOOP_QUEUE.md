@@ -23,7 +23,7 @@ under three phase gates:
 
 ## Items
 
-- [ ] 1.1 Tighten Bash / Edit / external_directory permissions (HARDENING_ROADMAP §1.1)
+- [x] 1.1 Tighten Bash / Edit / external_directory permissions (HARDENING_ROADMAP §1.1)
   - context: replace `permission: {}` in workspace opencode.jsonc with a real per-tool / per-pattern allow/deny shape gated to the workspace cwd.
   - acceptance:
     - `lib/user-workspace.ts` `writeOpencodeConfig` writes a `permission:` object with `bash`, `edit`, `external_directory`, `webfetch`, `websearch` keys (grep the file for those identifiers).

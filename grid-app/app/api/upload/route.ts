@@ -4,7 +4,7 @@ import path from "node:path"
 import { spawn } from "node:child_process"
 import { createClient } from "@/lib/supabase/server"
 import { createArtifact } from "@/lib/artifacts"
-import { ensureUserWorkspace } from "@/lib/user-workspace"
+import { ensureUserWorkspace, pythonEnv } from "@/lib/user-workspace"
 
 const PY_BIN = process.env.STEINMETZ_PY || "/home/agent/zap/.venv/bin/python"
 
@@ -84,12 +84,12 @@ export async function POST(req: NextRequest) {
 
   // Fire and forget — the ingestion script self-updates the artifact row via
   // the Supabase service-role key.
-  spawnIngestion(artifact.id, rawDir)
+  spawnIngestion(artifact.id, rawDir, workspace)
 
   return NextResponse.json(artifact, { status: 201 })
 }
 
-function spawnIngestion(artifactId: string, folder: string) {
+function spawnIngestion(artifactId: string, folder: string, workspace: string) {
   const child = spawn(
     PY_BIN,
     [ingestScriptPath(), "--artifact-id", artifactId, "--folder", folder],
@@ -97,7 +97,7 @@ function spawnIngestion(artifactId: string, folder: string) {
       detached: true,
       stdio: "ignore",
       cwd: process.cwd(),
-      env: { ...process.env },
+      env: pythonEnv(workspace),
     },
   )
   child.unref()

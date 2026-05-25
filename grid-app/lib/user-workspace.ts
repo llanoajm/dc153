@@ -16,6 +16,11 @@ export async function ensureUserWorkspace(userId: string): Promise<string> {
   await fs.mkdir(path.join(dir, ".opencode", "agent"), { recursive: true })
   await fs.mkdir(path.join(dir, ".opencode", "skills"), { recursive: true })
   await fs.mkdir(path.join(dir, "features"), { recursive: true })
+  // Per-user pip install target (HARDENING §2.1). `pip install --target=<dir>`
+  // creates this on demand, but materializing it up front means PYTHONPATH
+  // always points at an existing directory and the agent's first `pip install`
+  // is just an install — no mkdir surprises.
+  await fs.mkdir(pythonLibsDir(dir), { recursive: true })
 
   // Bootstrap idempotently.
   await writeIfMissing(
@@ -39,6 +44,23 @@ zap library.
   feature so the agent rediscovers them in future sessions.
 - **The shared venv**: \`/home/agent/zap/.venv/bin/python\` has zap installed.
   Use it for any Python you run.
+- **Your pip target** (\`.python_libs/\`): when you need a package that isn't
+  in the shared venv, install it here so it's scoped to your workspace and
+  can't shadow zap or another user's installs.
+
+## Installing Python packages
+
+The shared venv is **read-only** for end-user-mode agents — do NOT
+\`pip install\` into \`/home/agent/zap/.venv\`. Instead, install per-workspace:
+
+\`\`\`bash
+/home/agent/zap/.venv/bin/python -m pip install --target=.python_libs <pkg>
+\`\`\`
+
+(\`.python_libs\` is a directory inside this workspace; \`--target\` puts the
+package files there instead of into the shared venv.) The Steinmetz harness
+adds \`.python_libs\` to \`PYTHONPATH\` for every subprocess it spawns on your
+behalf, so the install is visible from your MCP tools and feature modules.
 
 ## Shipping a feature
 
@@ -243,6 +265,28 @@ export function workspaceRoot(): string {
   return ROOT
 }
 
+// Per-user pip target (HARDENING §2.1). The agent runs
+// `pip install --target=<workspace>/.python_libs <pkg>`; every Python
+// subprocess we spawn prepends this dir to PYTHONPATH so the install is
+// visible to that user's runs only and never leaks into the shared venv.
+export function pythonLibsDir(workspaceDir: string): string {
+  return path.join(workspaceDir, ".python_libs")
+}
+
+// Build a child-process env that includes PYTHONPATH pointing at the user's
+// per-workspace pip target. Preserves any existing PYTHONPATH from the
+// caller / parent process. Callers should pass `process.env` as `base` (or
+// omit to use it implicitly).
+export function pythonEnv(
+  workspaceDir: string,
+  base: NodeJS.ProcessEnv = process.env,
+): NodeJS.ProcessEnv {
+  const libs = pythonLibsDir(workspaceDir)
+  const existing = base.PYTHONPATH
+  const PYTHONPATH = existing ? `${libs}${path.delimiter}${existing}` : libs
+  return { ...base, PYTHONPATH }
+}
+
 // Org-overlay file naming. Each org membership lands in two files —
 // `glossary.org.<slug>.md` and `company-context.org.<slug>.md` — so the
 // agent can read which definitions came from which org. Listed first in
@@ -331,6 +375,10 @@ export async function writeOpencodeConfig(
         environment: {
           STEINMETZ_FEATURES_DIR: path.join(workspaceDir, "features"),
           STEINMETZ_WORKSPACE_DIR: workspaceDir,
+          // HARDENING §2.1: per-user pip target. The MCP server (and any
+          // feature modules it imports) sees this user's .python_libs/ first
+          // so `pip install --target=...` installs are visible only here.
+          PYTHONPATH: pythonLibsDir(workspaceDir),
         },
       },
     },

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import path from "node:path"
 import { spawn } from "node:child_process"
 import { createClient } from "@/lib/supabase/server"
+import { ensureUserWorkspace, pythonEnv } from "@/lib/user-workspace"
 
 const PY_BIN = process.env.STEINMETZ_PY || "/home/agent/zap/.venv/bin/python"
 
@@ -56,7 +57,8 @@ export async function POST(
     .update({ metadata, status: "draft" })
     .eq("id", id)
 
-  spawnIngestion(id, rawDir)
+  const workspace = await ensureUserWorkspace(user.id)
+  spawnIngestion(id, rawDir, workspace)
   return NextResponse.json({ ok: true, artifact_id: id, folder: rawDir })
 }
 
@@ -72,7 +74,7 @@ function resolveRawDir(fsPath: string | null): string | null {
   return [...parts.slice(0, sourcesIdx + 2), "raw"].join(path.sep)
 }
 
-function spawnIngestion(artifactId: string, folder: string) {
+function spawnIngestion(artifactId: string, folder: string, workspace: string) {
   const child = spawn(
     PY_BIN,
     [ingestScriptPath(), "--artifact-id", artifactId, "--folder", folder],
@@ -80,7 +82,7 @@ function spawnIngestion(artifactId: string, folder: string) {
       detached: true,
       stdio: "ignore",
       cwd: process.cwd(),
-      env: { ...process.env },
+      env: pythonEnv(workspace),
     },
   )
   child.unref()

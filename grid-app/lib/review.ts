@@ -1,6 +1,7 @@
 import "server-only"
 import { spawn } from "node:child_process"
 import path from "node:path"
+import { pythonEnv } from "@/lib/user-workspace"
 
 // Thin wrapper around `scripts/review_feature.py`. Fires the reviewer
 // detached so the request that triggered the review (a feature edit, a draft
@@ -21,7 +22,7 @@ export function reviewFeatureDetached(artifactId: string, workspace: string): vo
       {
         detached: true,
         stdio: "ignore",
-        env: { ...process.env },
+        env: pythonEnv(workspace),
       },
     )
     child.unref()

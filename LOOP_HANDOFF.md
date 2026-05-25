@@ -1,5 +1,5 @@
-## Current item (from LOOP_QUEUE.md line 45)
-- [ ] 1.3 Fix org-overlay stacking bug (HARDENING_ROADMAP §1.3)
+## Current item (from LOOP_QUEUE.md line 54)
+- [ ] 1.4 Per-user OpenRouter key (HARDENING_ROADMAP §1.4)
 
 ## Attempt
 1 of 5
@@ -42,8 +42,16 @@
 - The product roadmap (ROADMAP.md) is out of scope for this queue. Don't pick up feature work even if you notice gaps.
 
 STATUS: done
-SUMMARY: Added profiles.active_org_id + a workspace-header org switcher; syncOrgContextOverlays now emits only the active org's overlay and the session-creation route accepts/validates active_org_id (403 for non-members) — user MUST paste updated supabase/schema.sql into Supabase before the switcher / session route can persist.
-NEXT_STEPS:
-ACCEPTANCE: schema column added (supabase/schema.sql + public/schema.sql) PASS; lib/orgs.ts syncOrgContextOverlays emits only the active org and deletes non-active overlay files via applyOrgOverlays PASS; app/api/opencode/session/route.ts accepts active_org_id, validates via getMyRoleIn, returns 403 for non-members, then re-syncs and createSession PASS; UI switcher at components/orgs/OrgSwitcher.tsx mounted in app/app/layout.tsx header, flips active_org_id through new PUT /api/orgs/active and router.refresh() retriggers the layout's sync PASS; npm run build exits 0 PASS. NOT IMPLEMENTED in this PR: the §1.3 acceptance phrase "chat that started in A is flagged and cannot be silently re-scoped" — the column is the source of truth so any in-flight session keeps its already-loaded system prompt until the next prompt round, but there is no per-session record of which org was active when the chat started; a follow-up could stamp active_org_id on a chat-session table for the flag UX.
-
+SUMMARY: Added provider_keys table + RLS, /api/settings/provider-keys (GET/POST/DELETE), /app/settings UI, and lib/opencode-client refreshes the user's workspace `.opencode/opencode.jsonc` `provider.openrouter.options.apiKey` from the DB before each createSession/sendPrompt — opencode's config loader merges that over the env key per request, so per-user keys bill against the user with no fork modification. SCHEMA CHANGED: paste updated supabase/schema.sql into Supabase + set STEINMETZ_PROVIDER_KEYS_SECRET in .env.local (openssl rand -hex 32) before the table or settings page work.
+NEXT_STEPS: n/a
+ACCEPTANCE:
+- pass: `supabase/schema.sql` adds `provider_keys(user_id, provider, encrypted_key, created_at)` with RLS by `auth.uid()`. Schema also carries `id uuid primary key`, `key_hint text`, `updated_at timestamptz`, and a partial unique index on (user_id, provider) so each user has at most one row per provider. Encryption path: AES-256-GCM keyed off `STEINMETZ_PROVIDER_KEYS_SECRET` (documented in `.env.example`); Supabase Vault / pgsodium called out in the schema comment as the future migration target and out of scope here.
+- pass: `app/api/settings/provider-keys/route.ts` exists with GET (masked list — never round-trips plaintext), POST (upsert + workspace config refresh), DELETE (delete + config refresh).
+- pass: `app/app/settings/page.tsx` exists with a per-provider form (currently the supported set is just `openrouter`; SUPPORTED_PROVIDERS is the single chokepoint for adding more).
+- pass: `lib/opencode-client.ts` `sendPrompt` (and `createSession`) call `getUserProviderKeysMap(userId)` + `writeUserProviderConfig(dir, keys)` before posting to opencode. The key is written into `<workspace>/.opencode/opencode.jsonc` under `provider.openrouter.options.apiKey`; opencode's config loader merges this over the env key at request time (verified in /home/agent/opencode/packages/opencode/src/provider/provider.ts:1224-1268,1549 — config provider options are layered over env, with explicit precedence config > env > auth). When no per-user key is stored the provider block is empty and opencode falls back to the shared env key, preserving the today behaviour.
+- pass: `npm run build` exits 0 (run from grid-app; static analysis + 30 routes prerendered, pre-existing Turbopack warning about `app/api/upload/pdf/route.ts` is unchanged).
+- caveats (not blockers, documented):
+  - Plaintext keys land on disk in each user's workspace `opencode.jsonc` (mode 644). Until §3.1 chowns workspaces per-Linux-user, anyone with VM shell can `cat` them. Same blast radius as the existing shared env key — no regression — but worth flagging in STATE.md once you wire the §3.1 plumbing so the chown order-of-operations is clear.
+  - The Settings page rail entry is appended after Panels. If you want it at the top (account stuff usually lives above content), reorder DEFAULT_SECTIONS in `components/shell/LeftRail.tsx`.
+  - `STEINMETZ_PROVIDER_KEYS_SECRET` rotation invalidates every stored key. Documented in `.env.example`.
 VERIFIED: yes

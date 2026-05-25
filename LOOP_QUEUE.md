@@ -51,7 +51,7 @@ under three phase gates:
     - UI: a switcher exists in the workspace shell (`components/shell/` or `components/orgs/`) that flips `active_org_id` and triggers re-sync.
     - `npm run build` exits 0.
 
-- [ ] 1.4 Per-user OpenRouter key (HARDENING_ROADMAP §1.4)
+- [x] 1.4 Per-user OpenRouter key (HARDENING_ROADMAP §1.4)
   - context: today every session bills against one shared key. Add per-user keys with a managed-secrets path, fall back to shared env only if the user has none configured.
   - acceptance:
     - `supabase/schema.sql` adds `provider_keys(user_id uuid, provider text, encrypted_key text, created_at timestamptz)` with RLS by `auth.uid()`. Encryption path documented (Supabase Vault / pgsodium, or a TODO marker if vault setup is out of scope for this item).

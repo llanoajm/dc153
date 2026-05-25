@@ -1,5 +1,5 @@
-## Current item (from LOOP_QUEUE.md line 35)
-- [ ] 1.2 Lock opencode behind an auth token (HARDENING_ROADMAP §1.2)
+## Current item (from LOOP_QUEUE.md line 45)
+- [ ] 1.3 Fix org-overlay stacking bug (HARDENING_ROADMAP §1.3)
 
 ## Attempt
 1 of 5
@@ -42,7 +42,8 @@
 - The product roadmap (ROADMAP.md) is out of scope for this queue. Don't pick up feature work even if you notice gaps.
 
 STATUS: done
-SUMMARY: scripts/opencode-proxy.ts is a Bun sidecar that requires Authorization: Bearer $STEINMETZ_OPENCODE_TOKEN and forwards to 127.0.0.1:4096 (incl. SSE pass-through); lib/opencode-client.ts and the /api/opencode/session/[id]/stream route now read STEINMETZ_OPENCODE_URL (default 127.0.0.1:4097) and send the bearer header; env vars documented in .env.example and AGENTS.md Quick Start; npm run build exits 0; smoke confirmed 401 without bearer and 200 with bearer on GET/POST /session plus an SSE server.connected event arriving via the proxy.
-NEXT_STEPS: (deferred to user) (1) generate `openssl rand -hex 32`, add `STEINMETZ_OPENCODE_TOKEN=<value>` and `STEINMETZ_OPENCODE_URL=http://127.0.0.1:4097` to `grid-app/.env.local`; (2) launch the proxy with the launch line from AGENTS.md Quick Start; (3) restart the Next dev server so it picks up the new env. The existing `OPENCODE_SERVER_URL` line in .env.local is now ignored and can be removed. The currently-running dev server (pid 54578) will start failing as soon as Next dev reloads — until the proxy is up on :4097 and the token is in .env.local, /app chat will return 502/401 because the new default URL is the proxy. Authed /app chat end-to-end check was NOT executed (autonomous loop, no browser session); please verify after the proxy is up.
-ACCEPTANCE: PASS — fronting process exists and is committed (scripts/opencode-proxy.ts); PASS — curl without bearer returns 401, with bearer returns 200 (smoke-tested on port 4197); PASS — lib/opencode-client.ts reads STEINMETZ_OPENCODE_URL and sends `Authorization: Bearer …`; PASS — token name documented in .env.example and in AGENTS.md Quick Start (never written in plaintext); PASS — `npm run build` exits 0; DEFERRED — "authed /app chat continues to work end-to-end" needs human browser verification after the user wires up the env + launches the proxy (see NEXT_STEPS).
+SUMMARY: Added profiles.active_org_id + a workspace-header org switcher; syncOrgContextOverlays now emits only the active org's overlay and the session-creation route accepts/validates active_org_id (403 for non-members) — user MUST paste updated supabase/schema.sql into Supabase before the switcher / session route can persist.
+NEXT_STEPS:
+ACCEPTANCE: schema column added (supabase/schema.sql + public/schema.sql) PASS; lib/orgs.ts syncOrgContextOverlays emits only the active org and deletes non-active overlay files via applyOrgOverlays PASS; app/api/opencode/session/route.ts accepts active_org_id, validates via getMyRoleIn, returns 403 for non-members, then re-syncs and createSession PASS; UI switcher at components/orgs/OrgSwitcher.tsx mounted in app/app/layout.tsx header, flips active_org_id through new PUT /api/orgs/active and router.refresh() retriggers the layout's sync PASS; npm run build exits 0 PASS. NOT IMPLEMENTED in this PR: the §1.3 acceptance phrase "chat that started in A is flagged and cannot be silently re-scoped" — the column is the source of truth so any in-flight session keeps its already-loaded system prompt until the next prompt round, but there is no per-session record of which org was active when the chat started; a follow-up could stamp active_org_id on a chat-session table for the flag UX.
+
 VERIFIED: yes

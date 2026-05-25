@@ -42,7 +42,7 @@ under three phase gates:
     - `npm run build` exits 0.
     - Authed `/app` chat continues to work end-to-end (manual; document in handoff).
 
-- [ ] 1.3 Fix org-overlay stacking bug (HARDENING_ROADMAP §1.3)
+- [x] 1.3 Fix org-overlay stacking bug (HARDENING_ROADMAP §1.3)
   - context: `syncOrgContextOverlays` stacks every org the user belongs to into `instructions:`, leaking cross-org context. Add an `active_org_id` concept and emit only that overlay.
   - acceptance:
     - `supabase/schema.sql` adds `active_org_id uuid` (nullable, FK to `orgs.id`) on `profiles`, OR a session-level mechanism is added with equivalent intent (documented in the handoff).

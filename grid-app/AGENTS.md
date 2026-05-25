@@ -74,6 +74,7 @@ grid-app/
 ├─ lib/
 │  ├─ supabase/{client,server,service}.ts
 │  ├─ opencode-client.ts       # server-side HTTP to opencode
+│  ├─ linux-account.ts         # HARDENING §3.1 — shortUidFor + ensureLinuxAccount
 │  └─ user-workspace.ts        # ensureUserWorkspace(userId) — materializes per-user dir
 ├─ proxy.ts                    # Next 16 proxy.ts (renamed from middleware) — auth gate
 ├─ supabase/schema.sql         # profiles + features + RLS — paste into Supabase SQL editor

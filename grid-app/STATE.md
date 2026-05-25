@@ -35,6 +35,38 @@ Everything past v0. See `ROADMAP.md` build order for the prioritized list. Highe
 - ~~**Source document ingestion (PDF → glossary / company-context)**~~ Done (2026-05-23): `app/api/upload/pdf/route.ts` accepts a PDF, writes it under `<workspace>/sources/<slug>/v<N>/<file>.pdf`, creates a `source_document` artifact, and spawns `scripts/ingest_pdf.py` detached. The script extracts text via `pypdf`, chunks into ~1200-char pieces with overlap, computes deterministic hashing-based bag-of-words embeddings (128-dim, L2-normalized), inserts into `public.source_chunks` (new table with RLS), merges extracted terms into `<workspace>/glossary.md` and a narrative blurb into `<workspace>/company-context.md`. Both files are listed in opencode's `instructions:` config (`.opencode/opencode.jsonc`) so they auto-load into every session's system prompt (verified by reading opencode's `session/instruction.ts`). Re-uploading with the same slug bumps `metadata.version` and chains `parent_id`; the script emits a `diff` view spec showing old vs. new extracted text. New UI: `/app/sources` (drag-drop panel) and `/app/glossary` (live side-by-side view of `glossary.md` + `company-context.md`). PPTX/images/audio remain TODO (roadmap item 13).
 - ~~**Web-fetch data acquisition**~~ Done (2026-05-23): `/api/fetch` and the MCP tool `steinmetz__fetch_network` download a URL into `<workspace>/sources/<slug>/raw/`, write a `network` artifact with `metadata.source_url` / `.license` / `.fetched_at` / `.checksum`, and re-use the upload ingestion pipeline. Missing-license keeps the artifact `status='draft'` with `metadata.license_unknown=true`; the workspace AGENTS.md tells the agent to prompt the user before promoting to canonical.
 
+## Hardening flags (opt-in)
+
+- **`STEINMETZ_ENABLE_LINUX_ACCOUNTS=1`** — engages HARDENING §3.1 (per-user
+  Linux accounts). Default off because chmod 700 + foreign owner on the
+  workspace would block grid-app's existing org-overlay / provider-key /
+  source-upload writes until §3.2 (per-user opencode units) ships. Flip the
+  flag in production once §3.2 lands.
+  - **Host prereqs** before flipping on:
+    - `sudo groupadd --system steinmetz`
+    - `sudo usermod -aG steinmetz agent` (so grid-app sees the `steinmetz`
+      group on its supplementary GID list; the dir entry remains stat-able
+      via x on `/home/agent/grid-workspaces`).
+    - `/etc/sudoers.d/steinmetz-hardening` granting the `agent` user
+      NOPASSWD on the exact paths used by `lib/linux-account.ts`:
+      ```
+      agent ALL=(root) NOPASSWD: /usr/sbin/useradd, /bin/chown, /bin/chmod
+      ```
+      Tighten to argv globs (`/usr/sbin/useradd --system --no-create-home --home /home/agent/grid-workspaces/* steinmetz-*` etc.) once the production deploy script is in place.
+  - **What the flag does** on each `ensureUserWorkspace(userId)`:
+    1. mints `steinmetz-<short-uid>` (sha256(userId) → 16 hex chars; full
+       username fits the 32-char Linux cap).
+    2. `useradd --system --no-create-home --home <workspace> steinmetz-<short-uid>` (exit 9 if exists → no-op).
+    3. `chown -R steinmetz-<short-uid>:steinmetz <workspace>`.
+    4. `chmod 700 <workspace>`.
+  - **Detection on re-entry**: `ensureUserWorkspace` stats the dir first; if
+    the uid is no longer `agent`, the workspace is treated as already
+    provisioned and the bootstrap path is skipped (grid-app can't enter a
+    700 dir owned by someone else anyway).
+  - **shortUidFor / linuxUserFor / linuxGroup** are exported from
+    `lib/user-workspace.ts` (re-exported from `lib/linux-account.ts`) for
+    items 3.2 (systemd template parameter) and 3.3 (per-user venv path).
+
 ## Known operational gotchas
 
 - The OpenRouter key was pasted in chat earlier; **user should rotate it**. Same for the Supabase service-role key.

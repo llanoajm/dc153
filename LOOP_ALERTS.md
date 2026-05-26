@@ -16,3 +16,4 @@
 [2026-05-26T14:27:19+00:00] PARTIAL: - [ ] 5. Add `gpu` kwarg + `--gpu` flag to `scripts/smoke_dispatch.py::run_dispatch` (ROADMAP §Phase C.5) (attempt 1)
 [2026-05-26T14:27:31+00:00] PARTIAL: - [ ] 5. Add `gpu` kwarg + `--gpu` flag to `scripts/smoke_dispatch.py::run_dispatch` (ROADMAP §Phase C.5) (attempt 2)
 [2026-05-26T14:27:42+00:00] PARTIAL: - [ ] 5. Add `gpu` kwarg + `--gpu` flag to `scripts/smoke_dispatch.py::run_dispatch` (ROADMAP §Phase C.5) (attempt 3)
+[2026-05-26T14:27:53+00:00] PARTIAL: - [ ] 5. Add `gpu` kwarg + `--gpu` flag to `scripts/smoke_dispatch.py::run_dispatch` (ROADMAP §Phase C.5) (attempt 4)

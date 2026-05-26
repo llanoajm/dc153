@@ -525,14 +525,26 @@ class _OutcomeShim:
         self.angle = angle
 
 
-def _solve_via_modal(net_dir, pnet, snapshots, hours: int) -> tuple:
+def _solve_via_modal(
+    net_dir,
+    pnet,
+    snapshots,
+    hours: int,
+    admm_args: dict | None = None,
+) -> tuple:
     """Run the Modal-hosted ADMM solver and return a tuple shaped like the
     CPU path: ``(outcome, pnet, snapshots, used_solver, elapsed, extra)``.
 
     ``extra`` carries provenance fields the run artifact's metadata wants
     (machine, gpu, solver_args) — the caller passes them through
     ``build_run_row``'s provenance kwargs. Raises ``RuntimeError`` with a
-    clear message when the Modal env isn't configured or the call fails."""
+    clear message when the Modal env isn't configured or the call fails.
+
+    ``admm_args`` defaults to ``{"num_iterations": 1000}`` (the interactive
+    setting; fast but ~30% LMP diff vs CPU on ieee-30). The cross-path probe
+    (``scripts/_compare_gpu_paths.py``) overrides this to match the precision
+    settings ``scripts/_gpu_adapter.HIGH_PRECISION_ADMM_ARGS`` posts from the
+    CLI path so the two callers send identical bodies to the endpoint."""
     import base64
     import tempfile
 
@@ -554,10 +566,11 @@ def _solve_via_modal(net_dir, pnet, snapshots, hours: int) -> tuple:
     finally:
         Path(nc_path).unlink(missing_ok=True)
 
+    args_for_post = dict(admm_args) if admm_args else {"num_iterations": 1000}
     payload = json.dumps(
         {
             "network_nc_b64": base64.b64encode(nc_bytes).decode("ascii"),
-            "args": {"num_iterations": 1000},
+            "args": args_for_post,
             "import_args": {},
         }
     ).encode("utf-8")
@@ -594,6 +607,7 @@ def _solve_via_modal(net_dir, pnet, snapshots, hours: int) -> tuple:
         "solver_args": result.get("solver_args") or {},
         "num_buses": result.get("num_buses"),
         "time_horizon": result.get("time_horizon"),
+        "bus_ids": result.get("bus_ids") or [],
     }
     return outcome, pnet, snapshots, "MODAL_GPU", elapsed, extra
 

@@ -88,7 +88,7 @@ only captures grid-app changes.
     - same call with `gpu=True` writes an analogous row; metadata includes `machine: "cuda"` (or whatever the GPU container reports)
     - `may_I_proceed` / `release` are called around the solve, matching existing patterns for feature tools
 
-- [ ] 8. Extend `build_run_row` + `RunView.tsx` to show solver provenance (ROADMAP §Phase D.8)
+- [x] 8. Extend `build_run_row` + `RunView.tsx` to show solver provenance (ROADMAP §Phase D.8)
   - context: surface `machine`, `gpu`, `elapsed_s`, `solver_args` from GPU runs (and existing `used_solver` for CPU runs) in the run page header/footer.
   - acceptance:
     - `scripts/run_artifact.py::build_run_row` accepts and threads through the new provenance fields without breaking existing callers

@@ -1,31 +1,98 @@
-## Current item (from LOOP_QUEUE.md line 83)
-- [ ] 7. Add MCP tool `solve_opf(network_artifact_id, hours, gpu)` to `scripts/user-mcp-server.py` (ROADMAP §Phase D.7)
+## Current item (from LOOP_QUEUE.md line 91)
+- [ ] 8. Extend `build_run_row` + `RunView.tsx` to show solver provenance (ROADMAP §Phase D.8)
 
 ## Attempt
-5 of 5
+1 of 5
 
 ## Context to load before working
-- GPU_PARITY_ROADMAP.md
-- AGENTS.md / CLAUDE.md
-- STATE.md
-- infra/modal/README.md, infra/modal/solver_app.py
-- lib/modal-solver.ts
-- scripts/smoke_dispatch.py, scripts/run_artifact.py
-- scripts/user-mcp-server.py
-- components/runs/RunView.tsx
-- /home/agent/zap/zap/admm/, /home/agent/zap/zap/importers/pypsa.py
-- /home/agent/zap/zap/tests/
-- LOOP_QUEUE.md
+- GPU_PARITY_ROADMAP.md           (full roadmap; the item in LOOP_QUEUE.md points to a §section here)
+- AGENTS.md                       (project rules, layered architecture, harness-first principle)
+- CLAUDE.md                       (one-line include of AGENTS.md)
+- STATE.md                        (current build cursor — read tail for what's freshly shipped)
+- infra/modal/README.md           (existing Modal deploy + wire-up notes)
+- infra/modal/solver_app.py       (deployed Modal app; the body of `_run_solve` is the GPU call site)
+- lib/modal-solver.ts             (TS client; `SolveResult` interface lives here)
+- scripts/smoke_dispatch.py       (CPU baseline: `run_dispatch` returns `(outcome, pnet, snapshots, used_solver, elapsed)`)
+- scripts/run_artifact.py         (`build_run_row` / `build_run_view_spec` — downstream consumer of any solve outcome)
+- scripts/user-mcp-server.py      (per-user MCP server — where new agent-callable tools register)
+- components/runs/RunView.tsx     (renders run artifacts; provenance fields surface here)
+- /home/agent/zap/zap/admm/       (ADMMSolver / ADMMLayer source — Phase A.1)
+- /home/agent/zap/zap/importers/pypsa.py  (`load_pypsa_network`, `parse_generators` — Phase A.2)
+- /home/agent/zap/zap/tests/      (existing zap test layout — pattern for the new regression tests)
+- LOOP_QUEUE.md                          (the queue you're working from)
 - recent tail of LOOP_JOURNAL.md
 
-STATUS: done
-SUMMARY: added steinmetz__solve_opf MCP tool that dispatches CPU via smoke_dispatch.run_dispatch or GPU via the Modal endpoint, writes a kind='run' artifact, and surfaces machine/gpu/solver_args provenance in metadata
-ACCEPTANCE:
-  - PASS: `solve_opf` appears in `tools/list` — verified by driving handle() with a `tools/list` request; the public tool list now contains `steinmetz__solve_opf` alongside the four existing builtins.
-  - PASS: `solve_opf(network_artifact_id='f25eaa9b-…', hours=1, gpu=False)` against the canonical `ieee-30` row wrote run artifact `a39d6261-1eb4-420d-b73b-39861c9271af` (parent_id pointing back at ieee-30, view_spec.lmps populated with 30 entries, metadata.solver=HIGHS).
-  - PASS: `solve_opf(…, gpu=True)` against the same network wrote run artifact `d29dea25-b973-463c-bf2a-0cbcb172c718`; metadata.machine='cuda', metadata.gpu='H100', solver='MODAL_GPU', elapsed_s≈12.3s on a fresh Modal call. The redeploy was required to land the runtime `fastapi.Request` import fix described below.
-  - PASS: `may_I_proceed` / `release` wrap every `tools/call` in `handle()` (lines ~612-665), so the new builtin inherits the admission pattern automatically — no per-tool wiring needed and the existing `_proceed_request` / `_release_request` paths are unchanged.
+## Protocol
+1. Read the context above plus any acceptance criteria nested under the
+   current item in LOOP_QUEUE.md.
+2. Implement the item against those acceptance criteria. Run the relevant
+   smoke for the item (e.g. `python scripts/smoke_dispatch.py data/networks/ieee-30`
+   for Phase C items, `npm run build` for TS/renderer items in Phase B/D,
+   `pytest /home/agent/zap/zap/tests/` for Phase A items, `modal deploy
+   infra/modal/solver_app.py` after touching the Modal app) before concluding.
+3. Commit your code changes with a descriptive conventional-commit message.
+4. Overwrite LOOP_HANDOFF.md to end with EXACTLY these fields, one per line:
+   STATUS: done | partial
+   SUMMARY: <1 sentence, will be embedded in the loop's tag commit>
+   NEXT_STEPS: <only if partial; concrete handoff for the next agent>
+   ACCEPTANCE: <which criteria pass, which don't>
+   BLOCKED: yes  ← ONLY include this line if the item is genuinely
+                   blocked by an environmental constraint (not "this is
+                   hard" or "I'm not sure"). When BLOCKED: yes is set,
+                   the loop marks the item [!] immediately and stops
+                   retrying — no more attempts. Use NEXT_STEPS to
+                   describe what you tried and what blocked you.
+                   Be skeptical of your own "impossible" claim:
+                   enumerate concrete approaches and try the most
+                   promising before declaring BLOCKED.
+   Do NOT commit LOOP_HANDOFF.md — the loop owns the bookkeeping commit.
 
-Drive-by side-effect: `infra/modal/solver_app.py` had `fastapi.Request` imported only under `TYPE_CHECKING`; combined with `from __future__ import annotations`, the container's `get_type_hints()` couldn't resolve the annotation and FastAPI fell back to "request" as a query parameter. Every POST to the HTTPS endpoint returned HTTP 422 with `loc: ["query","request"]`. Fixed by moving the import to a runtime `try/except ImportError` and redeploying (`ZAP_SRC=/home/agent/zap modal deploy infra/modal/solver_app.py`). Without this fix the gpu=True acceptance bullet was unverifiable.
+## Constraints
+- Cross-repo items (1, 2) edit /home/agent/zap. Commit zap changes INSIDE
+  /home/agent/zap with a conventional-commit subject and push to origin if
+  configured, BEFORE returning STATUS: done. The grid-app loop's tag commit
+  only captures grid-app changes. Do not stage zap files into grid-app.
+- Otherwise honour AGENTS.md: "in end-user mode the agent must not modify
+  zap source." Items 1-2 are the explicit maintainer-mode exceptions for
+  this loop; everything else stays out of /home/agent/zap.
+- Do not commit secrets. .env.local holds ZAP_SOLVER_API_KEY — never stage
+  it. Same for OpenRouter / Supabase service-role keys.
+- Don't bypass `may_I_proceed` / `release` in user-mcp-server.py for the
+  new `solve_opf` tool — match the existing admission pattern.
+- No emojis in code or user-facing strings.
+- Don't add npm dependencies a few lines of code could replace.
+- For new Next.js routes / server code, remember this is Next 16
+  (`cookies()/headers()/params/searchParams` are async; `proxy.ts` not
+  `middleware.ts`; Turbopack is default).
+- Modal deploys take 3-5 minutes on first call after image changes; budget
+  for it but do not skip the deploy when an item's acceptance demands a
+  fresh endpoint.
+- Do NOT introduce a CPU-vs-GPU auto-tiering heuristic. The roadmap is
+  explicit: `--gpu` is a manual choice everywhere. (Phase E item 9
+  produces the parity data needed to inform a future heuristic; that
+  heuristic is out of scope for this loop.)
+- Do NOT delete the CPU path or alter its return shape. GPU adapts to
+  match CPU, not the other way around.
+- If an acceptance criterion can't be verified scriptably in this
+  environment (e.g. the Modal endpoint is down), say so explicitly in
+  ACCEPTANCE: rather than rubber-stamping.
+- Phase F mechanic: `LOOP_QUEUE.md` contains a sentinel line
+  `<==NEXT-LINE-IS-TERMINAL==>` immediately above item 99 (the demos
+  page). Item 99 is the **fixed terminus** and must remain the last
+  `- [ ]` line in the queue at all times. Item 10 (and only item 10)
+  is authorised to insert new `- [ ]` queue items — they go
+  IMMEDIATELY ABOVE the sentinel line, never below it. Number them
+  `10.x` (e.g. `- [ ] 10.1 Fix overflow on artifact list`) so their
+  provenance is unambiguous. Edits to LOOP_QUEUE.md from item 10 are
+  staged + committed by the work agent as part of that iteration's
+  commit (the loop's bookkeeping commit will pick them up).
+- For Phase F items, the test account credentials
+  (`STEINMETZ_TEST_ACCOUNT_EMAIL` / `STEINMETZ_TEST_ACCOUNT_PASSWORD`)
+  live in `.env.local` only and must never be staged. Verify
+  `.env.local` is in `.gitignore` before writing them.
+
+STATUS: done
+SUMMARY: build_run_row gained optional machine/gpu/solver_args kwargs; RunView renders them in the subtitle and a Solver-args footer; CPU callers unchanged.
+ACCEPTANCE: all three criteria pass — (1) build_run_row signature widened with optional machine/gpu/solver_args, existing CPU callers (seed_networks.py, ingest_pypsa_folder.py) untouched and still work; (2) GPU run artifact metadata now carries machine + gpu + solver_args via the new kwargs, RunView shows machine=… and gpu=yes/no in the subtitle and a "Solver args" footer block when solver_args is present, CPU runs render unchanged (verified by functional test: CPU row's metadata has no machine/gpu/solver_args keys); (3) `npm run build` exits 0 from /home/agent/grid-app.
 
 VERIFIED: yes

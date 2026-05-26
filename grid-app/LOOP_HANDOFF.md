@@ -1,8 +1,8 @@
-## Current item (from LOOP_QUEUE.md line 62)
-- [ ] 4. Build CPU-shape adapter (`scripts/_gpu_adapter.py`) for Modal response (ROADMAP §Phase B.4)
+## Current item (from LOOP_QUEUE.md line 69)
+- [ ] 5. Add `gpu` kwarg + `--gpu` flag to `scripts/smoke_dispatch.py::run_dispatch` (ROADMAP §Phase C.5)
 
 ## Attempt
-5 of 5
+1 of 5
 
 ## Context to load before working
 - GPU_PARITY_ROADMAP.md           (full roadmap; the item in LOOP_QUEUE.md points to a §section here)

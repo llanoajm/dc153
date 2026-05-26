@@ -64,10 +64,17 @@ export function RunView({ artifact, compact = false }: { artifact: Artifact; com
   const subtitle = [
     typeof meta.network_name === "string" ? (meta.network_name as string) : view.network_name,
     typeof meta.solver === "string" ? `solver=${meta.solver}` : null,
+    typeof meta.machine === "string" ? `machine=${meta.machine}` : null,
+    typeof meta.gpu === "boolean" ? `gpu=${meta.gpu ? "yes" : "no"}` : null,
     typeof meta.elapsed_s === "number" ? `${(meta.elapsed_s as number).toFixed(2)}s` : null,
   ]
     .filter(Boolean)
     .join(" · ")
+
+  const solverArgs =
+    meta.solver_args && typeof meta.solver_args === "object" && !Array.isArray(meta.solver_args)
+      ? (meta.solver_args as Record<string, unknown>)
+      : null
 
   return (
     <div className="space-y-6">
@@ -78,6 +85,17 @@ export function RunView({ artifact, compact = false }: { artifact: Artifact; com
       <ChartBlock title="Locational marginal prices" spec={lmpSpec} empty="No LMP data on this run." />
       <ChartBlock title="Dispatch by carrier" spec={carrierSpec} empty="No carrier dispatch on this run." />
       <ChartBlock title="Line flows" spec={flowSpec} empty="No line flow data on this run." />
+
+      {solverArgs && Object.keys(solverArgs).length > 0 ? (
+        <div className="border border-black/10 p-4">
+          <div className="text-[11px] font-mark tracking-wider uppercase text-black/60 mb-3">
+            Solver args
+          </div>
+          <pre className="text-[11px] font-mono text-black/70 whitespace-pre-wrap break-all">
+            {JSON.stringify(solverArgs, null, 2)}
+          </pre>
+        </div>
+      ) : null}
     </div>
   )
 }

@@ -530,10 +530,9 @@ def _solve_via_modal(net_dir, pnet, snapshots, hours: int) -> tuple:
     CPU path: ``(outcome, pnet, snapshots, used_solver, elapsed, extra)``.
 
     ``extra`` carries provenance fields the run artifact's metadata wants
-    (machine, gpu, solver_args) — we merge them in at the caller because
-    ``build_run_row`` doesn't accept them yet (LOOP_QUEUE item 8 will widen
-    its signature). Raises ``RuntimeError`` with a clear message when the
-    Modal env isn't configured or the call fails."""
+    (machine, gpu, solver_args) — the caller passes them through
+    ``build_run_row``'s provenance kwargs. Raises ``RuntimeError`` with a
+    clear message when the Modal env isn't configured or the call fails."""
     import base64
     import tempfile
 
@@ -685,18 +684,12 @@ def _builtin_solve_opf(
         used_solver=used_solver,
         elapsed_s=float(elapsed),
         canonical=False,
+        machine=(extra or {}).get("machine"),
+        gpu=True if gpu else None,
+        solver_args=(extra or {}).get("solver_args") or None,
     )
-    # Solver-provenance fields requested by LOOP_QUEUE item 8 — folded onto
-    # metadata here so the GPU run carries machine/gpu/solver_args even though
-    # build_run_row doesn't accept them as parameters yet.
     if extra:
         metadata = dict(row.get("metadata") or {})
-        if extra.get("machine"):
-            metadata["machine"] = extra["machine"]
-        if extra.get("gpu"):
-            metadata["gpu"] = extra["gpu"]
-        if extra.get("solver_args"):
-            metadata["solver_args"] = extra["solver_args"]
         metadata["gpu_requested"] = True
         row["metadata"] = metadata
     if user_id:

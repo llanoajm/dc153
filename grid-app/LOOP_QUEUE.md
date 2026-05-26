@@ -35,7 +35,7 @@ only captures grid-app changes.
     - `grep -n "ambitious" app/page.tsx` returns no matches
     - `npm run build` succeeds
 
-- [ ] 1. Fix `admm_prox_update` arity on PyPSA-importer devices (ROADMAP §Phase A.1)
+- [x] 1. Fix `admm_prox_update` arity on PyPSA-importer devices (ROADMAP §Phase A.1)
   - context: ADMM blows up with `not enough values to unpack (expected 3, got 2)` on `load_pypsa_network` outputs; tests wrap devices via `ConeBridge`/`NUOptBridge`.
   - acceptance:
     - new pytest in `/home/agent/zap` loads `ieee-30` (or inline string-bus PyPSA net) and runs `ADMMSolver(num_iterations=200).solve(...)` without raising; fails on main, passes after fix

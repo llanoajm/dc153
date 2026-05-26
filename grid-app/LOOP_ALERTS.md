@@ -2,3 +2,4 @@
 [2026-05-26T11:52:32+00:00] DONE: - [ ] 0.2. Soften SVG ↔ 3D transition in HeroAnimation (ROADMAP §Phase 0.2)
 [2026-05-26T11:55:36+00:00] DONE: - [ ] 0.3. Change "ambitious" → "critical" in hero sub-headline (ROADMAP §Phase 0.3)
 [2026-05-26T12:25:42+00:00] PARTIAL: - [ ] 1. Fix `admm_prox_update` arity on PyPSA-importer devices (ROADMAP §Phase A.1) (attempt 1)
+[2026-05-26T12:55:48+00:00] PARTIAL: - [ ] 1. Fix `admm_prox_update` arity on PyPSA-importer devices (ROADMAP §Phase A.1) (attempt 2)

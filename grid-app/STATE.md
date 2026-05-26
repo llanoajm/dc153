@@ -9,9 +9,11 @@ Build cursor. Update when you finish something or change direction. Last updated
   - `/login`, `/signup` — email+password forms.
   - `/auth/callback`, `/auth/signout` — route handlers.
   - `/app` — authed area. Materializes the user's workspace on first visit. Bare v0 chat: user message in, polls for assistant response, only text parts visible.
-  - `/app/demos` — auth-gated video walkthroughs of every validated flow from
+  - `/demos` — **public** (not auth-gated) video walkthroughs of every validated flow from
     Phase F.10. Recordings produced by `npx playwright test --config=playwright.demos.config.ts`
     and served from `public/demos/<slug>.webm`; manifest in `lib/demos.ts`.
+    Sits outside `app/app/` so neither `proxy.ts`'s `/app/**` matcher nor the
+    layout's session redirect applies; reachable from the LeftRail "Demos" entry.
   - `proxy.ts` — Next 16 proxy gating `/app/*` and `/api/opencode/*` on a Supabase session.
 - **Backend services on the VM**:
   - opencode server (our fork) on `127.0.0.1:4096`, OpenRouter key in env, persistent SQLite at `~/.local/share/opencode/`.

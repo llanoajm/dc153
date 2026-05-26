@@ -13,7 +13,6 @@ const ROUTES = [
   "/app/glossary",
   "/app/orgs",
   "/app/panels",
-  "/app/demos",
   "/app/settings",
 ]
 

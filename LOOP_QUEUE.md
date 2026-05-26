@@ -29,7 +29,7 @@ The loop processes top-to-bottom; do not reorder.
     - GPU↔CPU LMP parity on `ieee-30, hours=4`: `max(|gpu - cpu|) / max(|cpu|)` ≤ 5%; script (or companion `scripts/_compare_cpu_gpu.py`) prints this number on every `--gpu` run
     - missing `ZAP_SOLVER_MODAL_URL` / `ZAP_SOLVER_API_KEY` → `--gpu` exits non-zero with a message naming the missing var; no silent CPU fallback
 
-- [ ] 3. Thread `--gpu` through `seed_networks.py` and `ingest_pypsa_folder.py` (ROADMAP §3)
+- [x] 3. Thread `--gpu` through `seed_networks.py` and `ingest_pypsa_folder.py` (ROADMAP §3)
   - context: pure plumbing. Both scripts already call `run_dispatch`; add `--gpu` argparse flag and forward as `run_dispatch(..., gpu=args.gpu)`. No business-logic changes.
   - acceptance:
     - `python scripts/seed_networks.py --gpu --only ieee-30 --dry-run` (or narrowest available flag combo; add `--only <slug>` if missing) reaches the dispatch step and reports `MODAL_GPU` was used

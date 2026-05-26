@@ -30,3 +30,4 @@
 [2026-05-26T14:29:40+00:00] PARTIAL: - [ ] 7. Add MCP tool `solve_opf(network_artifact_id, hours, gpu)` to `scripts/user-mcp-server.py` (ROADMAP §Phase D.7) (attempt 3)
 [2026-05-26T14:29:52+00:00] PARTIAL: - [ ] 7. Add MCP tool `solve_opf(network_artifact_id, hours, gpu)` to `scripts/user-mcp-server.py` (ROADMAP §Phase D.7) (attempt 4)
 [2026-05-26T14:46:41+00:00] DONE: - [ ] 7. Add MCP tool `solve_opf(network_artifact_id, hours, gpu)` to `scripts/user-mcp-server.py` (ROADMAP §Phase D.7)
+[2026-05-26T14:53:24+00:00] DONE: - [ ] 8. Extend `build_run_row` + `RunView.tsx` to show solver provenance (ROADMAP §Phase D.8)

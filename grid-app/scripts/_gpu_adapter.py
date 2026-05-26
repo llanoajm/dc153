@@ -23,10 +23,33 @@ Design:
 """
 from __future__ import annotations
 
+import base64
+import json
+import os
+import tempfile
+import time
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import numpy as np
+
+ENV_FILE = Path(__file__).resolve().parent.parent / ".env.local"
+
+# Tighter ADMM tuning than the Modal endpoint's defaults (1000 iters / 1e-5 /
+# float32) so callers that need GPU↔CPU LMP parity get it out of the box.
+# Matches the knobs ``scripts/_gpu_parity_report.py`` uses to drive ieee-30
+# under the 5 % parity bar (historical 4.22 %).
+HIGH_PRECISION_ADMM_ARGS: dict[str, Any] = {
+    "num_iterations": 8000,
+    "rho_power": 1.0,
+    "rho_angle": 1.0,
+    "atol": 1e-7,
+    "rtol": 1e-7,
+    "dtype": "float64",
+}
 
 
 @dataclass
@@ -146,6 +169,160 @@ def adapt_modal_to_dispatch_outcome(
     angle = outcome.get("angle") or []
 
     return GpuDispatchOutcome(prices=prices, power=power, angle=angle)
+
+
+def load_grid_app_env() -> dict[str, str]:
+    """Lightweight ``.env.local`` parser (no python-dotenv dep). Process env
+    wins over file values so a one-off ``ZAP_SOLVER_TIMEOUT_S=…`` override on
+    the CLI behaves intuitively."""
+    env: dict[str, str] = {}
+    if ENV_FILE.exists():
+        for raw in ENV_FILE.read_text().splitlines():
+            line = raw.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            env[k.strip()] = v.strip().strip('"').strip("'")
+    env.update(os.environ)
+    return env
+
+
+def _export_truncated_netcdf(pnet, snapshots) -> bytes:
+    """Re-export ``pnet`` (with snapshots truncated to ``snapshots``) as
+    netCDF bytes for the Modal POST body. Mirrors
+    ``scripts/_gpu_parity_report.py::_export_truncated_netcdf`` but takes the
+    already-loaded ``pnet`` so callers don't re-parse the CSV folder."""
+    pnet.set_snapshots(snapshots)
+    with tempfile.NamedTemporaryFile(suffix=".nc", delete=False) as tf:
+        nc_path = tf.name
+    try:
+        pnet.export_to_netcdf(nc_path)
+        return Path(nc_path).read_bytes()
+    finally:
+        Path(nc_path).unlink(missing_ok=True)
+
+
+def solve_via_modal(
+    pnet,
+    snapshots,
+    admm_args: dict[str, Any] | None = None,
+    env: dict[str, str] | None = None,
+) -> tuple[dict[str, Any], float]:
+    """POST the truncated PyPSA network to the Modal GPU solver and return
+    ``(modal_result_dict, wall_elapsed_s)``.
+
+    Parameters
+    ----------
+    pnet : pypsa.Network
+        Local PyPSA network. Will be re-exported as netCDF with
+        ``snapshots`` set as its snapshot index.
+    snapshots : pandas.Index
+        Snapshot horizon to send to Modal (also used downstream when adapting
+        the response).
+    admm_args : dict | None
+        ADMM solver args forwarded to ``infra/modal/solver_app.py`` under
+        ``"args"``. Defaults to :data:`HIGH_PRECISION_ADMM_ARGS` (the
+        ``_gpu_parity_report.py`` ieee-30 tuning) so smoke callers hit the
+        ≤5 % parity bar without per-call tuning.
+    env : dict | None
+        Pre-loaded env mapping. If ``None``, parsed from ``.env.local``.
+
+    Raises
+    ------
+    RuntimeError
+        When ``ZAP_SOLVER_MODAL_URL`` / ``ZAP_SOLVER_API_KEY`` are missing
+        (names the missing var; no silent CPU fallback) or when Modal returns
+        a non-2xx status / unreachable network.
+    """
+    env = env if env is not None else load_grid_app_env()
+    endpoint = env.get("ZAP_SOLVER_MODAL_URL")
+    api_key = env.get("ZAP_SOLVER_API_KEY")
+    missing = [
+        name
+        for name, val in (
+            ("ZAP_SOLVER_MODAL_URL", endpoint),
+            ("ZAP_SOLVER_API_KEY", api_key),
+        )
+        if not val
+    ]
+    if missing:
+        raise RuntimeError(
+            "Modal solver not configured — missing "
+            + ", ".join(missing)
+            + " in grid-app/.env.local (no silent CPU fallback)"
+        )
+
+    nc_bytes = _export_truncated_netcdf(pnet, snapshots)
+    body = json.dumps(
+        {
+            "network_nc_b64": base64.b64encode(nc_bytes).decode("ascii"),
+            "args": dict(admm_args or HIGH_PRECISION_ADMM_ARGS),
+            "import_args": {},
+        }
+    ).encode("utf-8")
+    req = urllib.request.Request(
+        endpoint,
+        method="POST",
+        data=body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        },
+    )
+    timeout_s = int(env.get("ZAP_SOLVER_TIMEOUT_S") or 900)
+    t0 = time.time()
+    try:
+        with urllib.request.urlopen(req, timeout=timeout_s) as resp:
+            payload = json.loads(resp.read().decode())
+    except urllib.error.HTTPError as exc:
+        detail = ""
+        try:
+            detail = exc.read().decode()[:500]
+        except Exception:
+            pass
+        raise RuntimeError(
+            f"Modal solver returned HTTP {exc.code}: {detail}"
+        ) from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(
+            f"Modal solver unreachable ({exc.reason})"
+        ) from exc
+    return payload, time.time() - t0
+
+
+def cpu_gpu_lmp_parity(
+    cpu_prices: np.ndarray,
+    gpu_prices: np.ndarray,
+) -> tuple[float, float]:
+    """Return ``(max_abs_diff, max_rel_diff)`` where ``max_rel_diff`` is
+    ``max(|gpu - cpu|) / max(|cpu|)`` over the finite intersection of both
+    grids. ``(nan, nan)`` if either side has no finite values.
+
+    Caller is responsible for aligning shapes (bus axis, snapshot count)
+    before passing the arrays in — :func:`adapt_modal_to_dispatch_outcome`
+    already reindexes to ``pnet.buses.index``, and CPU/GPU share the same
+    snapshot count via the same ``snapshots`` slice.
+    """
+    if cpu_prices.size == 0 or gpu_prices.size == 0:
+        return float("nan"), float("nan")
+    if cpu_prices.shape != gpu_prices.shape:
+        # Truncate to the common shape so a mismatched snapshot count doesn't
+        # raise — callers can read the printed parity number as "not
+        # comparable" via the NaN return.
+        n_b = min(cpu_prices.shape[0], gpu_prices.shape[0])
+        n_t = min(cpu_prices.shape[1], gpu_prices.shape[1])
+        if n_b == 0 or n_t == 0:
+            return float("nan"), float("nan")
+        cpu_prices = cpu_prices[:n_b, :n_t]
+        gpu_prices = gpu_prices[:n_b, :n_t]
+    diff = cpu_prices - gpu_prices
+    finite = np.isfinite(diff)
+    if not finite.any():
+        return float("nan"), float("nan")
+    max_abs = float(np.max(np.abs(diff[finite])))
+    cpu_scale = float(np.nanmax(np.abs(cpu_prices)))
+    max_rel = max_abs / cpu_scale if cpu_scale > 0 else float("inf")
+    return max_abs, max_rel
 
 
 def _smoke_main() -> int:

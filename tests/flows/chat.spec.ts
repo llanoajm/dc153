@@ -43,4 +43,43 @@ test.describe("chat input edge cases (logged in)", () => {
     await page.goto("/app")
     await expect(page.getByText(/Ctrl\+Enter to send/i)).toBeVisible({ timeout: 15_000 })
   })
+
+  // Item 10.2: when POST /api/opencode/session 500s, the textarea was getting
+  // stuck on placeholder "Loading…" with no visible explanation. Verify the
+  // inline error banner + Retry button + offline placeholder render instead.
+  test("session bootstrap failure surfaces inline error + Retry above textarea", async ({
+    page,
+  }) => {
+    let hits = 0
+    await page.route("**/api/opencode/session", (route, request) => {
+      if (request.method() !== "POST") return route.continue()
+      hits += 1
+      return route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "simulated bootstrap failure (test fixture)" }),
+      })
+    })
+
+    await page.goto("/app")
+
+    // Banner with the captured error text is visible (regardless of empty
+    // message list). Filtering by text disambiguates the banner from
+    // Next.js's built-in route announcer, which also exposes role=alert.
+    const banner = page.getByRole("alert").filter({ hasText: /chat is offline/i })
+    await expect(banner).toBeVisible({ timeout: 15_000 })
+    await expect(banner.getByText(/simulated bootstrap failure/i)).toBeVisible()
+
+    // Textarea placeholder swaps to the offline message so the disabled
+    // state has a stated reason.
+    await expect(page.getByPlaceholder(/chat is offline/i)).toBeVisible()
+    await expect(page.getByPlaceholder(/^Loading…$/)).toHaveCount(0)
+
+    // Retry button is present and re-invokes the POST.
+    const retry = page.getByRole("button", { name: /^Retry$/ })
+    await expect(retry).toBeVisible()
+    const before = hits
+    await retry.click()
+    await expect.poll(() => hits, { timeout: 5_000 }).toBeGreaterThan(before)
+  })
 })

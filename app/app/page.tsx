@@ -46,6 +46,7 @@ export default function ChatPage() {
   const [input, setInput] = useState("")
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [bootstrapping, setBootstrapping] = useState(true)
   const messagesEnd = useRef<HTMLDivElement>(null)
 
   // Keep a ref in lockstep so the SSE handler can mutate without stale closures.
@@ -53,21 +54,36 @@ export default function ChatPage() {
     messagesRef.current = messages
   }, [messages])
 
-  // Create the session on mount.
-  useEffect(() => {
-    let cancelled = false
-    fetch("/api/opencode/session", { method: "POST" })
-      .then((r) => r.json())
-      .then((data) => {
-        if (cancelled) return
-        if (data.error) setError(data.error)
-        else setSessionId(data.id)
-      })
-      .catch((e) => !cancelled && setError(String(e)))
-    return () => {
-      cancelled = true
+  const bootstrapSession = useCallback(async (signal?: AbortSignal) => {
+    setBootstrapping(true)
+    setError(null)
+    try {
+      const r = await fetch("/api/opencode/session", { method: "POST", signal })
+      const data = await r.json().catch(() => ({}) as { id?: string; error?: string })
+      if (signal?.aborted) return
+      if (!r.ok || data.error) {
+        setError(data.error ?? `session bootstrap failed: HTTP ${r.status}`)
+        return
+      }
+      if (!data.id) {
+        setError("session bootstrap failed: server returned no session id")
+        return
+      }
+      setSessionId(data.id)
+    } catch (e) {
+      if ((e as { name?: string }).name === "AbortError") return
+      setError(String(e))
+    } finally {
+      if (!signal?.aborted) setBootstrapping(false)
     }
   }, [])
+
+  // Create the session on mount.
+  useEffect(() => {
+    const ac = new AbortController()
+    bootstrapSession(ac.signal)
+    return () => ac.abort()
+  }, [bootstrapSession])
 
   // Initial backfill: GET existing messages so reloads aren't blank. Then
   // open the SSE stream.
@@ -291,7 +307,7 @@ export default function ChatPage() {
                 ? "Describe what you want — an objective, a constraint, an analysis. The agent will build it in your workspace."
                 : "Preparing your workspace…"}
             </p>
-            {error ? <p className="text-red-600 mt-3">{error}</p> : null}
+            {error && sessionId ? <p className="text-red-600 mt-3">{error}</p> : null}
           </div>
         ) : null}
         {messages.map((m) => (
@@ -307,6 +323,25 @@ export default function ChatPage() {
         ) : null}
         <div ref={messagesEnd} />
       </div>
+      {!sessionId && error ? (
+        <div
+          role="alert"
+          className="border-t border-red-300 bg-red-50 px-4 py-3 flex items-start justify-between gap-3"
+        >
+          <div className="text-sm text-red-700">
+            <p className="font-mark tracking-wider text-xs uppercase">Chat is offline</p>
+            <p className="mt-1 font-mono text-[12px] break-words">{error}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => bootstrapSession()}
+            disabled={bootstrapping}
+            className="shrink-0 border border-red-700 text-red-700 px-3 py-1 text-xs font-mark tracking-wider disabled:opacity-40"
+          >
+            {bootstrapping ? "Retrying…" : "Retry"}
+          </button>
+        </div>
+      ) : null}
       <form onSubmit={onSubmit} className="border-t border-black/10 p-4">
         <div className="flex gap-2">
           <textarea
@@ -315,7 +350,9 @@ export default function ChatPage() {
             placeholder={
               sessionId
                 ? "Describe a feature… ('add a nitrogen-emissions objective', etc.)"
-                : "Loading…"
+                : error
+                  ? "Chat is offline — see error above"
+                  : "Loading…"
             }
             disabled={!sessionId || pending}
             rows={3}

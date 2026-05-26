@@ -139,7 +139,7 @@ only captures grid-app changes.
       mitigation; LOOP_ALERTS.md note from 2026-05-26 can be closed once
       this lands
 
-- [ ] 10.2 Surface a clear inline error when `/api/opencode/session` 500s during chat bootstrap (ROADMAP §Phase F.10 — filed by item 10)
+- [x] 10.2 Surface a clear inline error when `/api/opencode/session` 500s during chat bootstrap (ROADMAP §Phase F.10 — filed by item 10)
   - context: when the session POST 500s (e.g. the env-pollution above, or
     opencode itself being down), the chat page leaves the textarea stuck
     on placeholder "Loading…" with no visible explanation. The component

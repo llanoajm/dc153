@@ -95,7 +95,7 @@ only captures grid-app changes.
     - a GPU run artifact opened in the app visibly shows machine + gpu + elapsed; a CPU run artifact still renders correctly with the new fields absent
     - `npm run build` from `/home/agent/grid-app` succeeds
 
-- [ ] 9. End-to-end CPU vs GPU parity report (ROADMAP §Phase E.9)
+- [x] 9. End-to-end CPU vs GPU parity report (ROADMAP §Phase E.9)
   - context: one reproducible script + committed report capturing timing and LMP-diff numbers on `ieee-30` and `pypsa-eur-slice`.
   - acceptance:
     - `python scripts/_gpu_parity_report.py` exits 0

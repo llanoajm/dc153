@@ -36,7 +36,7 @@ The loop processes top-to-bottom; do not reorder.
     - `python scripts/ingest_pypsa_folder.py --gpu data/networks/ieee-30` (routed to a temp output dir via the script's existing flag) reports `MODAL_GPU`
     - without `--gpu`, both scripts behave EXACTLY as before — diff CPU-path output against a pre-change baseline (tag baseline before item 3 starts) to confirm zero regression
 
-- [ ] 4. Smoke-validate the existing GPU consumers (ROADMAP §4)
+- [x] 4. Smoke-validate the existing GPU consumers (ROADMAP §4)
   - context: items 7 (`solve_opf` MCP tool) and 9 (`_gpu_parity_report.py`) already use GPU via private code paths. Items 1-3 add the canonical layer but don't refactor them. This item confirms both still work end-to-end after items 1-3 land.
   - acceptance:
     - `python scripts/_gpu_parity_report.py` exits 0 and rewrites `infra/modal/PARITY_REPORT.md` with current numbers; `ieee-30` max-relative LMP diff stays ≤ 5% (historical baseline 4.22% — anything > 6% is a regression and must fail this item)

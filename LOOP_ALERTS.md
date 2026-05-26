@@ -52,3 +52,4 @@
   sections.
 [2026-05-26T15:48:00+00:00] DONE: - [ ] 10. Frontend validation & bug-hunting with Playwright (substantial; 1.5× budget) (ROADMAP §Phase F.10)
 [2026-05-26T15:59:35+00:00] DONE: - [ ] 10.1 Validate `STEINMETZ_OPENCODE_TOKEN` / `STEINMETZ_INTERNAL_TOKEN` format at server boot (ROADMAP §Phase F.10 — filed by item 10)
+[2026-05-26T16:13:20+00:00] DONE: - [ ] 10.2 Surface a clear inline error when `/api/opencode/session` 500s during chat bootstrap (ROADMAP §Phase F.10 — filed by item 10)

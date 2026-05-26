@@ -161,7 +161,7 @@ only captures grid-app changes.
      terminal item below. Insert any new validation-spawned queue items
      immediately ABOVE this comment so the loop processes them before item 99. -->
 
-- [ ] 99. Demo screen recordings on `/app/demos` — TERMINAL ITEM (ROADMAP §Phase F.99)
+- [x] 99. Demo screen recordings on `/app/demos` — TERMINAL ITEM (ROADMAP §Phase F.99)
   - context: auth-gated `/app/demos` page lists video walkthroughs of validated flows. Recordings produced via Playwright `video: 'on'` (or another browser-recording tool the agent picks); stored in Supabase Storage `demos` bucket (preferred) or `public/demos/` (only if total < ~20MB).
   - acceptance:
     - `app/app/demos/page.tsx` exists; `http://localhost:3000/app/demos` redirects to `/login` when logged out and renders the demos list when logged in

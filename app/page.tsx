@@ -25,7 +25,7 @@ export default function HomePage() {
         <div className={styles.heroContent}>
           <span className={styles.heroLabel}></span>
           <h1 className={styles.heroTitle}><span className={styles.step1}>Frontier</span><br /><span className={styles.step2}>Intelligence</span><br /><span className={styles.step3}>For the Grid</span></h1>
-          <p className={styles.heroSub}><span className={styles.step4}>Powering the most ambitious</span><br /><span className={styles.step5}>electrical infrastructure projects</span></p>
+          <p className={styles.heroSub}><span className={styles.step4}>Powering the most critical</span><br /><span className={styles.step5}>electrical infrastructure projects</span></p>
           <a href="/login" className={`${styles.heroCta} ${styles.step6}`}><span className={styles.heroCtaText}>Try Curie OS</span></a>
         </div>
 

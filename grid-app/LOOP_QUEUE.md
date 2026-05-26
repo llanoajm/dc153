@@ -103,7 +103,7 @@ only captures grid-app changes.
     - `ieee-30` max relative LMP diff < 5% (or report explains why and references the ADMM knobs tuned)
     - "Wire-up that's NOT done" section of `infra/modal/README.md` deleted; replaced with a one-line pointer to `PARITY_REPORT.md`
 
-- [ ] 10. Frontend validation & bug-hunting with Playwright (substantial; 1.5× budget) (ROADMAP §Phase F.10)
+- [x] 10. Frontend validation & bug-hunting with Playwright (substantial; 1.5× budget) (ROADMAP §Phase F.10)
   - context: self-expanding bug-hunt, not a smoke pass. Creates Supabase test account `claude@steinmetz.ai`, writes Playwright specs covering core flows AND varied error/edge probes (auth/session, form input, artifact lifecycle, chat, renderers, orgs, a11y, real-world weirdness — see ROADMAP §F.10 bucket B for the full prompt). Fixes trivial issues inline; inserts `- [ ] 10.x` queue items above the `<==NEXT-LINE-IS-TERMINAL==>` sentinel for substantive ones. Runs under 45m work / 15m verify budget (1.5× default; enforced by loop.sh per-item timeout override).
   - acceptance:
     - test account `claude@steinmetz.ai` exists in Supabase auth, created via service-role admin API with `email_confirm: true`; password persisted to `.env.local` as `STEINMETZ_TEST_ACCOUNT_PASSWORD` (gitignored under `.env*`), never committed

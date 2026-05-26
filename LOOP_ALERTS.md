@@ -31,3 +31,22 @@
 [2026-05-26T14:29:52+00:00] PARTIAL: - [ ] 7. Add MCP tool `solve_opf(network_artifact_id, hours, gpu)` to `scripts/user-mcp-server.py` (ROADMAP §Phase D.7) (attempt 4)
 [2026-05-26T14:46:41+00:00] DONE: - [ ] 7. Add MCP tool `solve_opf(network_artifact_id, hours, gpu)` to `scripts/user-mcp-server.py` (ROADMAP §Phase D.7)
 [2026-05-26T14:53:24+00:00] DONE: - [ ] 8. Extend `build_run_row` + `RunView.tsx` to show solver provenance (ROADMAP §Phase D.8)
+[2026-05-26T15:10:19+00:00] DONE: - [ ] 9. End-to-end CPU vs GPU parity report (ROADMAP §Phase E.9)
+[2026-05-26T15:43:23+00:00] HUMAN-REVIEW (Phase F.10 — env): the shell that
+  launches `npm run dev` had `STEINMETZ_OPENCODE_TOKEN` and
+  `STEINMETZ_INTERNAL_TOKEN` polluted with a trailing `" │\n"` (U+2502 box
+  drawing + newline — looks copy-pasted from a TUI table). Because Next.js
+  does not override pre-existing env vars, the corrupted shell value beat
+  the clean .env.local entry; the bearer header then raised
+  `TypeError: Cannot convert argument to a ByteString because the character
+  at index 72 has a value of 9474 which is greater than 255` inside
+  /api/opencode/session, leaving the chat textarea stuck on "Loading…".
+  Restarting with `env -i HOME=$HOME PATH=$PATH …` cleared it for the test
+  run; filed a 10.x to add startup format validation as a long-term defense.
+  Also note: while debugging this, the auto-respawned `npm run start` on
+  :3000 was serving 500s on `/_next/static/chunks/*.css` because the build
+  had been refreshed under it (item 8 of this loop ran `npm run build`),
+  invalidating the hashed chunk names the running manifest still referenced.
+  A clean restart fixed it. Both gotchas would benefit from CLAUDE.md /
+  AGENTS.md callouts in the "Quick start" / "Known operational gotchas"
+  sections.

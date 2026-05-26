@@ -64,20 +64,10 @@ containers warm.
   `SolveResult` with `outcome.power`, `outcome.angle`, `outcome.prices`.
 - `.env.example` — added the two env vars callers need.
 
-## Wire-up that's NOT done
+## CPU vs GPU parity
 
-I deliberately did **not** wire `solveOpfOnModal` into any specific route or
-agent tool yet, because the call-site depends on where in the product you
-want the trigger — chat tool call, an explicit "Solve" button on a network
-artifact, agent-emitted view_spec action, etc. Once you point at the
-integration point I'll glue it in.
-
-Likely candidates from the current layout:
-- A new `app/api/solve/route.ts` route the agent can POST to.
-- An MCP tool surfaced via `scripts/user-mcp-server.py` so the harness can
-  emit a tool call (matches the harness-first design principle).
-- A direct call from `scripts/run_artifact.py` when the artifact `kind` is
-  `run` and the upstream PyPSA network has no pre-solved snapshots.
+See [`PARITY_REPORT.md`](PARITY_REPORT.md) for the latest timing + LMP-diff
+numbers (re-run with `python scripts/_gpu_parity_report.py`).
 
 ## Request / response shape
 

@@ -101,21 +101,40 @@ def _patch_pandas_cow_in_container():
 
 
 def _tensor_to_list(x):
-    """Convert torch tensors / nested structures to JSON-friendly Python."""
+    """Convert torch tensors / nested structures to JSON-friendly Python.
+
+    Replaces NaN / +inf / -inf with ``None`` so the FastAPI default JSON
+    encoder (strict mode) doesn't reject the response. Out-of-range floats
+    show up when the upstream PyPSA importer hands ADMM lines with x=0
+    (the zap importer's ``susceptance = 1/x`` produces inf, which then
+    propagates through the iterate). The renderer treats null LMPs as
+    missing data, so this loses no information that wasn't already lost.
+    """
+    import math
     import torch
     import numpy as np
+
+    def _clean(v):
+        if isinstance(v, float):
+            return v if math.isfinite(v) else None
+        return v
 
     if x is None:
         return None
     if isinstance(x, torch.Tensor):
-        return x.detach().cpu().numpy().tolist()
+        arr = x.detach().cpu().numpy()
+        return _tensor_to_list(arr)
     if isinstance(x, np.ndarray):
+        # Float arrays: walk the nested list and clean. Integer / bool arrays
+        # don't need cleaning so the cheap path stays cheap.
+        if np.issubdtype(x.dtype, np.floating):
+            return _tensor_to_list(x.tolist())
         return x.tolist()
     if isinstance(x, (list, tuple)):
         return [_tensor_to_list(xi) for xi in x]
     if isinstance(x, dict):
         return {k: _tensor_to_list(v) for k, v in x.items()}
-    return x
+    return _clean(x)
 
 
 def _run_solve(network_nc: bytes, args: dict, import_args: dict) -> dict:

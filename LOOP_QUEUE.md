@@ -43,7 +43,7 @@ only captures grid-app changes.
     - zap fix committed inside `/home/agent/zap` (conventional commit subject); pushed if origin remote set
     - from `/home/agent/grid-app`, `modal run infra/modal/solver_app.py::smoke --network-path <ieee-30.nc>` returns JSON with non-empty `outcome`
 
-- [ ] 2. Fix `parse_generators` for string-typed bus columns in modern pandas (ROADMAP §Phase A.2)
+- [x] 2. Fix `parse_generators` for string-typed bus columns in modern pandas (ROADMAP §Phase A.2)
   - context: `.replace(buses_to_index).values.astype(int)` chokes on string-dtype bus columns; real PyPSA networks default to string bus names.
   - acceptance:
     - new pytest in `/home/agent/zap` builds a tiny PyPSA net with string bus names, calls `parse_generators` (and siblings with same `astype(int)` pattern); fails on main, passes after fix

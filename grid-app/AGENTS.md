@@ -58,6 +58,11 @@ URLs (the VM is remote; user connects via SSH tunnel `-L 3000:localhost:3000`):
 - Roadmap (via tunnel): `http://localhost:3000/ROADMAP.md`
 - Schema (via tunnel): `http://localhost:3000/schema.sql`
 
+## Known operational gotchas
+
+- **Env-var pollution from pasted shell values.** Next.js's dotenv loader does NOT override pre-existing env vars, so a shell that exports `STEINMETZ_OPENCODE_TOKEN` (or `STEINMETZ_INTERNAL_TOKEN`) with non-ASCII trailing junk (e.g. `" │\n"` U+2502 from a copy-pasted TUI table) silently beats the clean `.env.local` entry. Downstream `fetch` then throws `Cannot convert argument to a ByteString because the character ... is greater than 255` and the chat textarea sticks on "Loading…". Mitigation: launch with `env -i HOME=$HOME PATH=$PATH npm run dev` so only `.env.local` populates the env. `instrumentation.ts` also validates these vars at boot (see `lib/bearer-token-validation.ts`) and recovers the clean value from `.env.local` when possible — but the `env -i` launch is still the cleanest fix.
+- **Stale Next.js chunks after a rebuild while `npm run start` is running.** Running `npm run build` against a directory whose `npm run start` is still serving the previous build invalidates the hashed chunk names in the running manifest; `/app/*` then 500s on `/_next/static/chunks/*.css`. Fix: stop and re-start the `npm run start` process after every build.
+
 ## Layout you actually need to know
 
 ```

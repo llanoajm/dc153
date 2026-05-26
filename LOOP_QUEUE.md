@@ -1,127 +1,126 @@
-# Loop Queue — Hardening
+# Loop Queue — GPU/CPU parity
 
-Derived from `HARDENING_ROADMAP.md`. Section pointers (e.g. §1.1) refer to that
-file. Acceptance criteria are quoted/condensed from the roadmap's own
-"Acceptance:" lists where present, and scripted to be checkable from a shell
-(file existence, `npm run build` exit 0, curl checks, SQL/schema greps).
+Legend: `[ ]` pending · `[x]` done · `[!]` blocked (manual review)
+Source roadmap: `GPU_PARITY_ROADMAP.md`. Each item below points to a numbered
+section there. Acceptance bullets here are the scriptable subset; read the
+roadmap section for full context before working an item.
 
-Legend: `- [ ]` pending · `- [x]` done & verified · `- [!]` blocked (see LOOP_ALERTS.md)
+Cross-repo note: items 1 and 2 edit `/home/agent/zap`. The work agent must
+commit zap edits inside `/home/agent/zap` (and push if origin is set)
+before returning `STATUS: done`. The grid-app loop's per-iteration commit
+only captures grid-app changes.
 
-This queue is **infrastructure work**, not feature work. The product roadmap
-(`ROADMAP.md`) is intentionally separate. Everything here runs on a single VM
-— multi-tenancy is achieved through OS-level mechanisms (Linux users, systemd
-units, cgroup slices, Unix sockets), not containers or orchestrators. The
-single-VM target is end state; if it ever stops being enough, that's a
-separate doc (`TIER3_EXPANSION.md`) and out of scope here. Items roll up
-under three phase gates:
+---
 
-- Phase 1 (items 1.1–1.4): must ship before user #2 gets a login.
-- Phase 2 (items 2.1–2.3): must ship before any paying user.
-- Phase 3 (items 3.1–3.4): OS-level execution isolation — kernel-enforced
-  rather than honest-broker. Gate: do not onboard any user you don't
-  personally trust until this ships.
-
-## Items
-
-- [x] 1.1 Tighten Bash / Edit / external_directory permissions (HARDENING_ROADMAP §1.1)
-  - context: replace `permission: {}` in workspace opencode.jsonc with a real per-tool / per-pattern allow/deny shape gated to the workspace cwd.
+- [ ] 0.1. Recolour accent CTAs + navbar to dark blue (ROADMAP §Phase 0.1)
+  - context: `--accent: #0044CC` in `app/page.module.css:3` is the variable used by `.navLink`, `.navCta` (Contact Us), and `.heroCta` (Try Curie OS). Logo (`.navLogo`/`.navMark`/`.navWord`) inherits page colour `#000` and does NOT use `--accent` — straight variable swap leaves it alone. 3D skins (in `public/models/*.glb`) are unaffected by CSS.
   - acceptance:
-    - `lib/user-workspace.ts` `writeOpencodeConfig` writes a `permission:` object with `bash`, `edit`, `external_directory`, `webfetch`, `websearch` keys (grep the file for those identifiers).
-    - The `external_directory` key is present and set to `"deny"` (grep `external_directory.*deny`).
-    - `<WORKSPACE>/**` (literal substitution to the workspace's absolute path at write time) is used as the allow-pattern for `bash` and `edit`.
-    - `npm run build` exits 0.
-    - Manual cross-user smoke (best-effort, document in handoff if not runnable): asking the agent to `cat /home/agent/grid-workspaces/<otherUid>/glossary.md` is denied or prompts for permission; agents do not access another user's workspace silently.
+    - `--accent` swapped from `#0044CC` to a dark blue (navy / midnight; agent picks the exact hex)
+    - navbar links, Contact Us button, Try Curie OS CTA all visibly dark blue; logo + wordmark remain black; 3D hero materials unchanged
+    - hover states still contrast cleanly
+    - `npm run build` succeeds
 
-- [x] 1.2 Lock opencode behind an auth token (HARDENING_ROADMAP §1.2)
-  - context: opencode currently binds 127.0.0.1:4096 with no auth; anyone with shell on the VM gets full session takeover. Front it with a bearer-token proxy; do not modify the opencode fork.
+- [ ] 0.2. Soften SVG ↔ 3D transition in HeroAnimation (ROADMAP §Phase 0.2)
+  - context: `app/components/HeroAnimation.tsx` snaps between the SVG morph and the 3D canvas at `local === T_MORPH` — SVG paths jump `opacity:1→0`, canvas `clipPath` jumps `circle(0%)→circle(100%)`. Goal: short overlap window (~120–200ms) where both layers are partially visible, and the 3D layer **fades** when the phase ends instead of being abruptly clipped away.
   - acceptance:
-    - A new fronting process exists (e.g. `scripts/opencode-proxy.ts` or a Caddy/nginx unit under `infra/` or `deploy/`); the file is committed.
-    - The fronting layer rejects requests without `Authorization: Bearer $STEINMETZ_OPENCODE_TOKEN` (curl without bearer → 401; with bearer → 200).
-    - `lib/opencode-client.ts` no longer hard-codes `http://127.0.0.1:4096` — it reads the fronted endpoint (e.g. `process.env.STEINMETZ_OPENCODE_URL`) and sends the bearer header.
-    - Token name documented in `.env.example` (or AGENTS.md / STATE.md Quick Start) so the user knows where to set it; never committed in plaintext.
-    - `npm run build` exits 0.
-    - Authed `/app` chat continues to work end-to-end (manual; document in handoff).
+    - visual review on dev server shows transitions between SVG and 3D are smoother — no hard snap; a brief moment where both are visible
+    - 3D removal at end of 3D phase is a quick fade (~150ms), not an instant clip-back
+    - no layout shift, animation cadence preserved (no perceptible timing change beyond the overlap itself)
+    - `npm run build` succeeds; no new lint complaints from `HeroAnimation.tsx`
 
-- [x] 1.3 Fix org-overlay stacking bug (HARDENING_ROADMAP §1.3)
-  - context: `syncOrgContextOverlays` stacks every org the user belongs to into `instructions:`, leaking cross-org context. Add an `active_org_id` concept and emit only that overlay.
+- [ ] 0.3. Change "ambitious" → "critical" in hero sub-headline (ROADMAP §Phase 0.3)
+  - context: one word in `app/page.tsx:28`.
   - acceptance:
-    - `supabase/schema.sql` adds `active_org_id uuid` (nullable, FK to `orgs.id`) on `profiles`, OR a session-level mechanism is added with equivalent intent (documented in the handoff).
-    - `lib/orgs.ts` `syncOrgContextOverlays` only emits the active org's overlay files; non-active overlays are deleted from the workspace.
-    - Session-creation API (`app/api/opencode/session/route.ts` or the route that POSTs to opencode) accepts an `active_org_id`, validates membership via `org_members`, and 403s if the caller isn't a member.
-    - UI: a switcher exists in the workspace shell (`components/shell/` or `components/orgs/`) that flips `active_org_id` and triggers re-sync.
-    - `npm run build` exits 0.
+    - hero sub-headline reads "Powering the most critical / electrical infrastructure projects"
+    - `grep -n "ambitious" app/page.tsx` returns no matches
+    - `npm run build` succeeds
 
-- [x] 1.4 Per-user OpenRouter key (HARDENING_ROADMAP §1.4)
-  - context: today every session bills against one shared key. Add per-user keys with a managed-secrets path, fall back to shared env only if the user has none configured.
+- [ ] 1. Fix `admm_prox_update` arity on PyPSA-importer devices (ROADMAP §Phase A.1)
+  - context: ADMM blows up with `not enough values to unpack (expected 3, got 2)` on `load_pypsa_network` outputs; tests wrap devices via `ConeBridge`/`NUOptBridge`.
   - acceptance:
-    - `supabase/schema.sql` adds `provider_keys(user_id uuid, provider text, encrypted_key text, created_at timestamptz)` with RLS by `auth.uid()`. Encryption path documented (Supabase Vault / pgsodium, or a TODO marker if vault setup is out of scope for this item).
-    - `app/api/settings/provider-keys/route.ts` exists with GET (masked list), POST (upsert), DELETE.
-    - `app/app/settings/page.tsx` exists with a form to paste a key per provider.
-    - `lib/opencode-client.ts` `sendPrompt` (or equivalent session-config plumbing) fetches the user's key and passes it via per-session model config, falling back to the shared env key only when none is set.
-    - `npm run build` exits 0.
+    - new pytest in `/home/agent/zap` loads `ieee-30` (or inline string-bus PyPSA net) and runs `ADMMSolver(num_iterations=200).solve(...)` without raising; fails on main, passes after fix
+    - existing `pytest /home/agent/zap/zap/tests/` still passes
+    - zap fix committed inside `/home/agent/zap` (conventional commit subject); pushed if origin remote set
+    - from `/home/agent/grid-app`, `modal run infra/modal/solver_app.py::smoke --network-path <ieee-30.nc>` returns JSON with non-empty `outcome`
 
-- [x] 2.1 Per-user pip target (HARDENING_ROADMAP §2.1)
-  - context: `pip install` from the agent's Bash currently lands in the shared `/home/agent/zap/.venv/`; isolate per user via `--target=<WORKSPACE>/.python_libs/` + `PYTHONPATH`.
+- [ ] 2. Fix `parse_generators` for string-typed bus columns in modern pandas (ROADMAP §Phase A.2)
+  - context: `.replace(buses_to_index).values.astype(int)` chokes on string-dtype bus columns; real PyPSA networks default to string bus names.
   - acceptance:
-    - Workspace `AGENTS.md` template (in `lib/user-workspace.ts`) documents `pip install --target=<WORKSPACE>/.python_libs <pkg>` as the convention.
-    - All Python subprocess spawn sites prepend `<WORKSPACE>/.python_libs/` to `PYTHONPATH` in their env block — at minimum: `lib/user-workspace.ts` (MCP server env), `lib/review.ts` (`reviewFeatureDetached`), `app/api/upload/**/route.ts`, `app/api/fetch/route.ts`. (Grep for `PYTHONPATH` should turn these up; new sites added later should follow the same pattern.)
-    - zap stays read-only in the shared venv (no edits to zap source; no zap install paths changed).
-    - `npm run build` exits 0.
+    - new pytest in `/home/agent/zap` builds a tiny PyPSA net with string bus names, calls `parse_generators` (and siblings with same `astype(int)` pattern); fails on main, passes after fix
+    - existing zap test suite still green
+    - fix committed inside `/home/agent/zap`; pushed if origin set
+    - from `/home/agent/grid-app`: `python scripts/smoke_dispatch.py data/networks/ieee-30` still exits 0 on the CPU path (no importer regression)
 
-- [x] 2.2 Per-user solve concurrency limits + tool-run visibility (HARDENING_ROADMAP §2.2)
-  - context: implement the `may_I_proceed()` honest-broker pattern between `scripts/user-mcp-server.py` and grid-app, with per-user and global slot caps and a `tool_runs` audit table.
+- [ ] 3. Add `bus_ids` / `snapshot_iso` / `device_class_names` to Modal solver response (ROADMAP §Phase B.3)
+  - context: CPU `DispatchOutcome` consumer needs indices to build view_spec; Modal payload today is raw tensors with no labels.
   - acceptance:
-    - `lib/concurrency.ts` exists with an in-memory token bucket (per-user default 1, global default 3).
-    - `app/api/internal/proceed/route.ts` and `app/api/internal/release/route.ts` exist; both gated by `STEINMETZ_INTERNAL_TOKEN` and return 401 without it.
-    - `supabase/schema.sql` adds `tool_runs(id, user_id, tool, args_digest, token, started_at, expected_deadline, ended_at, runtime_ms, status, error)` with RLS.
-    - `scripts/user-mcp-server.py` wraps its `tools/call` handler with proceed/release; existing detached-spawn upload routes call the same endpoints.
-    - Hang detection: a sweep (or lazy per-request check) marks runs `orphaned` past `expected_deadline + grace`.
-    - `npm run build` exits 0.
-    - Behavioural smoke (best-effort, document in handoff): two concurrent same-user `iesp__solve` calls — second returns 429 surfaced as an MCP tool error.
+    - `infra/modal/solver_app.py::_run_solve` returns the three new keys alongside existing fields
+    - `lib/modal-solver.ts::SolveResult` interface lists the three new fields; `npm run build` from `/home/agent/grid-app` succeeds
+    - `modal deploy infra/modal/solver_app.py` from `/home/agent/grid-app` (with `ZAP_SRC=/home/agent/zap`) succeeds
+    - fresh call to the redeployed endpoint returns JSON containing all three new keys
 
-- [x] 2.3 Disk quotas + monitoring (HARDENING_ROADMAP §2.3)
-  - context: keep one user's PPTX-heavy workspace from filling `/` and bricking the VM. Mostly ops-shaped work, but the app-side enforcement and the script need to land in this repo.
+- [ ] 4. Build CPU-shape adapter (`scripts/_gpu_adapter.py`) for Modal response (ROADMAP §Phase B.4)
+  - context: Modal payload → object that quacks like cvxpy's `DispatchOutcome`, so `run_artifact.build_run_view_spec` flows unchanged.
   - acceptance:
-    - `scripts/quota_check.sh` exists; documents how `du -sh` per workspace is computed and how `profiles.over_quota=true` is flipped at the 80% mark.
-    - `supabase/schema.sql` adds `over_quota boolean default false` to `profiles` (or equivalent column documented in the handoff).
-    - Upload routes (`app/api/upload/**/route.ts`) reject new uploads with a clear error when the caller's `over_quota=true`.
-    - `app/api/admin/health/route.ts` returns JSON with at least: process CPU, free disk on the workspace filesystem, active session count, opencode RSS (best-effort; placeholders allowed but the route must exist and return 200 for an authed admin).
-    - Mount + `quotaon` instructions documented in this repo (e.g. `infra/QUOTA.md` or a section in STATE.md / AGENTS.md) — runtime config the user has to apply on the VM is allowed to be doc-only, but the doc must be committed.
-    - `npm run build` exits 0.
+    - new `scripts/_gpu_adapter.py` exports `adapt_modal_to_dispatch_outcome(modal_result, pnet, snapshots)`
+    - adapter unit smoke (in module `__main__` or `scripts/_test_gpu_adapter.py`) builds a fake Modal result for `ieee-30` shape, passes it through `build_run_view_spec`, asserts non-empty `lmps` and `hours`
+    - existing CPU path round-trip still works: `python -c "from scripts.smoke_dispatch import run_dispatch; ..."` still produces a usable `view_spec` (regression check)
 
-- [x] 3.1 Per-user Linux account (HARDENING_ROADMAP §3.1)
-  - context: kernel-enforced isolation begins here; spin a per-user OS account on signup, chown the workspace to it, run grid-app in a group that can still read workspace metadata. **VERIFIER NOTE: this item touches the host system (useradd/chown). The verify phase must focus on the in-repo plumbing, not on actually creating Linux users — document any OS-side actions in the handoff rather than executing them.**
+- [ ] 5. Add `gpu` kwarg + `--gpu` flag to `scripts/smoke_dispatch.py::run_dispatch` (ROADMAP §Phase C.5)
+  - context: same tuple shape `(outcome, pnet, snapshots, used_solver, elapsed)` with `used_solver="MODAL_GPU"`; routes through Modal endpoint and Phase B adapter.
   - acceptance:
-    - `lib/user-workspace.ts` `ensureUserWorkspace` calls a helper that derives a short-uid (hash of supabase uid, length ≤ 32 chars) and runs `useradd --system --no-create-home --home <workspace> steinmetz-<short-uid>` (idempotent — second call is a no-op).
-    - `chown -R steinmetz-<short-uid>:steinmetz` + `chmod 700` applied to the workspace directory.
-    - `lib/user-workspace.ts` exposes a `shortUidFor(supabaseUid)` (or equivalent) function used by downstream items 3.2 and 3.3.
-    - Documented host-side prereq (in STATE.md or AGENTS.md): grid-app must run in group `steinmetz`; sudoers / capability grant for `useradd`/`chown` recorded.
-    - `npm run build` exits 0.
+    - `python scripts/smoke_dispatch.py data/networks/ieee-30 --gpu --hours 4` exits 0; printed summary names `solver=MODAL_GPU`
+    - `python scripts/smoke_dispatch.py data/networks/ieee-30 --hours 4` (no `--gpu`) still works exactly as before
+    - GPU and CPU LMPs on `ieee-30, hours=4` agree within 5% max relative diff (printed by the script or by a companion `scripts/_compare_cpu_gpu.py`)
 
-- [x] 3.2 Per-user opencode server (HARDENING_ROADMAP §3.2)
-  - context: one opencode unit per user, bound to a Unix socket; grid-app routes per-request based on the user's short-uid.
+- [ ] 6. Thread `--gpu` through `seed_networks.py` and `ingest_pypsa_folder.py` (ROADMAP §Phase C.6)
+  - context: plumb the flag verbatim through both ingest callers; no business-logic changes.
   - acceptance:
-    - A systemd template unit (e.g. `infra/systemd/steinmetz-opencode@.service` or `deploy/systemd/...`) is committed; parameterised by `<short-uid>`, runs as `User=steinmetz-<short-uid>`, binds `/run/steinmetz/<short-uid>.sock` (mode 0660, group `steinmetz`).
-    - `lib/opencode-client.ts` picks the per-user socket per request from the caller's supabase uid → short-uid map (the call must go through the helper added in 3.1).
-    - `createSession` (or session-bootstrap) triggers `systemctl start steinmetz-opencode@<short-uid>` idempotently; an idle-eviction strategy is documented (unit `TimeoutStopSec` and/or a watchdog script under `infra/` or `scripts/`).
-    - 1.2's bearer-token proxy (or its socket equivalent) is updated to forward per-user.
-    - `npm run build` exits 0.
-    - Behavioural smoke (best-effort, document in handoff): killing user A's unit doesn't affect user B's chat.
+    - `python scripts/seed_networks.py --gpu --only ieee-30 --dry-run` (or equivalent narrow-scope invocation) reports `MODAL_GPU` was used
+    - `python scripts/ingest_pypsa_folder.py --gpu <test-folder>` likewise
+    - without `--gpu`, both scripts behave exactly as before (run on `ieee-30`, compare exit code + emitted artifact to a baseline)
 
-- [x] 3.3 Per-user Python environment (HARDENING_ROADMAP §3.3)
-  - context: per-user venv at `/home/steinmetz-<short-uid>/.venv/` (or under the workspace); zap stays system-wide, exposed read-only via `.pth` or sys.path injection.
+- [ ] 7. Add MCP tool `solve_opf(network_artifact_id, hours, gpu)` to `scripts/user-mcp-server.py` (ROADMAP §Phase D.7)
+  - context: agent-callable tool that fetches a network artifact, runs dispatch (CPU or GPU), writes a `run` artifact, returns its ID.
   - acceptance:
-    - `lib/user-workspace.ts` provisions a per-user venv on first session (idempotent) and exposes a `pyInterpreterFor(supabaseUid)` helper.
-    - All callers of the shared interpreter env (`STEINMETZ_PY` and friends) are updated to resolve the per-user interpreter: at minimum `lib/user-workspace.ts`, `lib/review.ts`, `scripts/fetch_url.py`, `app/api/upload/**/route.ts`, `app/api/fetch/route.ts`. Grep for `STEINMETZ_PY` should show no remaining hard references to the shared venv path.
-    - zap is exposed to every per-user venv read-only (documented mechanism: pth file, sys.path prepend, or system site-packages mount).
-    - `npm run build` exits 0.
+    - `solve_opf` appears in `tools/list` output when the MCP server is started against a workspace
+    - calling `solve_opf` with a real seeded `ieee-30` artifact ID and `gpu=False` writes a `run` artifact row whose `view_spec.lmps` is non-empty
+    - same call with `gpu=True` writes an analogous row; metadata includes `machine: "cuda"` (or whatever the GPU container reports)
+    - `may_I_proceed` / `release` are called around the solve, matching existing patterns for feature tools
 
-- [x] 3.4 systemd resource limits per user (HARDENING_ROADMAP §3.4)
-  - context: every per-user opencode unit runs inside `Slice=steinmetz-<short-uid>.slice` with sane Memory / CPU / IO defaults; per-user tunable via `profiles.compute_tier`.
+- [ ] 8. Extend `build_run_row` + `RunView.tsx` to show solver provenance (ROADMAP §Phase D.8)
+  - context: surface `machine`, `gpu`, `elapsed_s`, `solver_args` from GPU runs (and existing `used_solver` for CPU runs) in the run page header/footer.
   - acceptance:
-    - The systemd template from 3.2 references a per-user slice (e.g. `Slice=steinmetz-%i.slice`).
-    - A slice template (e.g. `infra/systemd/steinmetz-%i.slice`) is committed with `MemoryMax=4G`, `CPUQuota=200%`, `IOWeight=100` (or equivalent documented defaults).
-    - `supabase/schema.sql` adds `compute_tier text` (nullable) on `profiles`; a small mapping table or hardcoded resolver in `lib/` selects slice params per tier.
-    - Operational note documented (STATE.md / AGENTS.md / infra README): how the slice file is materialised from the template at user-create time.
-    - `npm run build` exits 0.
-    - Behavioural smoke (best-effort, document in handoff): a runaway allocation in user A's slice gets OOM-killed without taking down the VM.
+    - `scripts/run_artifact.py::build_run_row` accepts and threads through the new provenance fields without breaking existing callers
+    - a GPU run artifact opened in the app visibly shows machine + gpu + elapsed; a CPU run artifact still renders correctly with the new fields absent
+    - `npm run build` from `/home/agent/grid-app` succeeds
+
+- [ ] 9. End-to-end CPU vs GPU parity report (ROADMAP §Phase E.9)
+  - context: one reproducible script + committed report capturing timing and LMP-diff numbers on `ieee-30` and `pypsa-eur-slice`.
+  - acceptance:
+    - `python scripts/_gpu_parity_report.py` exits 0
+    - `infra/modal/PARITY_REPORT.md` committed and contains timing + LMP diff numbers for both networks
+    - `ieee-30` max relative LMP diff < 5% (or report explains why and references the ADMM knobs tuned)
+    - "Wire-up that's NOT done" section of `infra/modal/README.md` deleted; replaced with a one-line pointer to `PARITY_REPORT.md`
+
+- [ ] 10. Frontend validation & bug-hunting with Playwright (substantial; 1.5× budget) (ROADMAP §Phase F.10)
+  - context: self-expanding bug-hunt, not a smoke pass. Creates Supabase test account `claude@steinmetz.ai`, writes Playwright specs covering core flows AND varied error/edge probes (auth/session, form input, artifact lifecycle, chat, renderers, orgs, a11y, real-world weirdness — see ROADMAP §F.10 bucket B for the full prompt). Fixes trivial issues inline; inserts `- [ ] 10.x` queue items above the `<==NEXT-LINE-IS-TERMINAL==>` sentinel for substantive ones. Runs under 45m work / 15m verify budget (1.5× default; enforced by loop.sh per-item timeout override).
+  - acceptance:
+    - test account `claude@steinmetz.ai` exists in Supabase auth, created via service-role admin API with `email_confirm: true`; password persisted to `.env.local` as `STEINMETZ_TEST_ACCOUNT_PASSWORD` (gitignored under `.env*`), never committed
+    - `tests/flows/` contains Playwright specs covering the 12 core flows (signup, login, workspace materialization, chat send/receive, network upload, network artifact view, run artifact view, dashboards page, features page, org pages, settings, logout) AND a meaningful sample across the error/edge buckets (auth/session, form/input, artifact lifecycle, chat, renderers, org/sharing, a11y, real-world)
+    - `npx playwright test tests/flows/` exits 0 OR every failure has explicit disposition: **fixed inline**, **filed as 10.x queue item**, or **noted in LOOP_ALERTS.md for human review**
+    - `LOOP_QUEUE.md` either gained `- [ ]` items above the sentinel this iteration (the expected outcome), OR ACCEPTANCE explicitly states "no follow-up items needed — every flow ships clean" (treat with skepticism)
+    - dev stack (Next.js on 3000, opencode proxy on 4097, opencode server on 4096) verifiably running during the test run; spec comments document the launch assumption
+
+<==NEXT-LINE-IS-TERMINAL==>
+<!-- Loop note: item 10 (and any 10.x items it inserts) must finish BEFORE the
+     terminal item below. Insert any new validation-spawned queue items
+     immediately ABOVE this comment so the loop processes them before item 99. -->
+
+- [ ] 99. Demo screen recordings on `/app/demos` — TERMINAL ITEM (ROADMAP §Phase F.99)
+  - context: auth-gated `/app/demos` page lists video walkthroughs of validated flows. Recordings produced via Playwright `video: 'on'` (or another browser-recording tool the agent picks); stored in Supabase Storage `demos` bucket (preferred) or `public/demos/` (only if total < ~20MB).
+  - acceptance:
+    - `app/app/demos/page.tsx` exists; `http://localhost:3000/app/demos` redirects to `/login` when logged out and renders the demos list when logged in
+    - at least one recording per validated flow from item 10 (and any 10.x items) is uploaded/served, plays in the browser
+    - `npm run build` succeeds from `/home/agent/grid-app`
+    - `STATE.md` updated with a pointer to the demos page so the surface is discoverable

@@ -66,7 +66,7 @@ only captures grid-app changes.
     - adapter unit smoke (in module `__main__` or `scripts/_test_gpu_adapter.py`) builds a fake Modal result for `ieee-30` shape, passes it through `build_run_view_spec`, asserts non-empty `lmps` and `hours`
     - existing CPU path round-trip still works: `python -c "from scripts.smoke_dispatch import run_dispatch; ..."` still produces a usable `view_spec` (regression check)
 
-- [ ] 5. Add `gpu` kwarg + `--gpu` flag to `scripts/smoke_dispatch.py::run_dispatch` (ROADMAP §Phase C.5)
+- [!] 5. Add `gpu` kwarg + `--gpu` flag to `scripts/smoke_dispatch.py::run_dispatch` (ROADMAP §Phase C.5)
   - context: same tuple shape `(outcome, pnet, snapshots, used_solver, elapsed)` with `used_solver="MODAL_GPU"`; routes through Modal endpoint and Phase B adapter.
   - acceptance:
     - `python scripts/smoke_dispatch.py data/networks/ieee-30 --gpu --hours 4` exits 0; printed summary names `solver=MODAL_GPU`

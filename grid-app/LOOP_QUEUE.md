@@ -20,7 +20,7 @@ only captures grid-app changes.
     - hover states still contrast cleanly
     - `npm run build` succeeds
 
-- [ ] 0.2. Soften SVG ↔ 3D transition in HeroAnimation (ROADMAP §Phase 0.2)
+- [x] 0.2. Soften SVG ↔ 3D transition in HeroAnimation (ROADMAP §Phase 0.2)
   - context: `app/components/HeroAnimation.tsx` snaps between the SVG morph and the 3D canvas at `local === T_MORPH` — SVG paths jump `opacity:1→0`, canvas `clipPath` jumps `circle(0%)→circle(100%)`. Goal: short overlap window (~120–200ms) where both layers are partially visible, and the 3D layer **fades** when the phase ends instead of being abruptly clipped away.
   - acceptance:
     - visual review on dev server shows transitions between SVG and 3D are smoother — no hard snap; a brief moment where both are visible

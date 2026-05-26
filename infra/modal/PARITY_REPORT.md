@@ -62,19 +62,19 @@ The script consumes `ZAP_SOLVER_MODAL_URL` + `ZAP_SOLVER_API_KEY` from `grid-app
 
 Comparison between the CLI GPU path (`scripts/smoke_dispatch.py --gpu` → `_gpu_adapter.solve_via_modal`) and the agent GPU path (`scripts/user-mcp-server.py::_solve_via_modal`, the GPU branch of the MCP `solve_opf` tool). Both callers are driven with identical ADMM args (`scripts/_gpu_adapter.HIGH_PRECISION_ADMM_ARGS`) so any diff is endpoint non-determinism, not config drift.
 
-_Last probed: 2026-05-26T20:38:37.762501+00:00 — `scripts/_compare_gpu_paths.py`_.
+_Last probed: 2026-05-26T20:44:48.578587+00:00 — `scripts/_compare_gpu_paths.py`_.
 
 - Network: `ieee-30`, hours: 4
 - ADMM args: `{'num_iterations': 8000, 'rho_power': 1.0, 'rho_angle': 1.0, 'atol': 1e-07, 'rtol': 1e-07, 'dtype': 'float64'}`
 - Acceptance threshold: ≤ 1.00% max relative diff
-- CLI wall: 26.43 s; agent wall: 10.41 s
+- CLI wall: 31.74 s; agent wall: 14.16 s
 
 | Metric | Value |
 |---|---:|
-| Max \|cli - agent\| | 1.237e-12 |
+| Max \|cli - agent\| | 1.559e-12 |
 | Max relative | 0.0000% |
-| Mean \|cli - agent\| | 5.666e-13 |
-| RMSE | 6.563e-13 |
+| Mean \|cli - agent\| | 6.375e-13 |
+| RMSE | 7.895e-13 |
 | CLI max\|p\| | 4.021 |
 | Finite cells | 30 / 30 |
 

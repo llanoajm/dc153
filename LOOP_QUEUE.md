@@ -43,7 +43,7 @@ The loop processes top-to-bottom; do not reorder.
     - new helper `scripts/_smoke_solve_opf.py` runs the MCP solve_opf path (call `_solve_via_modal` from `scripts/user-mcp-server.py` directly OR exercise the tool via stdio if simpler) once with `gpu=False` and once with `gpu=True` on a seeded `ieee-30` artifact; both calls produce the existing tuple shape with non-empty prices
     - `scripts/_smoke_solve_opf.py` exits 0; if MCP server requires Supabase workspace and that's too heavy, document the workaround inline and call `_solve_via_modal` directly
 
-- [ ] 5. Cross-path parity probe (ROADMAP §5)
+- [x] 5. Cross-path parity probe (ROADMAP §5)
   - context: `solve_opf(gpu=True)` (agent path) and `smoke_dispatch.py --gpu` (CLI path from item 2) are independent callers of the same Modal endpoint. They should produce identical results on identical input. A drift probe catches future divergence.
   - acceptance:
     - `scripts/_compare_gpu_paths.py` runs both paths on `data/networks/ieee-30, hours=4`, prints side-by-side LMP comparison + max-relative-diff; two paths agree within 1% max relative diff (much tighter than CPU↔GPU's 5%, because same endpoint + same args)

@@ -1,3 +1,4 @@
 [2026-05-26T20:02:35+00:00] DONE: - [ ] 1. Build CPU-shape adapter `scripts/_gpu_adapter.py` (ROADMAP §1)
 [2026-05-26T20:14:30+00:00] DONE: - [ ] 2. Add `gpu` kwarg + `--gpu` flag to `scripts/smoke_dispatch.py` (ROADMAP §2)
 [2026-05-26T20:23:07+00:00] DONE: - [ ] 3. Thread `--gpu` through `seed_networks.py` and `ingest_pypsa_folder.py` (ROADMAP §3)
+[2026-05-26T20:31:48+00:00] DONE: - [ ] 4. Smoke-validate the existing GPU consumers (ROADMAP §4)

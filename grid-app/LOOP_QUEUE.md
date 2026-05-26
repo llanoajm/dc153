@@ -12,7 +12,7 @@ only captures grid-app changes.
 
 ---
 
-- [ ] 0.1. Recolour accent CTAs + navbar to dark blue (ROADMAP §Phase 0.1)
+- [x] 0.1. Recolour accent CTAs + navbar to dark blue (ROADMAP §Phase 0.1)
   - context: `--accent: #0044CC` in `app/page.module.css:3` is the variable used by `.navLink`, `.navCta` (Contact Us), and `.heroCta` (Try Curie OS). Logo (`.navLogo`/`.navMark`/`.navWord`) inherits page colour `#000` and does NOT use `--accent` — straight variable swap leaves it alone. 3D skins (in `public/models/*.glb`) are unaffected by CSS.
   - acceptance:
     - `--accent` swapped from `#0044CC` to a dark blue (navy / midnight; agent picks the exact hex)

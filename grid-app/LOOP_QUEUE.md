@@ -13,7 +13,7 @@ The loop processes top-to-bottom; do not reorder.
 
 ---
 
-- [ ] 1. Build CPU-shape adapter `scripts/_gpu_adapter.py` (ROADMAP §1)
+- [x] 1. Build CPU-shape adapter `scripts/_gpu_adapter.py` (ROADMAP §1)
   - context: takes Modal solver response dict + local `pnet` + `snapshots`, returns an object whose attributes match what `scripts/run_artifact.build_run_view_spec` reads from cvxpy's `DispatchOutcome` (same shapes, same names).
   - acceptance:
     - `scripts/_gpu_adapter.py` exists and exports `adapt_modal_to_dispatch_outcome(modal_result: dict, pnet, snapshots) -> object`

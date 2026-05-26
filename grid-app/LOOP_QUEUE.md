@@ -28,7 +28,7 @@ only captures grid-app changes.
     - no layout shift, animation cadence preserved (no perceptible timing change beyond the overlap itself)
     - `npm run build` succeeds; no new lint complaints from `HeroAnimation.tsx`
 
-- [ ] 0.3. Change "ambitious" → "critical" in hero sub-headline (ROADMAP §Phase 0.3)
+- [x] 0.3. Change "ambitious" → "critical" in hero sub-headline (ROADMAP §Phase 0.3)
   - context: one word in `app/page.tsx:28`.
   - acceptance:
     - hero sub-headline reads "Powering the most critical / electrical infrastructure projects"

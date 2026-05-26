@@ -1,4 +1,10 @@
+## Current item (from LOOP_QUEUE.md line 31)
+- [ ] 0.3. Change "ambitious" → "critical" in hero sub-headline (ROADMAP §Phase 0.3)
+
+## Attempt
+1 of 5
+
 STATUS: done
-SUMMARY: HeroAnimation now crossfades SVG ↔ 3D — 180ms overlap at T_MORPH and a 150ms 3D fade-out inside the existing 0.4s tail; cadence unchanged.
-ACCEPTANCE: smoothness (overlap window) + quick fade-out + cadence preservation + clean build all pass in code/CI; visual-eye-review on a live browser was not performed in this headless agent run — change is constructed so both layers are partially visible for ~180ms around T_MORPH and the 3D dims out over ~150ms inside the existing 0.4s phase tail.
+SUMMARY: Hero sub-headline now reads "Powering the most critical / electrical infrastructure projects"; npm run build passes.
+ACCEPTANCE: all three criteria pass — copy reads "critical", `grep ambitious app/page.tsx` empty, `npm run build` succeeds.
 VERIFIED: yes

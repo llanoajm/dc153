@@ -171,7 +171,11 @@ def _run_solve(network_nc: bytes, args: dict, import_args: dict) -> dict:
         verbose=False,
     )
     params = layer.initialize_parameters()
-    outcome = layer(**params)
+    # ADMMLayer.forward returns an ADMMState (raw solver fields: power, phase,
+    # dual_power, ...). The DispatchOutcome view (power, angle, prices) is one
+    # `.as_outcome()` call away — match the CPU return shape so the response
+    # below can stay aligned with the existing keys.
+    outcome = layer(**params).as_outcome()
 
     elapsed = time.time() - t0
 

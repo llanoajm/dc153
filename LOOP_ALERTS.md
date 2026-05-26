@@ -27,3 +27,4 @@
 [2026-05-26T14:29:10+00:00] BLOCKED: - [ ] 6. Thread `--gpu` through `seed_networks.py` and `ingest_pypsa_folder.py` (ROADMAP §Phase C.6) (max attempts)
 [2026-05-26T14:29:18+00:00] PARTIAL: - [ ] 7. Add MCP tool `solve_opf(network_artifact_id, hours, gpu)` to `scripts/user-mcp-server.py` (ROADMAP §Phase D.7) (attempt 1)
 [2026-05-26T14:29:29+00:00] PARTIAL: - [ ] 7. Add MCP tool `solve_opf(network_artifact_id, hours, gpu)` to `scripts/user-mcp-server.py` (ROADMAP §Phase D.7) (attempt 2)
+[2026-05-26T14:29:40+00:00] PARTIAL: - [ ] 7. Add MCP tool `solve_opf(network_artifact_id, hours, gpu)` to `scripts/user-mcp-server.py` (ROADMAP §Phase D.7) (attempt 3)

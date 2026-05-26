@@ -23,3 +23,5 @@
 [2026-05-26T14:28:31+00:00] PARTIAL: - [ ] 6. Thread `--gpu` through `seed_networks.py` and `ingest_pypsa_folder.py` (ROADMAP §Phase C.6) (attempt 2)
 [2026-05-26T14:28:42+00:00] PARTIAL: - [ ] 6. Thread `--gpu` through `seed_networks.py` and `ingest_pypsa_folder.py` (ROADMAP §Phase C.6) (attempt 3)
 [2026-05-26T14:28:54+00:00] PARTIAL: - [ ] 6. Thread `--gpu` through `seed_networks.py` and `ingest_pypsa_folder.py` (ROADMAP §Phase C.6) (attempt 4)
+[2026-05-26T14:29:05+00:00] PARTIAL: - [ ] 6. Thread `--gpu` through `seed_networks.py` and `ingest_pypsa_folder.py` (ROADMAP §Phase C.6) (attempt 5)
+[2026-05-26T14:29:10+00:00] BLOCKED: - [ ] 6. Thread `--gpu` through `seed_networks.py` and `ingest_pypsa_folder.py` (ROADMAP §Phase C.6) (max attempts)

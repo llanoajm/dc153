@@ -73,7 +73,7 @@ only captures grid-app changes.
     - `python scripts/smoke_dispatch.py data/networks/ieee-30 --hours 4` (no `--gpu`) still works exactly as before
     - GPU and CPU LMPs on `ieee-30, hours=4` agree within 5% max relative diff (printed by the script or by a companion `scripts/_compare_cpu_gpu.py`)
 
-- [ ] 6. Thread `--gpu` through `seed_networks.py` and `ingest_pypsa_folder.py` (ROADMAP §Phase C.6)
+- [!] 6. Thread `--gpu` through `seed_networks.py` and `ingest_pypsa_folder.py` (ROADMAP §Phase C.6)
   - context: plumb the flag verbatim through both ingest callers; no business-logic changes.
   - acceptance:
     - `python scripts/seed_networks.py --gpu --only ieee-30 --dry-run` (or equivalent narrow-scope invocation) reports `MODAL_GPU` was used

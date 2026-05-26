@@ -59,7 +59,7 @@ only captures grid-app changes.
     - `modal deploy infra/modal/solver_app.py` from `/home/agent/grid-app` (with `ZAP_SRC=/home/agent/zap`) succeeds
     - fresh call to the redeployed endpoint returns JSON containing all three new keys
 
-- [ ] 4. Build CPU-shape adapter (`scripts/_gpu_adapter.py`) for Modal response (ROADMAP §Phase B.4)
+- [!] 4. Build CPU-shape adapter (`scripts/_gpu_adapter.py`) for Modal response (ROADMAP §Phase B.4)
   - context: Modal payload → object that quacks like cvxpy's `DispatchOutcome`, so `run_artifact.build_run_view_spec` flows unchanged.
   - acceptance:
     - new `scripts/_gpu_adapter.py` exports `adapt_modal_to_dispatch_outcome(modal_result, pnet, snapshots)`

@@ -11,3 +11,5 @@
 [2026-05-26T14:26:31+00:00] PARTIAL: - [ ] 4. Build CPU-shape adapter (`scripts/_gpu_adapter.py`) for Modal response (ROADMAP §Phase B.4) (attempt 2)
 [2026-05-26T14:26:42+00:00] PARTIAL: - [ ] 4. Build CPU-shape adapter (`scripts/_gpu_adapter.py`) for Modal response (ROADMAP §Phase B.4) (attempt 3)
 [2026-05-26T14:26:54+00:00] PARTIAL: - [ ] 4. Build CPU-shape adapter (`scripts/_gpu_adapter.py`) for Modal response (ROADMAP §Phase B.4) (attempt 4)
+[2026-05-26T14:27:06+00:00] PARTIAL: - [ ] 4. Build CPU-shape adapter (`scripts/_gpu_adapter.py`) for Modal response (ROADMAP §Phase B.4) (attempt 5)
+[2026-05-26T14:27:11+00:00] BLOCKED: - [ ] 4. Build CPU-shape adapter (`scripts/_gpu_adapter.py`) for Modal response (ROADMAP §Phase B.4) (max attempts)

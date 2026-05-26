@@ -21,7 +21,7 @@ The loop processes top-to-bottom; do not reorder.
     - unit smoke (in `scripts/_test_gpu_adapter.py` or `__main__` of the adapter) hand-builds a fake Modal result for `ieee-30` shape, runs it through `adapt_modal_to_dispatch_outcome` → `build_run_view_spec`, asserts non-empty `lmps` and `hours`, exits 0
     - CPU path round-trip still works: `python -c "from pathlib import Path; from scripts.smoke_dispatch import run_dispatch; from scripts.run_artifact import build_run_view_spec; o,p,s,u,e = run_dispatch(Path('data/networks/ieee-30'), hours=4, solver=None); print(list(build_run_view_spec(o,p,s).keys()))"` prints a non-empty list and exits 0
 
-- [ ] 2. Add `gpu` kwarg + `--gpu` flag to `scripts/smoke_dispatch.py` (ROADMAP §2)
+- [x] 2. Add `gpu` kwarg + `--gpu` flag to `scripts/smoke_dispatch.py` (ROADMAP §2)
   - context: `run_dispatch(net_dir, hours=1, solver=None, gpu=False)`; when `gpu=True` export netCDF + POST to Modal + feed response through item 1's adapter + return same `(outcome, pnet, snapshots, "MODAL_GPU", elapsed)` tuple shape. Reference HTTP-call code lives in `scripts/_gpu_parity_report.py::gpu_solve`.
   - acceptance:
     - `python scripts/smoke_dispatch.py data/networks/ieee-30 --gpu --hours 4` exits 0 and printed summary names `solver=MODAL_GPU` (or the literal returned in the tuple)

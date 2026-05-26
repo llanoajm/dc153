@@ -50,6 +50,8 @@ const T_HOLD = 3.0
 const T_SPIN = 4.0
 const T_SVG_PHASE = T_MORPH + T_HOLD
 const T_3D_PHASE = T_MORPH + T_SPIN + 0.4
+const T_OVERLAP = 0.18
+const T_FADE_OUT = 0.15
 
 function phaseDur(s: number) {
   return s === 0 ? T_SVG_PHASE : T_3D_PHASE
@@ -216,23 +218,55 @@ export default function HeroAnimation() {
       const isModel = shapeIdx > 0
 
       if (isModel) {
-        // 3D model phase: morph → 3D spin
+        // 3D model phase: morph → crossover → 3D spin → 3D fade-out
+        const overlapEnd = T_MORPH + T_OVERLAP
+        const fadeOutStart = T_3D_PHASE - T_FADE_OUT
+
+        let svgOpacity = 1
+        let cvsOpacity = 0
+        let circleR = 0
+        let activate3D = false
+
         if (local < T_MORPH) {
           const p = ease(local / T_MORPH)
           for (let i = 0; i < N_PATHS; i++) {
-            const el = paths[i]!
-            el.setAttribute('d', morphsRef.current[prevIdx][i](p))
-            el.style.opacity = '1'
+            paths[i]!.setAttribute('d', morphsRef.current[prevIdx][i](p))
           }
-          cvs.style.clipPath = 'circle(0% at 50% 50%)'
-          animState.activeModelIdx = -1
-        } else {
+        } else if (local < overlapEnd) {
+          // Crossover: hold SVG at morph endpoint while 3D fades in.
           for (let i = 0; i < N_PATHS; i++) {
-            paths[i]!.style.opacity = '0'
+            paths[i]!.setAttribute('d', morphsRef.current[prevIdx][i](1))
           }
-          cvs.style.clipPath = 'circle(100% at 50% 50%)'
+          const f = (local - T_MORPH) / T_OVERLAP
+          svgOpacity = 1 - f
+          cvsOpacity = f
+          circleR = 100
+          activate3D = true
+        } else if (local < fadeOutStart) {
+          svgOpacity = 0
+          cvsOpacity = 1
+          circleR = 100
+          activate3D = true
+        } else {
+          // Quick fade-out: 3D dims out while SVG outline returns.
+          const f = (local - fadeOutStart) / T_FADE_OUT
+          svgOpacity = f
+          cvsOpacity = 1 - f
+          circleR = 100
+          activate3D = true
+        }
+
+        for (let i = 0; i < N_PATHS; i++) {
+          paths[i]!.style.opacity = svgOpacity.toString()
+        }
+        cvs.style.opacity = cvsOpacity.toString()
+        cvs.style.clipPath = `circle(${circleR}% at 50% 50%)`
+
+        if (activate3D) {
           animState.activeModelIdx = shapeIdx
-          animState.spinProgress = ease(Math.min(1, (local - T_MORPH) / T_SPIN))
+          animState.spinProgress = ease(Math.min(1, Math.max(0, (local - T_MORPH) / T_SPIN)))
+        } else {
+          animState.activeModelIdx = -1
         }
       } else {
         // Cube (SVG-only) phase: morph → hold strokes
@@ -250,6 +284,7 @@ export default function HeroAnimation() {
             el.style.opacity = '1'
           }
         }
+        cvs.style.opacity = '0'
         cvs.style.clipPath = 'circle(0% at 50% 50%)'
         animState.activeModelIdx = -1
       }

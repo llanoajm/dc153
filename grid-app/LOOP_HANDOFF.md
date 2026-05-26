@@ -2,7 +2,7 @@
 - [ ] 1. Fix `admm_prox_update` arity on PyPSA-importer devices (ROADMAP §Phase A.1)
 
 ## Attempt
-1 of 5
+2 of 5
 
 ## Context to load before working
 - GPU_PARITY_ROADMAP.md           (full roadmap; the item in LOOP_QUEUE.md points to a §section here)

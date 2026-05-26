@@ -60,6 +60,43 @@ api_key_secret = modal.Secret.from_name(
 )
 
 
+_PANDAS_COW_PATCHED = False
+
+
+def _patch_pandas_cow_in_container():
+    """Pandas 3.0 enabled Copy-on-Write by default, which makes
+    ``DataFrame.values`` / ``Series.values`` return read-only ndarrays.
+    ``zap.importers.pypsa`` mutates those arrays in-place (``+=``, ``/=``),
+    so importing a real PyPSA network blows up with
+    ``ValueError: output array is read-only``. Mirrors the shim used in
+    ``grid-app/scripts/_pypsa_compat.py`` and ``zap/tests/conftest.py``.
+    Idempotent under pandas <3.0 where ``.values`` is already writable."""
+    global _PANDAS_COW_PATCHED
+    if _PANDAS_COW_PATCHED:
+        return
+
+    import numpy as np
+    import pandas as pd
+
+    orig_df = pd.DataFrame.values.fget
+    orig_series = pd.Series.values.fget
+
+    def _writable(arr):
+        if isinstance(arr, np.ndarray) and not arr.flags.writeable:
+            return arr.copy()
+        return arr
+
+    def _df_values(self):
+        return _writable(orig_df(self))
+
+    def _series_values(self):
+        return _writable(orig_series(self))
+
+    pd.DataFrame.values = property(_df_values)
+    pd.Series.values = property(_series_values)
+    _PANDAS_COW_PATCHED = True
+
+
 def _tensor_to_list(x):
     """Convert torch tensors / nested structures to JSON-friendly Python."""
     import torch
@@ -81,6 +118,7 @@ def _tensor_to_list(x):
 def _run_solve(network_nc: bytes, args: dict, import_args: dict) -> dict:
     """Body of the solve, broken out so both the web endpoint and the local
     entrypoint share the same code path."""
+    _patch_pandas_cow_in_container()
     import pypsa
     import torch
     import zap

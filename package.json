@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test:unit": "node --test --test-reporter=spec tests/unit/"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",

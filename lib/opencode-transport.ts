@@ -6,6 +6,7 @@ import { execFile } from "node:child_process"
 import { promisify } from "node:util"
 import fs from "node:fs/promises"
 import { shortUidFor } from "@/lib/linux-account"
+import { sanitizeBearerTokenEnv } from "@/lib/bearer-token-validation"
 
 // HARDENING §3.2 — per-user opencode transport.
 //
@@ -34,7 +35,7 @@ const SOCKET_WAIT_MS = Math.max(
 
 const FALLBACK_HTTP_URL =
   process.env.STEINMETZ_OPENCODE_URL || "http://127.0.0.1:4097"
-const FALLBACK_TOKEN = process.env.STEINMETZ_OPENCODE_TOKEN ?? ""
+const FALLBACK_TOKEN = sanitizeBearerTokenEnv("STEINMETZ_OPENCODE_TOKEN") ?? ""
 
 export interface OpencodeTarget {
   kind: "http" | "socket"

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { release, sweep } from "@/lib/concurrency"
 import { serviceClient } from "@/lib/supabase/service"
+import { sanitizeBearerTokenEnv } from "@/lib/bearer-token-validation"
 
 // HARDENING §2.2 — `may_I_proceed()` release endpoint.
 //
@@ -17,7 +18,7 @@ function unauthorized() {
 }
 
 function checkAuth(req: NextRequest): boolean {
-  const expected = process.env.STEINMETZ_INTERNAL_TOKEN
+  const expected = sanitizeBearerTokenEnv("STEINMETZ_INTERNAL_TOKEN")
   if (!expected) return false
   const got = req.headers.get("authorization") ?? ""
   const want = `Bearer ${expected}`

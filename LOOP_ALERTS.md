@@ -32,7 +32,7 @@
 [2026-05-26T14:46:41+00:00] DONE: - [ ] 7. Add MCP tool `solve_opf(network_artifact_id, hours, gpu)` to `scripts/user-mcp-server.py` (ROADMAP §Phase D.7)
 [2026-05-26T14:53:24+00:00] DONE: - [ ] 8. Extend `build_run_row` + `RunView.tsx` to show solver provenance (ROADMAP §Phase D.8)
 [2026-05-26T15:10:19+00:00] DONE: - [ ] 9. End-to-end CPU vs GPU parity report (ROADMAP §Phase E.9)
-[2026-05-26T15:43:23+00:00] HUMAN-REVIEW (Phase F.10 — env): the shell that
+[2026-05-26T15:43:23+00:00] HUMAN-REVIEW (Phase F.10 — env) [CLOSED by item 10.1]: the shell that
   launches `npm run dev` had `STEINMETZ_OPENCODE_TOKEN` and
   `STEINMETZ_INTERNAL_TOKEN` polluted with a trailing `" │\n"` (U+2502 box
   drawing + newline — looks copy-pasted from a TUI table). Because Next.js
@@ -50,3 +50,4 @@
   A clean restart fixed it. Both gotchas would benefit from CLAUDE.md /
   AGENTS.md callouts in the "Quick start" / "Known operational gotchas"
   sections.
+[2026-05-26T15:48:00+00:00] DONE: - [ ] 10. Frontend validation & bug-hunting with Playwright (substantial; 1.5× budget) (ROADMAP §Phase F.10)

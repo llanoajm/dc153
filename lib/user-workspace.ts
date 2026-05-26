@@ -5,6 +5,7 @@ import { execFile } from "node:child_process"
 import { promisify } from "node:util"
 import { ensureLinuxAccount, shortUidFor } from "@/lib/linux-account"
 import { ensureUserSlice } from "@/lib/compute-tier"
+import { sanitizeBearerTokenEnv } from "@/lib/bearer-token-validation"
 
 // Re-export so downstream items 3.2 (per-user opencode units) and 3.3
 // (per-user venvs) can resolve a Linux short-uid from a supabase uid via the
@@ -558,7 +559,7 @@ export async function writeOpencodeConfig(
     // `pip install --target=...` installs are visible only here.
     PYTHONPATH: pythonLibsDir(workspaceDir),
   }
-  const internalToken = process.env.STEINMETZ_INTERNAL_TOKEN
+  const internalToken = sanitizeBearerTokenEnv("STEINMETZ_INTERNAL_TOKEN")
   if (internalToken) mcpEnv.STEINMETZ_INTERNAL_TOKEN = internalToken
   const gridAppUrl = process.env.STEINMETZ_GRID_APP_URL
   if (gridAppUrl) mcpEnv.STEINMETZ_GRID_APP_URL = gridAppUrl

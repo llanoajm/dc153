@@ -3,3 +3,9 @@ KlimTestFonts (1)/
 logo.png
 rounded.png
 .vercel
+
+# Next.js
+.next/
+node_modules/
+next-env.d.ts
+.env.local

@@ -1,23 +1,38 @@
-import Link from "next/link"
-import { Lockup } from "@/components/lockup"
+/* eslint-disable @next/next/no-img-element */
+import HeroAnimationLoader from './components/HeroAnimationLoader'
+import styles from './page.module.css'
 
-export default function LandingPage() {
+export default function HomePage() {
   return (
-    <main className="flex-1 flex flex-col items-center justify-center bg-white text-black px-6">
-      <div className="flex flex-col items-center gap-10">
-        <Lockup size="lg" />
-        <div className="flex items-center gap-6 text-[13px] sm:text-[14px] font-mark tracking-wider">
-          <Link
-            href="/login"
-            className="border border-black px-5 py-2 hover:bg-black hover:text-white transition"
-          >
-            Sign in
-          </Link>
+    <div className={styles.page}>
+      <nav className={styles.nav}>
+        <div className={styles.navLogo}>
+          <img className={styles.navMark} src="/spi-mark-filled.png" alt="Steinmetz" />
+          <span className={styles.navWord}>Steinmetz</span>
         </div>
-      </div>
-      <footer className="fixed bottom-6 inset-x-0 text-center font-serif-soft text-[13px] sm:text-[15px] leading-none">
-        Steinmetz Power Infrastructure &copy; 2026
-      </footer>
-    </main>
+        <div className={styles.navLinks}>
+          <a href="#" className={styles.navLink}>Research</a>
+          <a href="#" className={styles.navLink}>Platform</a>
+          <a href="#" className={styles.navLink}>Solutions</a>
+        </div>
+        <a href="/login" className={styles.navCta}><span className={styles.navCtaText}>Contact Us</span></a>
+      </nav>
+
+      <section className={styles.hero}>
+        <div className={styles.axisY} />
+        <div className={styles.axisX} />
+
+        <div className={styles.heroContent}>
+          <span className={styles.heroLabel}></span>
+          <h1 className={styles.heroTitle}><span className={styles.step1}>Frontier</span><br /><span className={styles.step2}>Intelligence</span><br /><span className={styles.step3}>For the Grid</span></h1>
+          <p className={styles.heroSub}><span className={styles.step4}>Powering the most ambitious</span><br /><span className={styles.step5}>electrical infrastructure projects</span></p>
+          <a href="/login" className={`${styles.heroCta} ${styles.step6}`}><span className={styles.heroCtaText}>Try Curie OS</span></a>
+        </div>
+
+        <div className={styles.heroCube}>
+          <HeroAnimationLoader />
+        </div>
+      </section>
+    </div>
   )
 }

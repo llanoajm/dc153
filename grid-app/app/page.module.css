@@ -1,0 +1,263 @@
+.page {
+  --axis-angle: 5deg;
+  --accent: #0044CC;
+  min-height: 100vh;
+  background: #F4F3F3;
+  color: #000;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Navbar ── */
+
+.nav {
+  display: flex;
+  align-items: center;
+  padding: 20px clamp(24px, 4vw, 56px);
+  position: relative;
+  z-index: 10;
+}
+
+.navLogo {
+  display: flex;
+  align-items: center;
+  gap: clamp(7px, 0.77vw, 8px);
+}
+
+.navMark {
+  height: clamp(28px, 3.2vw, 34px);
+  width: auto;
+  display: block;
+  transform: rotate(5deg);
+}
+
+.navWord {
+  font-size: clamp(18px, 2.1vw, 22px);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.navLinks {
+  display: flex;
+  gap: clamp(20px, 2.8vw, 44px);
+  margin: 0 auto;
+}
+
+.navLink {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.navLink:hover {
+  color: var(--accent);
+}
+
+.navCta {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  text-decoration: none;
+  border: 1.5px solid var(--accent);
+  padding: 12px 28px;
+  transition: background 0.2s, color 0.2s;
+  transform: skewX(-12deg);
+}
+
+.navCtaText {
+  display: block;
+  transform: skewX(var(--axis-angle));
+}
+
+.navCta:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ── Hero ── */
+
+.hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: calc(100vh - 76px);
+  padding: 0 clamp(40px, 6vw, 100px) 0 clamp(30px, 4vw, 60px);
+  overflow: hidden;
+}
+
+/* ── Axes ── */
+
+.axisY {
+  position: absolute;
+  width: 1.5px;
+  height: 250%;
+  background: rgba(0, 0, 0, 0.07);
+  right: 27%;
+  top: -75%;
+  transform: rotate(var(--axis-angle));
+  pointer-events: none;
+}
+
+.axisX {
+  position: absolute;
+  height: 1.5px;
+  width: 250%;
+  background: rgba(0, 0, 0, 0.07);
+  left: -25%;
+  top: 52%;
+  pointer-events: none;
+}
+
+/* ── Hero content (left) ── */
+
+.heroContent {
+  flex: 0 0 45%;
+  position: relative;
+  z-index: 2;
+  padding-bottom: 40px;
+  margin-top: clamp(-90px, -8.5vw, -55px);
+  font-family: var(--font-sora), sans-serif;
+}
+
+.heroLabel {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 14px;
+  padding-left: clamp(42px, 4.2vw, 62px);
+  font-family: var(--font-recursive), monospace;
+  font-variation-settings: 'MONO' 1, 'CASL' 0.3;
+  font-style: oblique -7deg;
+}
+
+.heroTitle {
+  font-size: clamp(44px, 5.5vw, 84px);
+  font-weight: 200;
+  font-style: italic;
+  line-height: 1.05;
+  margin: 0 0 16px 0;
+  letter-spacing: -0.01em;
+}
+
+.step1 { padding-left: clamp(22px, 2.2vw, 34px); }
+.step2 { padding-left: clamp(14px, 1.4vw, 22px); }
+.step3 { padding-left: clamp(6px, 0.6vw, 10px); }
+.step4 { padding-left: clamp(7px, 0.7vw, 12px); }
+.step5 { padding-left: clamp(3px, 0.3vw, 6px); }
+.step6 { margin-left: clamp(-2px, -0.1vw, 0px); }
+
+.heroSub {
+  font-size: clamp(11px, 1vw, 14px);
+  font-weight: 300;
+  line-height: 1.7;
+  color: #333;
+  margin: 0 0 12px 0;
+  font-style: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.heroCta {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--accent);
+  padding: 12px 28px;
+  text-decoration: none;
+  transition: opacity 0.2s;
+  transform: skewX(-8deg);
+}
+
+.heroCtaText {
+  display: block;
+  font-style: normal;
+  transform: skewX(8deg);
+}
+
+.heroCta:hover {
+  opacity: 0.85;
+}
+
+/* ── Hero cube (right) ── */
+
+.heroCube {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  padding-left: clamp(90px, 9vw, 136px);
+  align-items: center;
+  position: relative;
+  z-index: 2;
+  margin-top: clamp(-60px, -5vw, -30px);
+}
+
+.cubeWrap {
+  position: relative;
+  width: clamp(140px, 15vw, 240px);
+  aspect-ratio: 460 / 393;
+  transform: rotate(5deg);
+}
+
+.canvasLayer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  clip-path: circle(0% at 50% 50%);
+  pointer-events: none;
+}
+
+.cubeSvg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── Mobile ── */
+
+@media (max-width: 768px) {
+  .navLinks {
+    display: none;
+  }
+
+  .hero {
+    flex-direction: column;
+    padding: 40px clamp(20px, 5vw, 40px);
+  }
+
+  .heroContent {
+    flex: none;
+  }
+
+  .heroCube {
+    flex: none;
+    margin-top: 20px;
+  }
+
+  .cubeWrap {
+    width: clamp(200px, 60vw, 320px);
+  }
+
+  .axisY,
+  .axisX {
+    display: none;
+  }
+}

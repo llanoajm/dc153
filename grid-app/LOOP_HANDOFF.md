@@ -2,7 +2,7 @@
 - [ ] 7. Add MCP tool `solve_opf(network_artifact_id, hours, gpu)` to `scripts/user-mcp-server.py` (ROADMAP §Phase D.7)
 
 ## Attempt
-2 of 5
+3 of 5
 
 ## Context to load before working
 - GPU_PARITY_ROADMAP.md           (full roadmap; the item in LOOP_QUEUE.md points to a §section here)

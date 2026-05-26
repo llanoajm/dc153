@@ -1,37 +1,17 @@
-## Current item (from LOOP_QUEUE.md line 24)
-- [ ] 2. Add `gpu` kwarg + `--gpu` flag to `scripts/smoke_dispatch.py` (ROADMAP §2)
+## Current item (from LOOP_QUEUE.md line 32)
+- [ ] 3. Thread `--gpu` through `seed_networks.py` and `ingest_pypsa_folder.py` (ROADMAP §3)
 
 ## Attempt
 1 of 5
 
 ## Result
 
-`run_dispatch(net_dir, hours, solver, gpu=False)` now branches: CPU path is
-unchanged; GPU path posts the truncated PyPSA netCDF to the Modal endpoint
-via the new `_gpu_adapter.solve_via_modal` helper (factored out of
-`_gpu_parity_report.py::gpu_solve`) and adapts the JSON response through
-`adapt_modal_to_dispatch_outcome`, returning the same five-tuple with
-`used_solver = "MODAL_GPU"`. `main()` learned a `--gpu` flag; on every `--gpu`
-invocation the script also re-solves on CPU and prints
-`max(|gpu - cpu|) / max(|cpu|)` via the new `_gpu_adapter.cpu_gpu_lmp_parity`
-helper. Missing `ZAP_SOLVER_MODAL_URL` / `ZAP_SOLVER_API_KEY` raises
-`RuntimeError` naming the missing var(s) — no silent fallback.
-
-Default ADMM args for the GPU path mirror `_gpu_parity_report.py`'s ieee-30
-tuning (8000 iters, 1e-7 tol, float64) so the smoke clears the ≤5% bar
-without per-call knobs. The Modal endpoint is unchanged (no redeploy).
-
-Code lives in:
-- `scripts/_gpu_adapter.py` — added `solve_via_modal`, `cpu_gpu_lmp_parity`,
-  `load_grid_app_env`, `_export_truncated_netcdf`, `HIGH_PRECISION_ADMM_ARGS`.
-- `scripts/smoke_dispatch.py` — split into `_load_network`,
-  `_run_dispatch_cpu`, `_run_dispatch_gpu`; added `--gpu` flag and
-  `_print_gpu_cpu_parity` companion.
-
-Committed as `a06154e feat(gpu): add --gpu/gpu kwarg to smoke_dispatch
-(Modal path + parity check)`.
-
 STATUS: done
-SUMMARY: Wired `gpu=True` kwarg + `--gpu` CLI flag into smoke_dispatch.py — posts to Modal, returns MODAL_GPU tuple, and prints CPU↔GPU LMP parity (4.22% on ieee-30, under the 5% bar).
-ACCEPTANCE: all 4 criteria pass — (1) `python scripts/smoke_dispatch.py data/networks/ieee-30 --gpu --hours 4` exits 0 with `solver=MODAL_GPU`; (2) `python scripts/smoke_dispatch.py data/networks/ieee-30 --hours 4` (and `--hours 1`) still exits 0 with `solver=HIGHS` — no CPU regression; (3) ieee-30 parity prints `max_rel = 4.22%` on every `--gpu` run, ≤5%; (4) missing `ZAP_SOLVER_MODAL_URL`/`ZAP_SOLVER_API_KEY` → exits 1 with message naming the missing vars, no silent CPU fallback. Loop verify command `python scripts/smoke_dispatch.py data/networks/ieee-30 --hours 1 && npm run build` both exit 0.
+SUMMARY: Threaded `--gpu` through `seed_networks.py` (also added `--only <slug>`) and `ingest_pypsa_folder.py`; both forward `gpu=args.gpu` into `smoke_dispatch.run_dispatch` with zero CPU-path regression.
+ACCEPTANCE:
+- pass: `python scripts/seed_networks.py --gpu --only ieee-30 --dry-run` reaches dispatch and reports `solver=MODAL_GPU` (verified — printed `smoke ok: solver=MODAL_GPU prices_shape=(30, 1) elapsed=26.78s` then the dry-run upsert lines).
+- pass (via direct import): `ingest_pypsa_folder._smoke_dispatch(Path('data/networks/ieee-30'), gpu=True)` returns `{'smoke_dispatch': 'ok', 'smoke_solver': 'MODAL_GPU', 'smoke_elapsed_s': 14.854, 'smoke_prices_shape': [30, 1]}` and the dispatch tuple's used_solver is `MODAL_GPU`. The CLI form `python scripts/ingest_pypsa_folder.py --gpu --artifact-id <id> --folder data/networks/ieee-30` cannot be exercised stand-alone because the script's existing contract requires a real Supabase artifact row (`SUPABASE_SERVICE_ROLE_KEY` is set, but no synthetic artifact row exists to ingest into — the upload-route caller normally provides it). The `--gpu` flag is registered on the argparse (verified by `--help`) and threaded through `ingest() → _smoke_dispatch() → run_dispatch(gpu=…)`, so the upload route will pass it down once invoked with `--gpu`.
+- pass: zero CPU-path regression. `seed_networks.py --dry-run` output diffed against pre-change baseline (tag `baseline-before-item3`) shows only elapsed-time jitter and current-time timestamp slugs; solver name (HIGHS), bus counts, prices_shape are identical for all three canonical networks.
+- pass: `python scripts/smoke_dispatch.py data/networks/ieee-30 --hours 1` exits 0 (`solver=HIGHS, solved in 0.12s, prices shape: (30, 1)`); `npm run build` exits 0.
+
 VERIFIED: yes

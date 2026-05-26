@@ -40,6 +40,26 @@ RELEASE_URL_PATH = "/api/internal/release"
 DEFAULT_GRID_APP_URL = "http://127.0.0.1:3000"
 
 
+ROOT = Path(__file__).resolve().parent.parent
+GRID_APP_ENV_FILE = ROOT / ".env.local"
+
+
+def _load_grid_app_env() -> dict[str, str]:
+    """Read ``<grid-app>/.env.local`` so the MCP server can reach Supabase /
+    Modal without those keys being injected into every opencode session env.
+    Lightweight parser — mirrors ``scripts/seed_networks._load_env``."""
+    env: dict[str, str] = {}
+    if GRID_APP_ENV_FILE.exists():
+        for line in GRID_APP_ENV_FILE.read_text().splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            env[k.strip()] = v.strip().strip('"').strip("'")
+    env.update(os.environ)
+    return env
+
+
 def features_dir() -> Path:
     return Path(os.environ.get("STEINMETZ_FEATURES_DIR") or "features").resolve()
 
@@ -178,6 +198,44 @@ def _builtin_tools() -> list[dict]:
                 "required": ["slug", "python_source", "skill_markdown"],
             },
             "_builtin": "write_custom_importer",
+        },
+        {
+            "name": "steinmetz__solve_opf",
+            "description": (
+                "Run an OPF dispatch on a network artifact and write a "
+                "`run` artifact tied to it. Pass `network_artifact_id` (uuid "
+                "of a `kind='network'` artifact visible to this user), "
+                "`hours` (number of snapshots to solve; 1 by default), and "
+                "`gpu` (false → CPU/cvxpy via the local zap install; true → "
+                "Modal-hosted ADMM on GPU). Returns the new run artifact's "
+                "id; view_spec carries LMPs (and best-effort carrier + line "
+                "flows). Metadata records `solver` / `machine` / `elapsed_s` "
+                "so downstream pages can show solver provenance."
+            ),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "network_artifact_id": {
+                        "type": "string",
+                        "description": "UUID of the `kind='network'` artifact to solve.",
+                    },
+                    "hours": {
+                        "type": "integer",
+                        "description": "Number of snapshots to dispatch (default 1).",
+                    },
+                    "gpu": {
+                        "type": "boolean",
+                        "description": (
+                            "Run on the Modal-hosted GPU container instead "
+                            "of the local CPU solver. Requires "
+                            "ZAP_SOLVER_MODAL_URL + ZAP_SOLVER_API_KEY in "
+                            "grid-app/.env.local."
+                        ),
+                    },
+                },
+                "required": ["network_artifact_id"],
+            },
+            "_builtin": "solve_opf",
         },
         {
             "name": "steinmetz__fetch_network",
@@ -422,11 +480,251 @@ def _builtin_fetch_network(
     return json.dumps(result, indent=2)
 
 
+def _supabase_request(env: dict, method: str, path: str, body=None):
+    """Issue a Supabase REST request using the service-role key. Mirrors the
+    helper in ``scripts/seed_networks.py`` / ``scripts/ingest_pypsa_folder.py``
+    so the MCP solve_opf tool can fetch the network row + insert a run row
+    without depending on a JWT we don't have."""
+    url = env.get("NEXT_PUBLIC_SUPABASE_URL")
+    key = env.get("SUPABASE_SERVICE_ROLE_KEY")
+    if not url or not key:
+        raise RuntimeError(
+            "Supabase env missing (need NEXT_PUBLIC_SUPABASE_URL and "
+            "SUPABASE_SERVICE_ROLE_KEY in grid-app/.env.local)"
+        )
+    req = urllib.request.Request(
+        f"{url}/rest/v1/{path}",
+        method=method,
+        data=json.dumps(body).encode() if body is not None else None,
+        headers={
+            "apikey": key,
+            "Authorization": f"Bearer {key}",
+            "Content-Type": "application/json",
+            "Prefer": "return=representation",
+        },
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        text = resp.read().decode()
+        return json.loads(text) if text else None
+
+
+class _OutcomeShim:
+    """Minimal duck-type stand-in for zap's ``DispatchOutcome``.
+
+    ``scripts/run_artifact.build_run_view_spec`` only reads
+    ``outcome.prices`` (cast through numpy), so we wrap the Modal solver's
+    JSON ``outcome.prices`` list in an object that exposes the same attribute.
+    Carrier-dispatch + line-flow extraction is best-effort over PyPSA's own
+    pre-solved time-series, which we don't touch."""
+
+    __slots__ = ("prices", "power", "angle")
+
+    def __init__(self, prices=None, power=None, angle=None):
+        self.prices = prices
+        self.power = power
+        self.angle = angle
+
+
+def _solve_via_modal(net_dir, pnet, snapshots, hours: int) -> tuple:
+    """Run the Modal-hosted ADMM solver and return a tuple shaped like the
+    CPU path: ``(outcome, pnet, snapshots, used_solver, elapsed, extra)``.
+
+    ``extra`` carries provenance fields the run artifact's metadata wants
+    (machine, gpu, solver_args) — we merge them in at the caller because
+    ``build_run_row`` doesn't accept them yet (LOOP_QUEUE item 8 will widen
+    its signature). Raises ``RuntimeError`` with a clear message when the
+    Modal env isn't configured or the call fails."""
+    import base64
+    import tempfile
+
+    env = _load_grid_app_env()
+    endpoint = env.get("ZAP_SOLVER_MODAL_URL")
+    api_key = env.get("ZAP_SOLVER_API_KEY")
+    if not endpoint or not api_key:
+        raise RuntimeError(
+            "Modal solver not configured — set ZAP_SOLVER_MODAL_URL + "
+            "ZAP_SOLVER_API_KEY in grid-app/.env.local"
+        )
+
+    pnet.set_snapshots(snapshots)
+    with tempfile.NamedTemporaryFile(suffix=".nc", delete=False) as tf:
+        nc_path = tf.name
+    try:
+        pnet.export_to_netcdf(nc_path)
+        nc_bytes = Path(nc_path).read_bytes()
+    finally:
+        Path(nc_path).unlink(missing_ok=True)
+
+    payload = json.dumps(
+        {
+            "network_nc_b64": base64.b64encode(nc_bytes).decode("ascii"),
+            "args": {"num_iterations": 1000},
+            "import_args": {},
+        }
+    ).encode("utf-8")
+    req = urllib.request.Request(
+        endpoint,
+        method="POST",
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        },
+    )
+    timeout_s = int(env.get("ZAP_SOLVER_TIMEOUT_S") or 600)
+    t0 = time.time()
+    try:
+        with urllib.request.urlopen(req, timeout=timeout_s) as resp:
+            result = json.loads(resp.read().decode())
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode()[:500] if exc.fp else ""
+        raise RuntimeError(
+            f"Modal solver returned HTTP {exc.code}: {detail}"
+        ) from exc
+    elapsed = time.time() - t0
+
+    outcome_payload = result.get("outcome") or {}
+    outcome = _OutcomeShim(
+        prices=outcome_payload.get("prices"),
+        power=outcome_payload.get("power"),
+        angle=outcome_payload.get("angle"),
+    )
+    extra = {
+        "machine": result.get("machine"),
+        "gpu": result.get("gpu"),
+        "solver_args": result.get("solver_args") or {},
+        "num_buses": result.get("num_buses"),
+        "time_horizon": result.get("time_horizon"),
+    }
+    return outcome, pnet, snapshots, "MODAL_GPU", elapsed, extra
+
+
+def _builtin_solve_opf(
+    network_artifact_id: str,
+    hours: int = 1,
+    gpu: bool = False,
+) -> str:
+    """Fetch a network artifact, dispatch on CPU or GPU, write a run row."""
+    if not network_artifact_id or not isinstance(network_artifact_id, str):
+        raise ValueError("network_artifact_id is required")
+    try:
+        hours = int(hours)
+    except (TypeError, ValueError):
+        raise ValueError("hours must be an integer")
+    if hours < 1:
+        raise ValueError("hours must be >= 1")
+
+    env = _load_grid_app_env()
+    rows = _supabase_request(
+        env,
+        "GET",
+        f"artifacts?id=eq.{network_artifact_id}&select=*",
+    )
+    if not rows:
+        raise RuntimeError(f"network artifact {network_artifact_id} not found")
+    network_artifact = rows[0]
+    if network_artifact.get("kind") != "network":
+        raise RuntimeError(
+            f"artifact {network_artifact_id} is kind={network_artifact.get('kind')!r}, "
+            "not 'network'"
+        )
+
+    fs_path = network_artifact.get("fs_path")
+    if not fs_path:
+        raise RuntimeError(
+            f"artifact {network_artifact_id} has no fs_path; cannot locate "
+            "PyPSA folder on disk"
+        )
+    net_dir = Path(fs_path)
+    if not net_dir.is_absolute():
+        net_dir = (ROOT / net_dir).resolve()
+    if not (net_dir / "buses.csv").exists():
+        raise RuntimeError(
+            f"network folder {net_dir} is missing buses.csv — re-run "
+            "ingestion or pass a different artifact"
+        )
+
+    # The smoke-dispatch helper covers the CPU path end-to-end; for the GPU
+    # path we load the network locally so build_run_row can re-use the same
+    # pnet for carrier / line-flow extraction.
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import _pypsa_compat  # noqa: F401  must precede pypsa import
+
+    import pypsa
+    import pandas as pd
+
+    pnet = pypsa.Network()
+    pnet.import_from_csv_folder(str(net_dir))
+    if len(pnet.snapshots) == 0:
+        pnet.set_snapshots(pd.date_range("2024-01-01", periods=1, freq="h"))
+    snapshots = pnet.snapshots[:hours]
+
+    extra: dict = {}
+    if gpu:
+        outcome, pnet, snapshots, used_solver, elapsed, extra = _solve_via_modal(
+            net_dir, pnet, snapshots, hours
+        )
+    else:
+        from smoke_dispatch import run_dispatch
+
+        outcome, pnet, snapshots, used_solver, elapsed = run_dispatch(
+            net_dir, hours=hours
+        )
+
+    from run_artifact import build_run_row
+
+    user_id = network_artifact.get("user_id") or os.environ.get("STEINMETZ_USER_ID")
+    row = build_run_row(
+        network_artifact={"id": network_artifact_id, "user_id": user_id},
+        network_name=network_artifact.get("name") or net_dir.name,
+        network_slug=network_artifact.get("slug"),
+        net_dir=net_dir,
+        outcome=outcome,
+        pnet=pnet,
+        snapshots=snapshots,
+        used_solver=used_solver,
+        elapsed_s=float(elapsed),
+        canonical=False,
+    )
+    # Solver-provenance fields requested by LOOP_QUEUE item 8 — folded onto
+    # metadata here so the GPU run carries machine/gpu/solver_args even though
+    # build_run_row doesn't accept them as parameters yet.
+    if extra:
+        metadata = dict(row.get("metadata") or {})
+        if extra.get("machine"):
+            metadata["machine"] = extra["machine"]
+        if extra.get("gpu"):
+            metadata["gpu"] = extra["gpu"]
+        if extra.get("solver_args"):
+            metadata["solver_args"] = extra["solver_args"]
+        metadata["gpu_requested"] = True
+        row["metadata"] = metadata
+    if user_id:
+        row["user_id"] = user_id
+
+    inserted = _supabase_request(env, "POST", "artifacts", row)
+    if not inserted:
+        raise RuntimeError("Supabase insert returned no row")
+    new_id = inserted[0].get("id")
+    return json.dumps(
+        {
+            "run_artifact_id": new_id,
+            "network_artifact_id": network_artifact_id,
+            "solver": used_solver,
+            "machine": (extra or {}).get("machine") or "cpu",
+            "elapsed_s": round(float(elapsed), 3),
+            "hours": int(len(snapshots)),
+        },
+        indent=2,
+    )
+
+
 _BUILTIN_DISPATCH = {
     "list_pending_imports": _builtin_list_pending_imports,
     "inspect_upload": _builtin_inspect_upload,
     "write_custom_importer": _builtin_write_custom_importer,
     "fetch_network": _builtin_fetch_network,
+    "solve_opf": _builtin_solve_opf,
 }
 
 

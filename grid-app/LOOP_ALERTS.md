@@ -13,3 +13,4 @@
 [2026-05-26T14:26:54+00:00] PARTIAL: - [ ] 4. Build CPU-shape adapter (`scripts/_gpu_adapter.py`) for Modal response (ROADMAP §Phase B.4) (attempt 4)
 [2026-05-26T14:27:06+00:00] PARTIAL: - [ ] 4. Build CPU-shape adapter (`scripts/_gpu_adapter.py`) for Modal response (ROADMAP §Phase B.4) (attempt 5)
 [2026-05-26T14:27:11+00:00] BLOCKED: - [ ] 4. Build CPU-shape adapter (`scripts/_gpu_adapter.py`) for Modal response (ROADMAP §Phase B.4) (max attempts)
+[2026-05-26T14:27:19+00:00] PARTIAL: - [ ] 5. Add `gpu` kwarg + `--gpu` flag to `scripts/smoke_dispatch.py::run_dispatch` (ROADMAP §Phase C.5) (attempt 1)

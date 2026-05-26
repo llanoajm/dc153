@@ -510,7 +510,7 @@ def _extract_topology(net_dir: Path) -> dict[str, Any]:
     }
 
 
-def _smoke_dispatch(net_dir: Path):
+def _smoke_dispatch(net_dir: Path, gpu: bool = False):
     """Run the 1-hour smoke and return ``(info_dict, dispatch_payload | None)``.
 
     ``info_dict`` is the metadata to merge onto the network artifact.
@@ -520,7 +520,7 @@ def _smoke_dispatch(net_dir: Path):
     """
     from smoke_dispatch import run_dispatch
 
-    outcome, pnet, snapshots, used_solver, elapsed = run_dispatch(net_dir)
+    outcome, pnet, snapshots, used_solver, elapsed = run_dispatch(net_dir, gpu=gpu)
     info: dict[str, Any] = {
         "smoke_dispatch": "ok",
         "smoke_solver": used_solver,
@@ -600,7 +600,7 @@ def _resolve_network_dir(folder: Path) -> tuple[Path | None, dict[str, Any]]:
     return None, {}
 
 
-def ingest(artifact_id: str, folder: Path) -> None:
+def ingest(artifact_id: str, folder: Path, gpu: bool = False) -> None:
     env = _load_env()
     if "SUPABASE_SERVICE_ROLE_KEY" not in env or "NEXT_PUBLIC_SUPABASE_URL" not in env:
         raise SystemExit("missing Supabase env vars (need SUPABASE_SERVICE_ROLE_KEY)")
@@ -640,7 +640,7 @@ def ingest(artifact_id: str, folder: Path) -> None:
         if net_dir != folder:
             _patch_artifact(env, artifact_id, {"fs_path": str(net_dir)})
 
-        info, dispatch = _smoke_dispatch(net_dir)
+        info, dispatch = _smoke_dispatch(net_dir, gpu=gpu)
         _set_pipeline_status(env, artifact_id, "ready", extra_metadata=info)
 
         if dispatch is not None:
@@ -660,8 +660,17 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--artifact-id", required=True)
     parser.add_argument("--folder", required=True, help="absolute path to the raw upload folder")
+    parser.add_argument(
+        "--gpu",
+        action="store_true",
+        help=(
+            "forward gpu=True into smoke_dispatch.run_dispatch (Modal GPU solver). "
+            "Requires ZAP_SOLVER_MODAL_URL / ZAP_SOLVER_API_KEY in grid-app/.env.local; "
+            "no silent CPU fallback."
+        ),
+    )
     args = parser.parse_args()
-    ingest(args.artifact_id, Path(args.folder).resolve())
+    ingest(args.artifact_id, Path(args.folder).resolve(), gpu=args.gpu)
 
 
 if __name__ == "__main__":

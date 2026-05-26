@@ -245,6 +245,20 @@ def main():
         action="store_true",
         help="skip the 1-hour smoke dispatch (use only when zap is unavailable)",
     )
+    parser.add_argument(
+        "--only",
+        default=None,
+        help="restrict seeding to a single network slug (folder name under data/networks/)",
+    )
+    parser.add_argument(
+        "--gpu",
+        action="store_true",
+        help=(
+            "dispatch via the Modal-hosted GPU solver (forwards gpu=True to "
+            "run_dispatch). Requires ZAP_SOLVER_MODAL_URL / ZAP_SOLVER_API_KEY "
+            "in grid-app/.env.local; no silent CPU fallback."
+        ),
+    )
     args = parser.parse_args()
 
     env = {**_load_env(), **os.environ}
@@ -254,6 +268,11 @@ def main():
         sys.exit(1)
 
     folders = sorted(p for p in NETWORKS_DIR.iterdir() if p.is_dir())
+    if args.only:
+        folders = [p for p in folders if p.name == args.only]
+        if not folders:
+            print(f"no network folder matches --only {args.only}", file=sys.stderr)
+            sys.exit(1)
     if not folders:
         print(f"no networks under {NETWORKS_DIR}", file=sys.stderr)
         sys.exit(1)
@@ -265,7 +284,9 @@ def main():
         run_info = None
         if not args.skip_smoke:
             try:
-                outcome, pnet, snapshots, used_solver, elapsed = run_dispatch(net_dir)
+                outcome, pnet, snapshots, used_solver, elapsed = run_dispatch(
+                    net_dir, gpu=args.gpu
+                )
                 run_info = (outcome, pnet, snapshots, used_solver, elapsed)
                 print(
                     f"  smoke ok: solver={used_solver} "

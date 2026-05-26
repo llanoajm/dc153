@@ -51,7 +51,7 @@ only captures grid-app changes.
     - fix committed inside `/home/agent/zap`; pushed if origin set
     - from `/home/agent/grid-app`: `python scripts/smoke_dispatch.py data/networks/ieee-30` still exits 0 on the CPU path (no importer regression)
 
-- [ ] 3. Add `bus_ids` / `snapshot_iso` / `device_class_names` to Modal solver response (ROADMAP §Phase B.3)
+- [x] 3. Add `bus_ids` / `snapshot_iso` / `device_class_names` to Modal solver response (ROADMAP §Phase B.3)
   - context: CPU `DispatchOutcome` consumer needs indices to build view_spec; Modal payload today is raw tensors with no labels.
   - acceptance:
     - `infra/modal/solver_app.py::_run_solve` returns the three new keys alongside existing fields

@@ -5,3 +5,4 @@
 [2026-05-26T12:55:48+00:00] PARTIAL: - [ ] 1. Fix `admm_prox_update` arity on PyPSA-importer devices (ROADMAP §Phase A.1) (attempt 2)
 [2026-05-26T13:32:50+00:00] DONE: - [ ] 1. Fix `admm_prox_update` arity on PyPSA-importer devices (ROADMAP §Phase A.1)
 [2026-05-26T13:50:27+00:00] WARN: - [ ] 2. Fix `parse_generators` for string-typed bus columns in modern pandas (ROADMAP §Phase A.2) — STATUS=done, HEAD unchanged
+[2026-05-26T14:06:12+00:00] DONE: - [ ] 2. Fix `parse_generators` for string-typed bus columns in modern pandas (ROADMAP §Phase A.2)

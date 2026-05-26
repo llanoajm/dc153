@@ -2,7 +2,7 @@
 - [ ] 4. Build CPU-shape adapter (`scripts/_gpu_adapter.py`) for Modal response (ROADMAP §Phase B.4)
 
 ## Attempt
-4 of 5
+5 of 5
 
 ## Context to load before working
 - GPU_PARITY_ROADMAP.md           (full roadmap; the item in LOOP_QUEUE.md points to a §section here)

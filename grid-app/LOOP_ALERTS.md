@@ -51,3 +51,4 @@
   AGENTS.md callouts in the "Quick start" / "Known operational gotchas"
   sections.
 [2026-05-26T15:48:00+00:00] DONE: - [ ] 10. Frontend validation & bug-hunting with Playwright (substantial; 1.5× budget) (ROADMAP §Phase F.10)
+[2026-05-26T15:59:35+00:00] DONE: - [ ] 10.1 Validate `STEINMETZ_OPENCODE_TOKEN` / `STEINMETZ_INTERNAL_TOKEN` format at server boot (ROADMAP §Phase F.10 — filed by item 10)

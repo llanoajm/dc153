@@ -80,7 +80,7 @@ only captures grid-app changes.
     - `python scripts/ingest_pypsa_folder.py --gpu <test-folder>` likewise
     - without `--gpu`, both scripts behave exactly as before (run on `ieee-30`, compare exit code + emitted artifact to a baseline)
 
-- [ ] 7. Add MCP tool `solve_opf(network_artifact_id, hours, gpu)` to `scripts/user-mcp-server.py` (ROADMAP §Phase D.7)
+- [x] 7. Add MCP tool `solve_opf(network_artifact_id, hours, gpu)` to `scripts/user-mcp-server.py` (ROADMAP §Phase D.7)
   - context: agent-callable tool that fetches a network artifact, runs dispatch (CPU or GPU), writes a `run` artifact, returns its ID.
   - acceptance:
     - `solve_opf` appears in `tools/list` output when the MCP server is started against a workspace

@@ -104,7 +104,13 @@ export async function createArtifact(input: CreateArtifactInput): Promise<Artifa
   return data as Artifact
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export async function getArtifact(id: string): Promise<Artifact | null> {
+  // Postgres' uuid input parser otherwise raises "invalid input syntax for
+  // type uuid" and the error propagates as a 500 — for /app/artifacts/[id]
+  // pages a route-shaped path segment should be a clean not-found instead.
+  if (!UUID_RE.test(id)) return null
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("artifacts")

@@ -112,6 +112,50 @@ only captures grid-app changes.
     - `LOOP_QUEUE.md` either gained `- [ ]` items above the sentinel this iteration (the expected outcome), OR ACCEPTANCE explicitly states "no follow-up items needed — every flow ships clean" (treat with skepticism)
     - dev stack (Next.js on 3000, opencode proxy on 4097, opencode server on 4096) verifiably running during the test run; spec comments document the launch assumption
 
+- [ ] 10.1 Validate `STEINMETZ_OPENCODE_TOKEN` / `STEINMETZ_INTERNAL_TOKEN` format at server boot (ROADMAP §Phase F.10 — filed by item 10)
+  - context: while validating Phase F.10, `/api/opencode/session` was 500ing
+    with `TypeError: Cannot convert argument to a ByteString because the
+    character at index 72 has a value of 9474 which is greater than 255`.
+    Root cause: the shell that launched `npm run dev` exported
+    `STEINMETZ_OPENCODE_TOKEN` (and `STEINMETZ_INTERNAL_TOKEN`) with a
+    trailing `" │\n"` (U+2502 box-drawing + newline, evidently copy-pasted
+    from a TUI table). Next.js's dotenv loader does NOT override
+    pre-existing env vars, so the corrupt shell value beat the clean
+    `.env.local` entry and Node's fetch refused the resulting bearer
+    header. The chat textarea silently stayed on "Loading…" with no
+    surfaced error — only a Playwright probe + DOM scrape revealed the
+    underlying TypeError. A startup-time validator would fail fast instead
+    of bleeding into every chat session.
+  - acceptance:
+    - on Next.js boot, validate each of `STEINMETZ_OPENCODE_TOKEN` and
+      `STEINMETZ_INTERNAL_TOKEN` (when present) matches `^[0-9a-f]{32,}$`
+      and is otherwise ASCII-only; log a loud warning AND set the value
+      to undefined (or throw) if it doesn't, so downstream code falls
+      back to `.env.local` instead of using the polluted value
+    - unit test covers: clean 64-char hex → kept; trailing whitespace →
+      kept after trim; embedded `│` (U+2502) or other non-ASCII → rejected
+    - AGENTS.md "Known operational gotchas" gains a one-liner pointing at
+      this footgun + the `env -i HOME=$HOME PATH=$PATH npm run dev`
+      mitigation; LOOP_ALERTS.md note from 2026-05-26 can be closed once
+      this lands
+
+- [ ] 10.2 Surface a clear inline error when `/api/opencode/session` 500s during chat bootstrap (ROADMAP §Phase F.10 — filed by item 10)
+  - context: when the session POST 500s (e.g. the env-pollution above, or
+    opencode itself being down), the chat page leaves the textarea stuck
+    on placeholder "Loading…" with no visible explanation. The component
+    state machine catches the error and stores it but only renders it when
+    `hasAnyRenderableContent` is true (see app/app/page.tsx around line
+    305) — empty-session boots therefore swallow the message entirely.
+    Users sit on a non-functional UI with no clue what's wrong.
+  - acceptance:
+    - on session-bootstrap failure, the chat page renders the captured
+      error text above the textarea regardless of message-list state, and
+      offers a "Retry" affordance that re-invokes the POST
+    - the textarea placeholder swaps from "Loading…" to "Chat is offline —
+      see error above" so the disabled state is at least explained
+    - Playwright spec (extend `tests/flows/chat.spec.ts`) drives the
+      failure mode by intercepting `POST /api/opencode/session` with a
+      500 and asserts the error + retry button are visible
 <==NEXT-LINE-IS-TERMINAL==>
 <!-- Loop note: item 10 (and any 10.x items it inserts) must finish BEFORE the
      terminal item below. Insert any new validation-spawned queue items

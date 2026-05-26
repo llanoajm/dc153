@@ -1,19 +1,26 @@
-## Current item (from LOOP_QUEUE.md line 106)
-- [ ] 10. Frontend validation & bug-hunting with Playwright (substantial; 1.5× budget) (ROADMAP §Phase F.10)
+## Current item (from LOOP_QUEUE.md line 115)
+- [ ] 10.1 Validate `STEINMETZ_OPENCODE_TOKEN` / `STEINMETZ_INTERNAL_TOKEN` format at server boot (ROADMAP §Phase F.10 — filed by item 10)
 
 ## Attempt
 1 of 5
 
 ## Context to load before working
-- GPU_PARITY_ROADMAP.md           (Phase F.10 has the full bug-hunt prompt)
-- AGENTS.md                       (Next 16 conventions + dev-stack ports)
-- LOOP_QUEUE.md                   (the queue + newly-inserted 10.1 / 10.2)
+- GPU_PARITY_ROADMAP.md           (full roadmap; the item in LOOP_QUEUE.md points to a §section here)
+- AGENTS.md                       (project rules, layered architecture, harness-first principle)
+- CLAUDE.md                       (one-line include of AGENTS.md)
+- STATE.md                        (current build cursor — read tail for what's freshly shipped)
+- infra/modal/README.md           (existing Modal deploy + wire-up notes)
+- infra/modal/solver_app.py       (deployed Modal app; the body of `_run_solve` is the GPU call site)
+- lib/modal-solver.ts             (TS client; `SolveResult` interface lives here)
+- scripts/smoke_dispatch.py       (CPU baseline: `run_dispatch` returns `(outcome, pnet, snapshots, used_solver, elapsed)`)
+- scripts/run_artifact.py         (`build_run_row` / `build_run_view_spec` — downstream consumer of any solve outcome)
+- scripts/user-mcp-server.py      (per-user MCP server — where new agent-callable tools register)
+- components/runs/RunView.tsx     (renders run artifacts; provenance fields surface here)
+- /home/agent/zap/zap/admm/       (ADMMSolver / ADMMLayer source — Phase A.1)
+- /home/agent/zap/zap/importers/pypsa.py  (`load_pypsa_network`, `parse_generators` — Phase A.2)
+- /home/agent/zap/zap/tests/      (existing zap test layout — pattern for the new regression tests)
+- LOOP_QUEUE.md                          (the queue you're working from)
 - recent tail of LOOP_JOURNAL.md
-- tests/flows/                    (this iteration's specs)
-- playwright.config.ts            (chromium-anon / chromium-auth projects)
-- tests/fixtures/global-setup.ts  (Supabase login → storageState)
-- lib/artifacts.ts                (the inline UUID-validation fix)
-- LOOP_ALERTS.md                  (env-pollution + stale-build gotchas)
 
 ## Protocol
 1. Read the context above plus any acceptance criteria nested under the
@@ -41,16 +48,55 @@
    Do NOT commit LOOP_HANDOFF.md — the loop owns the bookkeeping commit.
 
 ## Constraints
-(unchanged — see prior handoff)
+- Cross-repo items (1, 2) edit /home/agent/zap. Commit zap changes INSIDE
+  /home/agent/zap with a conventional-commit subject and push to origin if
+  configured, BEFORE returning STATUS: done. The grid-app loop's tag commit
+  only captures grid-app changes. Do not stage zap files into grid-app.
+- Otherwise honour AGENTS.md: "in end-user mode the agent must not modify
+  zap source." Items 1-2 are the explicit maintainer-mode exceptions for
+  this loop; everything else stays out of /home/agent/zap.
+- Do not commit secrets. .env.local holds ZAP_SOLVER_API_KEY — never stage
+  it. Same for OpenRouter / Supabase service-role keys.
+- Don't bypass `may_I_proceed` / `release` in user-mcp-server.py for the
+  new `solve_opf` tool — match the existing admission pattern.
+- No emojis in code or user-facing strings.
+- Don't add npm dependencies a few lines of code could replace.
+- For new Next.js routes / server code, remember this is Next 16
+  (`cookies()/headers()/params/searchParams` are async; `proxy.ts` not
+  `middleware.ts`; Turbopack is default).
+- Modal deploys take 3-5 minutes on first call after image changes; budget
+  for it but do not skip the deploy when an item's acceptance demands a
+  fresh endpoint.
+- Do NOT introduce a CPU-vs-GPU auto-tiering heuristic. The roadmap is
+  explicit: `--gpu` is a manual choice everywhere. (Phase E item 9
+  produces the parity data needed to inform a future heuristic; that
+  heuristic is out of scope for this loop.)
+- Do NOT delete the CPU path or alter its return shape. GPU adapts to
+  match CPU, not the other way around.
+- If an acceptance criterion can't be verified scriptably in this
+  environment (e.g. the Modal endpoint is down), say so explicitly in
+  ACCEPTANCE: rather than rubber-stamping.
+- Phase F mechanic: `LOOP_QUEUE.md` contains a sentinel line
+  `<==NEXT-LINE-IS-TERMINAL==>` immediately above item 99 (the demos
+  page). Item 99 is the **fixed terminus** and must remain the last
+  `- [ ]` line in the queue at all times. Item 10 (and only item 10)
+  is authorised to insert new `- [ ]` queue items — they go
+  IMMEDIATELY ABOVE the sentinel line, never below it. Number them
+  `10.x` (e.g. `- [ ] 10.1 Fix overflow on artifact list`) so their
+  provenance is unambiguous. Edits to LOOP_QUEUE.md from item 10 are
+  staged + committed by the work agent as part of that iteration's
+  commit (the loop's bookkeeping commit will pick them up).
+- For Phase F items, the test account credentials
+  (`STEINMETZ_TEST_ACCOUNT_EMAIL` / `STEINMETZ_TEST_ACCOUNT_PASSWORD`)
+  live in `.env.local` only and must never be staged. Verify
+  `.env.local` is in `.gitignore` before writing them.
 
 STATUS: done
-SUMMARY: Playwright Phase F.10 validation suite (39 specs / 8 files) lands green; inline fix in lib/artifacts.ts stops malformed UUID route segments from 500ing; filed 10.1 + 10.2 as substantive follow-ups.
+SUMMARY: Added lib/bearer-token-validation.ts + instrumentation.ts so STEINMETZ_OPENCODE_TOKEN / STEINMETZ_INTERNAL_TOKEN get format-validated at Next.js boot, with a best-effort .env.local fallback and defense-in-depth at each read site.
 ACCEPTANCE:
- - PASS: test account `claude@steinmetz.ai` created via service-role admin API with email_confirm:true (user id 3ccffca7-cb3e-490c-9b7e-1443dba6b725); STEINMETZ_TEST_ACCOUNT_EMAIL / STEINMETZ_TEST_ACCOUNT_PASSWORD appended to grid-app/.env.local (verified gitignored under .env*; git status shows no .env.local diff).
- - PASS: tests/flows/ contains 8 spec files / 39 tests covering the 12 core flows (signup → closed-beta copy, login, /app workspace mount, chat input, networks list, run/dashboards/features rail pages, settings, orgs, logout) AND a meaningful sample of error/edge probes — auth/session (wrong password, malformed email, signed-out deep link, signed-in-on-/login redirect, first-focus), form/input (empty chat, whitespace chat, 10kb paste, empty org name disabled, empty key disabled), artifact lifecycle (malformed uuid → not 500, random uuid → not 500, RLS via API 4xx), renderers/view-spec (rail-pages smoke for 9 routes), real-world weirdness (back/forward across SPA, refresh /app), and a11y/layout (1280×800 + 375×667 horizontal-scroll, login first-focus).
- - PASS: `PLAYWRIGHT_BASE_URL=http://localhost:3001 npx playwright test` exits 0 with 39 passed (1.6m) against a clean dev server. Initial run surfaced 6 failures; 1 was a genuine 500 bug fixed inline in lib/artifacts.ts (UUID-shape guard in getArtifact), 3 were test-side locator/regex fixes (chat placeholder, org Create button disabled assertion, settings Save button disabled assertion, login first-focus moved to anon project), and 2 were environmental (corrupted shell env overriding .env.local; stale `next start` serving 500 on hashed CSS chunks). Both env issues are recorded in LOOP_ALERTS.md and converted into actionable code defenses via 10.1.
- - PASS: LOOP_QUEUE.md gained two `- [ ]` items above the `<==NEXT-LINE-IS-TERMINAL==>` sentinel — 10.1 (boot-time STEINMETZ_*_TOKEN format validation) and 10.2 (surface session-bootstrap errors in the chat UI instead of leaving the textarea stuck on "Loading…"). Both are real findings from this iteration, not invented scope.
- - PASS: dev stack verifiably running during the test run — Next.js dev on :3001 (pid 234359, restarted with `env -i HOME=$HOME PATH=$PATH` to drop the polluted STEINMETZ_*_TOKEN shell exports), opencode proxy on :4097 (pid 150921), opencode server on :4096 (pid 170200). playwright.config.ts loads .env.local without dotenv (so STEINMETZ_TEST_ACCOUNT_* reaches the global-setup fixture); base URL is `PLAYWRIGHT_BASE_URL` (defaults to http://localhost:3000). Spec comments document the launch assumption.
- - NOTE: prod `next start` on :3000 was auto-respawned by something with PPID=1 (suspected loop.sh wrapper); it serves the older build and intermittently 500s on regenerated CSS chunks. The dev server on :3001 is the one the suite is canonically green against; running against :3000 will additionally fail the malformed-uuid test until that prod build is regenerated (the fix is shipped in the same commit). LOOP_ALERTS captured the gotcha for the human.
+  - boot-time validation: PASS — instrumentation.ts calls validateBearerTokensAtBoot() in the nodejs runtime; rejects non-ASCII (incl. U+2502) and non-hex/<32-char values; loud warning; deletes the polluted env var and best-effort re-reads .env.local to recover the clean committed value.
+  - unit test: PASS — `npm run test:unit` (node:test + jiti) runs 13 tests covering clean 64-char hex kept, leading/trailing whitespace trimmed, embedded U+2502 rejected, other non-ASCII rejected, uppercase hex / short / empty / null / whitespace-only rejected, plus sanitizeBearerTokenEnv scrub + clean-passthrough + missing-env paths.
+  - docs: PASS — AGENTS.md gained a "Known operational gotchas" section pointing at the footgun + `env -i HOME=$HOME PATH=$PATH npm run dev` mitigation; LOOP_ALERTS.md 2026-05-26 HUMAN-REVIEW note marked [CLOSED by item 10.1].
+  - build: PASS — `npm run build` compiles successfully in 21.5s; warning count unchanged from baseline (1 pre-existing Turbopack NFT warning in user-workspace.ts, not caused by this change).
 
 VERIFIED: yes

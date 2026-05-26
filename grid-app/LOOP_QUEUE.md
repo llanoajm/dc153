@@ -112,7 +112,7 @@ only captures grid-app changes.
     - `LOOP_QUEUE.md` either gained `- [ ]` items above the sentinel this iteration (the expected outcome), OR ACCEPTANCE explicitly states "no follow-up items needed — every flow ships clean" (treat with skepticism)
     - dev stack (Next.js on 3000, opencode proxy on 4097, opencode server on 4096) verifiably running during the test run; spec comments document the launch assumption
 
-- [ ] 10.1 Validate `STEINMETZ_OPENCODE_TOKEN` / `STEINMETZ_INTERNAL_TOKEN` format at server boot (ROADMAP §Phase F.10 — filed by item 10)
+- [x] 10.1 Validate `STEINMETZ_OPENCODE_TOKEN` / `STEINMETZ_INTERNAL_TOKEN` format at server boot (ROADMAP §Phase F.10 — filed by item 10)
   - context: while validating Phase F.10, `/api/opencode/session` was 500ing
     with `TypeError: Cannot convert argument to a ByteString because the
     character at index 72 has a value of 9474 which is greater than 255`.

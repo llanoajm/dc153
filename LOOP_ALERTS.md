@@ -7,3 +7,4 @@
 [2026-05-26T13:50:27+00:00] WARN: - [ ] 2. Fix `parse_generators` for string-typed bus columns in modern pandas (ROADMAP §Phase A.2) — STATUS=done, HEAD unchanged
 [2026-05-26T14:06:12+00:00] DONE: - [ ] 2. Fix `parse_generators` for string-typed bus columns in modern pandas (ROADMAP §Phase A.2)
 [2026-05-26T14:25:56+00:00] DONE: - [ ] 3. Add `bus_ids` / `snapshot_iso` / `device_class_names` to Modal solver response (ROADMAP §Phase B.3)
+[2026-05-26T14:26:20+00:00] PARTIAL: - [ ] 4. Build CPU-shape adapter (`scripts/_gpu_adapter.py`) for Modal response (ROADMAP §Phase B.4) (attempt 1)

@@ -157,16 +157,23 @@ def build_run_row(
     used_solver: str,
     elapsed_s: float,
     canonical: bool,
+    machine: str | None = None,
+    gpu: bool | None = None,
+    solver_args: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the JSON row to upsert into ``public.artifacts``.
 
     Caller is responsible for the actual HTTP request (so the row format stays
     portable between the seed script and the ingest pipeline).
+
+    ``machine`` / ``gpu`` / ``solver_args`` are optional provenance fields used
+    by GPU runs (Modal-hosted ADMM). CPU callers can omit them; the resulting
+    metadata simply lacks those keys and the run page renders accordingly.
     """
     view_spec = build_run_view_spec(outcome, pnet, snapshots)
     hours = len(snapshots)
     timestamp_slug = pd.Timestamp.utcnow().strftime("%Y%m%dT%H%M%SZ")
-    metadata = {
+    metadata: dict[str, Any] = {
         "network_name": network_name,
         "network_slug": network_slug,
         "network_artifact_id": (network_artifact or {}).get("id"),
@@ -179,6 +186,12 @@ def build_run_row(
         "fs_path": str(net_dir),
         "bundled": bool(canonical),
     }
+    if machine:
+        metadata["machine"] = machine
+    if gpu is not None:
+        metadata["gpu"] = bool(gpu)
+    if solver_args:
+        metadata["solver_args"] = solver_args
     row: dict[str, Any] = {
         "kind": "run",
         "name": f"{network_name} · dispatch ({hours}h, {used_solver})",

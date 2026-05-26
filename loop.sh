@@ -21,15 +21,20 @@ MAX_TOTAL_ITERS=200
 SLEEP_BETWEEN=5
 BUDGET_FLAGS=()   # e.g. (--max-budget-usd 3)
 
-# Rate-limit handling. When the underlying `claude -p` invocation hits a
-# 5-hour or weekly Max-subscription limit, it fails fast with an error
-# the loop would otherwise swallow as an "Unsuccessful ship". Instead,
-# detect the rate-limit error and SLEEP, retrying within the same
-# attempt (so it doesn't consume one of MAX_ATTEMPTS). The loop keeps
-# waiting in 30-minute pulses until either the limit clears or the
-# total waits exceed MAX_RATE_LIMIT_WAITS (default: 24 × 30m = 12h).
-RATE_LIMIT_WAIT_SECS=1800
-MAX_RATE_LIMIT_WAITS=24
+# Throttle / fast-fail guard. `claude -p` can exit in seconds without writing
+# STATUS when the Max subscription's 5-hour or weekly rate-limit kicks in (the
+# error wording changes; a regex alone is unreliable). The duration heuristic
+# (`elapsed < MIN_REAL_RUN_SECS` + no completion field) catches silent hits the
+# regex misses. Both produce a sleep-and-retry of the SAME attempt — they do
+# NOT count against MAX_ATTEMPTS. Without this, a 3-minute throttle window can
+# burn through 5 attempts on 3 items and auto-block them all (see 2026-05-26
+# items 4/5/6 in the GPU-parity loop).
+RATE_LIMIT_REGEX='rate.?limit|429|too many requests|usage limit|weekly limit|5.hour limit|please (wait|try again)|try again later|quota exceeded|exceeded.*limit|overloaded|service unavailable|503|api error|connection (reset|refused|timed out)'
+MIN_REAL_RUN_SECS=60        # treat sub-60s exits with no completion field as suspect
+THROTTLE_WAIT_SECS=1800     # sleep 30 min before retrying the same attempt
+MAX_THROTTLE_WAITS=24       # 24 × 30m = 12h max throttle wait per attempt
+WORK_LOG=/tmp/ralph-loop-work.log
+VERIFY_LOG=/tmp/ralph-loop-verify.log
 
 # --- Pre-flight --------------------------------------------------------------
 [ -f "$QUEUE" ] || { echo "Missing $QUEUE in $(pwd)"; exit 1; }
@@ -72,75 +77,60 @@ truncate_to() {
   if [ "${#s}" -gt "$max" ]; then echo "${s:0:$((max-1))}…"; else echo "$s"; fi
 }
 
-is_rate_limited() {
-  local log_file="$1"
-  [ -f "$log_file" ] || return 1
-  # Patterns the Claude CLI / API surface for 5-hour, weekly, and
-  # generic 429s. Case-insensitive; tolerates the various wordings
-  # we've observed in Max-subscription rate-limit errors.
-  grep -qiE 'rate.?limit|429|too many requests|usage limit|weekly limit|5-hour limit|please (wait|try again)|try again later|quota exceeded|exceeded.*limit' "$log_file"
-}
-
-run_claude_with_rate_limit_retry() {
-  # Args: <timeout_spec> <log_file> <prompt> [completion_field]
-  # Re-invokes `claude -p` after sleeping when a rate-limit error is
-  # detected. Returns once a non-rate-limited result is produced (or
-  # we hit MAX_RATE_LIMIT_WAITS).
-  #
-  # Rate-limit detection: combines a regex match on the log AND the
-  # absence of the completion field (default STATUS for work phase,
-  # VERIFIED for verify phase). The completion-field guard prevents
-  # false positives when the agent's own legitimate output mentions
-  # phrases like "rate limit" or "429" (item 10's bug-hunt probes
-  # exactly these UI states). Real rate-limit failures never reach the
-  # protocol step that writes the completion field.
-  local tmo="$1" log="$2" prompt="$3" completion_field="${4:-STATUS}"
-  local rl_waits=0
-  while : ; do
-    : > "$log"
-    timeout "$tmo" claude -p \
-      --model "$MODEL" \
-      --dangerously-skip-permissions \
-      "${BUDGET_FLAGS[@]}" \
-      "$prompt" >>"$log" 2>&1 || true
-
-    if is_rate_limited "$log" && [ -z "$(read_field "$completion_field")" ]; then
-      rl_waits=$((rl_waits + 1))
-      if [ "$rl_waits" -gt "$MAX_RATE_LIMIT_WAITS" ]; then
-        echo "[$(date -Iseconds)] RATE-LIMIT GIVE-UP: $rl_waits × ${RATE_LIMIT_WAIT_SECS}s and still rate-limited — exiting loop. Resume by relaunching ./loop.sh once limits reset." >> "$ALERTS"
-        echo ">>> Hit MAX_RATE_LIMIT_WAITS=$MAX_RATE_LIMIT_WAITS. Exiting cleanly so you can resume later."
-        exit 0
-      fi
-      echo ">>> RATE-LIMITED ($rl_waits/$MAX_RATE_LIMIT_WAITS); sleeping ${RATE_LIMIT_WAIT_SECS}s, will retry the SAME attempt..."
-      echo "[$(date -Iseconds)] RATE-LIMITED: sleep ${RATE_LIMIT_WAIT_SECS}s ($rl_waits/$MAX_RATE_LIMIT_WAITS) — same attempt will retry" >> "$ALERTS"
-      sleep "$RATE_LIMIT_WAIT_SECS"
-      continue
-    fi
-    break
-  done
-}
-
-per_item_work_timeout() {
-  # 1.5× default work budget for item 10 and its 10.x children
-  # (frontend validation / bug-hunting). Everything else uses default.
-  case "$1" in
-    10|10.*) echo "45m" ;;
-    *)       echo "$WORK_TIMEOUT" ;;
-  esac
-}
-
-per_item_verify_timeout() {
-  case "$1" in
-    10|10.*) echo "15m" ;;
-    *)       echo "$VERIFY_TIMEOUT" ;;
-  esac
-}
-
 push_if_remote() {
   [ "$HAS_REMOTE" = 1 ] || return 0
   local branch; branch=$(git rev-parse --abbrev-ref HEAD)
   git push -u origin "$branch" >/dev/null 2>&1 \
     || echo "[$(date -Iseconds)] WARN: push failed for $branch" >> "$ALERTS"
+}
+
+run_claude_attempt() {
+  # Args: <timeout_spec> <log_file> <prompt> [completion_field]
+  # Wraps `claude -p` with throttle / fast-fail retry. Re-issues the SAME
+  # invocation (does not consume an attempt) when:
+  #   - the log matches RATE_LIMIT_REGEX, OR
+  #   - the call returned in less than MIN_REAL_RUN_SECS and the agent did
+  #     not write the expected completion field (STATUS for work, VERIFIED
+  #     for verify).
+  # Sleeps THROTTLE_WAIT_SECS between retries, gives up after
+  # MAX_THROTTLE_WAITS and lets the caller treat it as a real failed attempt.
+  local tmo="$1" log="$2" prompt="$3" completion_field="${4:-STATUS}"
+  local waits=0
+  while : ; do
+    : > "$log"
+    local t0; t0=$(date +%s)
+    timeout "$tmo" claude -p \
+      --model "$MODEL" \
+      --dangerously-skip-permissions \
+      "${BUDGET_FLAGS[@]}" \
+      "$prompt" >>"$log" 2>&1 || true
+    local elapsed=$(( $(date +%s) - t0 ))
+
+    local saw_completion; saw_completion=$(read_field "$completion_field")
+    local saw_rl=0
+    if grep -qiE "$RATE_LIMIT_REGEX" "$log" 2>/dev/null; then saw_rl=1; fi
+    local fast_blank=0
+    if [ -z "$saw_completion" ] && [ "$elapsed" -lt "$MIN_REAL_RUN_SECS" ]; then
+      fast_blank=1
+    fi
+
+    if [ -z "$saw_completion" ] && { [ "$saw_rl" = 1 ] || [ "$fast_blank" = 1 ]; }; then
+      waits=$((waits + 1))
+      if [ "$waits" -gt "$MAX_THROTTLE_WAITS" ]; then
+        echo "[$(date -Iseconds)] THROTTLE GIVE-UP: $waits sleeps × ${THROTTLE_WAIT_SECS}s — letting caller count this as a real failed attempt." >> "$ALERTS"
+        echo ">>> Throttle retry budget exhausted; proceeding as a counted attempt."
+        return 0
+      fi
+      local why=""
+      [ "$saw_rl" = 1 ]    && why="${why}rate-limit-regex "
+      [ "$fast_blank" = 1 ] && why="${why}fast-blank(${elapsed}s)"
+      echo ">>> THROTTLED ($waits/$MAX_THROTTLE_WAITS) [$why]; sleeping ${THROTTLE_WAIT_SECS}s then retrying the SAME attempt..."
+      echo "[$(date -Iseconds)] THROTTLE: sleep ${THROTTLE_WAIT_SECS}s ($waits/$MAX_THROTTLE_WAITS) [$why]" >> "$ALERTS"
+      sleep "$THROTTLE_WAIT_SECS"
+      continue
+    fi
+    return 0
+  done
 }
 
 loop_commit() {
@@ -198,126 +188,64 @@ $item_text
 $attempt of $MAX_ATTEMPTS
 
 ## Context to load before working
-- GPU_PARITY_ROADMAP.md           (full roadmap; the item in $QUEUE points to a §section here)
-- AGENTS.md                       (project rules, layered architecture, harness-first principle)
+- GPU_UNBLOCK_ROADMAP.md          (full roadmap for this loop; the queue item points to a §section here)
+- GPU_PARITY_ROADMAP.md           (precedent roadmap; §Phase B.4 / §Phase C.5 / §Phase C.6 are the original specs for items 1-3)
+- AGENTS.md                       (project rules: harness-first principle, no-zap-edits in end-user mode, no-emoji, no-deps, conventional commits)
 - CLAUDE.md                       (one-line include of AGENTS.md)
-- STATE.md                        (current build cursor — read tail for what's freshly shipped)
-- infra/modal/README.md           (existing Modal deploy + wire-up notes)
-- infra/modal/solver_app.py       (deployed Modal app; the body of \`_run_solve\` is the GPU call site)
-- lib/modal-solver.ts             (TS client; \`SolveResult\` interface lives here)
-- scripts/smoke_dispatch.py       (CPU baseline: \`run_dispatch\` returns \`(outcome, pnet, snapshots, used_solver, elapsed)\`)
-- scripts/run_artifact.py         (\`build_run_row\` / \`build_run_view_spec\` — downstream consumer of any solve outcome)
-- scripts/user-mcp-server.py      (per-user MCP server — where new agent-callable tools register)
-- components/runs/RunView.tsx     (renders run artifacts; provenance fields surface here)
-- /home/agent/zap/zap/admm/       (ADMMSolver / ADMMLayer source — Phase A.1)
-- /home/agent/zap/zap/importers/pypsa.py  (\`load_pypsa_network\`, \`parse_generators\` — Phase A.2)
-- /home/agent/zap/zap/tests/      (existing zap test layout — pattern for the new regression tests)
-- $QUEUE                          (the queue you're working from)
+- STATE.md                        (current build cursor — what's freshly shipped, what's wired)
+- infra/modal/solver_app.py       (deployed Modal app; `_run_solve` returns the payload items 1-2 must adapt)
+- infra/modal/PARITY_REPORT.md    (item 9's parity numbers — historical 4.22% LMP diff on ieee-30 is the baseline for items 2 and 4)
+- lib/modal-solver.ts             (TS client; `SolveResult` interface mirrors the payload shape on the frontend)
+- scripts/smoke_dispatch.py       (CPU baseline `run_dispatch` returns `(outcome, pnet, snapshots, used_solver, elapsed)` — item 2 extends this; item 3 callers depend on it)
+- scripts/run_artifact.py         (`build_run_view_spec` is the downstream consumer; item 1's adapter output must satisfy this contract)
+- scripts/_gpu_parity_report.py   (item 9; `gpu_solve()` is the reference HTTP-call code for item 2)
+- scripts/user-mcp-server.py      (item 7; `_solve_via_modal()` is the agent-path GPU caller — item 4 smokes it, item 5 cross-checks it against `--gpu` CLI)
+- scripts/seed_networks.py        (item 3 target — adds `--gpu` flag, forwards through run_dispatch)
+- scripts/ingest_pypsa_folder.py  (item 3 target — same pattern)
+- data/networks/ieee-30/          (the canonical test network referenced by every acceptance bullet)
+- $QUEUE            (the queue you're working from)
 - recent tail of $JOURNAL
 
 ## Protocol
 1. Read the context above plus any acceptance criteria nested under the
    current item in $QUEUE.
-2. Implement the item against those acceptance criteria. Run the relevant
-   smoke for the item (e.g. \`python scripts/smoke_dispatch.py data/networks/ieee-30\`
-   for Phase C items, \`npm run build\` for TS/renderer items in Phase B/D,
-   \`pytest /home/agent/zap/zap/tests/\` for Phase A items, \`modal deploy
-   infra/modal/solver_app.py\` after touching the Modal app) before concluding.
+2. Implement the item against those acceptance criteria. Run \`python scripts/smoke_dispatch.py data/networks/ieee-30 --hours 1 && npm run build\`
+   (and any other checks the criteria name) before concluding.
 3. Commit your code changes with a descriptive conventional-commit message.
 4. Overwrite $HANDOFF to end with EXACTLY these fields, one per line:
    STATUS: done | partial
    SUMMARY: <1 sentence, will be embedded in the loop's tag commit>
    NEXT_STEPS: <only if partial; concrete handoff for the next agent>
    ACCEPTANCE: <which criteria pass, which don't>
-   BLOCKED: yes  ← ONLY include this line if the item is genuinely
-                   blocked by an environmental constraint (not "this is
-                   hard" or "I'm not sure"). When BLOCKED: yes is set,
-                   the loop marks the item [!] immediately and stops
-                   retrying — no more attempts. Use NEXT_STEPS to
-                   describe what you tried and what blocked you.
-                   Be skeptical of your own "impossible" claim:
-                   enumerate concrete approaches and try the most
-                   promising before declaring BLOCKED.
    Do NOT commit $HANDOFF — the loop owns the bookkeeping commit.
 
 ## Constraints
-- Cross-repo items (1, 2) edit /home/agent/zap. Commit zap changes INSIDE
-  /home/agent/zap with a conventional-commit subject and push to origin if
-  configured, BEFORE returning STATUS: done. The grid-app loop's tag commit
-  only captures grid-app changes. Do not stage zap files into grid-app.
-- Otherwise honour AGENTS.md: "in end-user mode the agent must not modify
-  zap source." Items 1-2 are the explicit maintainer-mode exceptions for
-  this loop; everything else stays out of /home/agent/zap.
-- Do not commit secrets. .env.local holds ZAP_SOLVER_API_KEY — never stage
-  it. Same for OpenRouter / Supabase service-role keys.
-- Don't bypass \`may_I_proceed\` / \`release\` in user-mcp-server.py for the
-  new \`solve_opf\` tool — match the existing admission pattern.
+- Do NOT modify /home/agent/zap source. In end-user mode the agent is forbidden from editing zap (AGENTS.md). All work in this loop is in /home/agent/grid-app/scripts/ — zap is consumed as a library.
+- Do NOT delete or alter the CPU path's return shape. `run_dispatch` must still return `(outcome, pnet, snapshots, used_solver, elapsed)` for CPU callers. GPU adapts to CPU, never the other way around (GPU_PARITY_ROADMAP.md §Design).
+- Do NOT introduce a CPU-vs-GPU auto-tiering heuristic. `--gpu` is a manual choice everywhere. Auto-routing is explicitly out of scope (see GPU_PARITY_ROADMAP §Design).
+- Do NOT use opencode.ai hosted services (Big Pickle, OpenCode Zen, OpenCode Go free models). Direct providers only.
+- Do NOT commit secrets. `.env.local` holds ZAP_SOLVER_API_KEY, Supabase service-role keys, and OpenRouter keys — never stage them.
+- Do NOT add npm or pip dependencies a few lines of code could replace.
 - No emojis in code or user-facing strings.
-- Don't add npm dependencies a few lines of code could replace.
-- For new Next.js routes / server code, remember this is Next 16
-  (\`cookies()/headers()/params/searchParams\` are async; \`proxy.ts\` not
-  \`middleware.ts\`; Turbopack is default).
-- Modal deploys take 3-5 minutes on first call after image changes; budget
-  for it but do not skip the deploy when an item's acceptance demands a
-  fresh endpoint.
-- Do NOT introduce a CPU-vs-GPU auto-tiering heuristic. The roadmap is
-  explicit: \`--gpu\` is a manual choice everywhere. (Phase E item 9
-  produces the parity data needed to inform a future heuristic; that
-  heuristic is out of scope for this loop.)
-- Do NOT delete the CPU path or alter its return shape. GPU adapts to
-  match CPU, not the other way around.
-- If an acceptance criterion can't be verified scriptably in this
-  environment (e.g. the Modal endpoint is down), say so explicitly in
-  ACCEPTANCE: rather than rubber-stamping.
-- Phase F mechanic: \`LOOP_QUEUE.md\` contains a sentinel line
-  \`<==NEXT-LINE-IS-TERMINAL==>\` immediately above item 99 (the demos
-  page). Item 99 is the **fixed terminus** and must remain the last
-  \`- [ ]\` line in the queue at all times. Item 10 (and only item 10)
-  is authorised to insert new \`- [ ]\` queue items — they go
-  IMMEDIATELY ABOVE the sentinel line, never below it. Number them
-  \`10.x\` (e.g. \`- [ ] 10.1 Fix overflow on artifact list\`) so their
-  provenance is unambiguous. Edits to LOOP_QUEUE.md from item 10 are
-  staged + committed by the work agent as part of that iteration's
-  commit (the loop's bookkeeping commit will pick them up).
-- For Phase F items, the test account credentials
-  (\`STEINMETZ_TEST_ACCOUNT_EMAIL\` / \`STEINMETZ_TEST_ACCOUNT_PASSWORD\`)
-  live in \`.env.local\` only and must never be staged. Verify
-  \`.env.local\` is in \`.gitignore\` before writing them.
+- Modal redeploys take 3-5 min after image changes — none of items 1-5 should need a redeploy (Modal endpoint is unchanged from item 3 of the prior loop). If you find yourself running `modal deploy`, stop and re-read the acceptance criteria.
+- The previous loop archived its state under `.loop-archive/gpu-parity-2026-05/`. Read it if you need history on items 4-6's earlier failed attempts (the original §Phase B.4 / C.5 / C.6 — now renumbered 1-3 in this loop). Do not modify .loop-archive.
+- If `ZAP_SOLVER_MODAL_URL` or `ZAP_SOLVER_API_KEY` is missing from `.env.local`, items 2, 4, and 5 cannot complete. Report this as the genuine blocker rather than rubber-stamping ACCEPTANCE.
 EOF
 
   echo ">>> [$total] WORK: $item_text (attempt $attempt)"
   pre_sha=$(git rev-parse HEAD)
 
-  item_work_timeout=$(per_item_work_timeout "$feature_num")
-  item_verify_timeout=$(per_item_verify_timeout "$feature_num")
-  work_log=$(mktemp)
-  run_claude_with_rate_limit_retry \
-    "$item_work_timeout" "$work_log" \
+  run_claude_attempt "$WORK_TIMEOUT" "$WORK_LOG" \
     "Read $HANDOFF and follow its Protocol exactly." \
     STATUS
-  rm -f "$work_log"
 
   status=$(read_field STATUS)
-  blocked=$(read_field BLOCKED)
   summary=$(read_field SUMMARY)
   next_steps=$(read_field NEXT_STEPS)
   acceptance=$(read_field ACCEPTANCE)
   [ -z "$summary" ] && summary="(no summary written by agent)"
 
   post_work_sha=$(git rev-parse HEAD)
-
-  # Agent-declared environmental block. Skip retries; mark [!] immediately.
-  if [ "$blocked" = "yes" ]; then
-    sed -i "${line_no}s/- \[ \]/- [!]/" "$QUEUE"
-    body=$(printf "Status: agent declared BLOCKED — environmental block, not retried.\n\nSummary: %s\n\nDetails / what was tried: %s\n\nAcceptance: %s\n\nUnderlying commits (if any):\n%s" \
-      "$summary" "${next_steps:-(none recorded)}" "${acceptance:-(none recorded)}" \
-      "$(git log --oneline "${pre_sha}..HEAD" 2>/dev/null || echo '(none)')")
-    loop_commit "Unsuccessful ship" "$feature_num" "agent declared blocked: $summary" "$body"
-    echo "[$(date -Iseconds)] AGENT_BLOCKED: $item_text — agent wrote BLOCKED: yes" >> "$ALERTS"
-    rm -f "$attempt_file"
-    sleep "$SLEEP_BETWEEN"
-    continue
-  fi
 
   if [ "$status" != "done" ]; then
     echo ">>> partial → will retry on next iteration"
@@ -342,22 +270,14 @@ EOF
 
   # --- Verify phase ----------------------------------------------------------
   echo ">>> VERIFY: $item_text (commit $post_work_sha)"
-  verify_log=$(mktemp)
-  run_claude_with_rate_limit_retry \
-    "$item_verify_timeout" "$verify_log" \
+  run_claude_attempt "$VERIFY_TIMEOUT" "$VERIFY_LOG" \
     "The previous agent claims the current item in $HANDOFF is done at commit $post_work_sha.
-Verify by running its acceptance criteria. Choose the right smoke for the
-item: \`npm run build\` for TS / renderer changes, \`python scripts/smoke_dispatch.py
-data/networks/ieee-30 --hours 4\` (with or without --gpu, as the item demands)
-for solve-path changes, \`pytest /home/agent/zap/zap/tests/\` for Phase A zap fixes,
-and \`modal run infra/modal/solver_app.py::smoke\` for Modal handler changes.
-For Phase A items, also verify the zap commit landed inside /home/agent/zap.
-If anything is broken, attempt ONE small fix and re-check.
+Verify by running its acceptance criteria, \`python scripts/smoke_dispatch.py data/networks/ieee-30 --hours 1 && npm run build\`, and any smoke
+tests the criteria name. If anything is broken, attempt ONE small fix and re-check.
 If still broken, run: git reset --hard ${pre_sha}
 Append exactly one line to $HANDOFF: 'VERIFIED: yes' or 'VERIFIED: no' or 'VERIFIED: reverted'.
 Do NOT commit $HANDOFF — the loop will." \
     VERIFIED
-  rm -f "$verify_log"
 
   verified=""
   if [ -f "$HANDOFF" ]; then verified=$(read_field VERIFIED); fi

@@ -20,3 +20,4 @@
 [2026-05-26T14:28:07+00:00] PARTIAL: - [ ] 5. Add `gpu` kwarg + `--gpu` flag to `scripts/smoke_dispatch.py::run_dispatch` (ROADMAP §Phase C.5) (attempt 5)
 [2026-05-26T14:28:12+00:00] BLOCKED: - [ ] 5. Add `gpu` kwarg + `--gpu` flag to `scripts/smoke_dispatch.py::run_dispatch` (ROADMAP §Phase C.5) (max attempts)
 [2026-05-26T14:28:19+00:00] PARTIAL: - [ ] 6. Thread `--gpu` through `seed_networks.py` and `ingest_pypsa_folder.py` (ROADMAP §Phase C.6) (attempt 1)
+[2026-05-26T14:28:31+00:00] PARTIAL: - [ ] 6. Thread `--gpu` through `seed_networks.py` and `ingest_pypsa_folder.py` (ROADMAP §Phase C.6) (attempt 2)

@@ -45,6 +45,11 @@ export interface SolveResult {
   time_horizon: number
   num_buses: number
   num_devices: number[]
+  // Labels carried so callers can rebuild a CPU-shaped DispatchOutcome
+  // without re-loading the upstream PyPSA network.
+  bus_ids: string[]
+  snapshot_iso: string[]
+  device_class_names: string[]
   outcome: DispatchOutcomeSerialised
   solver_args: Record<string, unknown>
 }

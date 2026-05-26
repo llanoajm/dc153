@@ -143,6 +143,20 @@ def _run_solve(network_nc: bytes, args: dict, import_args: dict) -> dict:
     net, devices = load_pypsa_network(pnet, **(import_args or {}))
     time_horizon = max(d.time_horizon for d in devices)
 
+    # Capture labels for the response so a remote caller can rebuild a
+    # CPU-shaped DispatchOutcome without re-loading the PyPSA network.
+    # Snapshots may be sliced inside the importer; respect any `snapshots`
+    # kwarg the caller passed, otherwise fall back to the full index.
+    snapshots_index = (import_args or {}).get("snapshots")
+    if snapshots_index is None:
+        snapshots_index = pnet.snapshots
+    bus_ids = [str(b) for b in pnet.buses.index.tolist()]
+    snapshot_iso = [
+        t.isoformat() if hasattr(t, "isoformat") else str(t)
+        for t in snapshots_index
+    ]
+    device_class_names = [d.__class__.__name__ for d in devices]
+
     # 3. Configure the ADMM solver. Default to GPU + float32.
     dtype = torch.float32 if args.get("dtype", "float32") == "float32" else torch.float64
     solver_kwargs = {
@@ -186,6 +200,9 @@ def _run_solve(network_nc: bytes, args: dict, import_args: dict) -> dict:
         "time_horizon": int(time_horizon),
         "num_buses": int(net.num_nodes),
         "num_devices": [int(d.num_devices) for d in devices_t],
+        "bus_ids": bus_ids,
+        "snapshot_iso": snapshot_iso,
+        "device_class_names": device_class_names,
         "outcome": {
             "power": _tensor_to_list(outcome.power),
             "angle": _tensor_to_list(outcome.angle),

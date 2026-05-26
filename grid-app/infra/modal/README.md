@@ -100,6 +100,9 @@ Response:
   "time_horizon": 24,
   "num_buses": 118,
   "num_devices": [54, 99, 0, 186],
+  "bus_ids": ["1", "2", "..."],
+  "snapshot_iso": ["2024-01-01T00:00:00", "..."],
+  "device_class_names": ["Generator", "Load", "ACLine", "..."],
   "outcome": {
     "power":  [[[...]]],
     "angle":  [[...]],

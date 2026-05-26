@@ -20,12 +20,15 @@ import pickle
 import time
 from pathlib import Path
 
-from typing import TYPE_CHECKING
-
 import modal
 
-if TYPE_CHECKING:
+# fastapi ships in the Modal image (`fastapi[standard]`), not in our local env.
+# The container resolves the annotation via this runtime import; locally the
+# import silently fails and the deploy step ships only the source + image spec.
+try:  # pragma: no cover - container-only
     from fastapi import Request
+except ImportError:
+    Request = object  # type: ignore[assignment,misc]
 
 ZAP_SRC = Path(os.environ.get("ZAP_SRC", "/home/agent/zap")).resolve()
 

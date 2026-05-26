@@ -3,7 +3,7 @@ import fs from "node:fs"
 import type { Page, TestInfo } from "@playwright/test"
 
 // Where the per-demo .webm clips land. `public/demos/` is served as static
-// content by Next.js (URL: /demos/<slug>.webm), so the /app/demos page can
+// content by Next.js (URL: /demos/<slug>.webm), so the /demos page can
 // embed them directly. Total size stays under ~5MB at 1024×700 with the short
 // scripts in this directory.
 const DEMOS_DIR = path.join(__dirname, "..", "..", "public", "demos")

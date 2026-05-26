@@ -1,23 +1,25 @@
-// Validates that /app/demos (Phase F.99) mounts behind the auth gate, lists
-// the recorded clips that exist on disk, and each <video src=/demos/*.webm>
-// resolves 200 against the live server.
+// Validates that /demos is public (no auth gate), lists the recorded clips
+// that exist on disk, and each <video src=/demos/*.webm> resolves 200
+// against the live server.
 
 import { test, expect } from "@playwright/test"
 
-test.describe("/app/demos (logged in)", () => {
-  test("page mounts and lists recordings", async ({ page }) => {
-    await page.goto("/app/demos")
-    await expect(page.getByText(/validated-flow walkthroughs/i)).toBeVisible({ timeout: 15_000 })
+test.describe("/demos (public)", () => {
+  test("does not redirect to /login", async ({ page }) => {
+    const resp = await page.goto("/demos")
+    expect(resp?.status() ?? 200).toBeLessThan(400)
+    expect(new URL(page.url()).pathname).toBe("/demos")
+  })
 
-    // At least one <video> renders (the recordings exist on disk after
-    // running `npx playwright test --config=playwright.demos.config.ts`).
+  test("page mounts and lists recordings", async ({ page }) => {
+    await page.goto("/demos")
+    await expect(page.getByText(/validated-flow walkthroughs/i)).toBeVisible({ timeout: 15_000 })
     const videos = page.locator("video")
-    const count = await videos.count()
-    expect(count).toBeGreaterThan(0)
+    expect(await videos.count()).toBeGreaterThan(0)
   })
 
   test("each rendered video src resolves to 200", async ({ page }) => {
-    await page.goto("/app/demos")
+    await page.goto("/demos")
     await expect(page.locator("video").first()).toBeVisible({ timeout: 15_000 })
     const srcs = await page.locator("video").evaluateAll((els) =>
       (els as HTMLVideoElement[]).map((v) => v.getAttribute("src") ?? ""),
@@ -30,8 +32,3 @@ test.describe("/app/demos (logged in)", () => {
     }
   })
 })
-
-// Signed-out redirect to /login is covered by the generic /app/** probe in
-// tests/flows/auth.anon.spec.ts ("signed-out deep link to /app/* redirects
-// to /login with ?next") — proxy.ts has no demos-specific branch, so the
-// generic case is sufficient.

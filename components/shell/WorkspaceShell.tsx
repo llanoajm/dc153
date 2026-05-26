@@ -23,7 +23,7 @@ const RAIL_ROUTES: Record<string, string> = {
   orgs: "/app/orgs",
   dashboards: "/app/dashboards",
   panels: "/app/panels",
-  demos: "/app/demos",
+  demos: "/demos",
   settings: "/app/settings",
 }
 
@@ -36,7 +36,6 @@ function currentRailKey(pathname: string, pinned: PinnedDashboard[]): string {
   if (pathname.startsWith("/app/orgs")) return "orgs"
   if (pathname.startsWith("/app/dashboards")) return "dashboards"
   if (pathname.startsWith("/app/panels")) return "panels"
-  if (pathname.startsWith("/app/demos")) return "demos"
   if (pathname.startsWith("/app/settings")) return "settings"
   if (pathname.startsWith("/app/artifacts/")) {
     const id = pathname.split("/")[3]
@@ -58,7 +57,6 @@ function primaryTabLabel(pathname: string, pinned: PinnedDashboard[]): string {
   if (pathname.startsWith("/app/orgs")) return "Orgs"
   if (pathname.startsWith("/app/dashboards")) return "Dashboards"
   if (pathname.startsWith("/app/panels")) return "Panels"
-  if (pathname.startsWith("/app/demos")) return "Demos"
   if (pathname.startsWith("/app/settings")) return "Settings"
   if (pathname.startsWith("/app/artifacts/")) {
     const id = pathname.split("/")[3]

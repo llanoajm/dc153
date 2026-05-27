@@ -152,7 +152,7 @@ function GLBModel({ url, idx }: { url: string; idx: number }) {
     const active = animState.activeModelIdx === idx
     outerRef.current.visible = active
     if (active) {
-      outerRef.current.rotation.y = animState.spinProgress * Math.PI * 4
+      outerRef.current.rotation.y = animState.spinProgress * Math.PI * 2
     }
   })
 
@@ -221,12 +221,13 @@ export default function HeroAnimation() {
       const PATH_END = 0.7    // forward: path morph finishes at 70% of T_MORPH
       const FILL_END = 0.3    // reverse: dot fill fades out by 30% of T_MORPH
 
+      const OVERLAP = 0.03
+
       if (isModel) {
         // Cube → 3D phase
         if (local < T_MORPH) {
           const morphP = local / T_MORPH
           if (morphP < PATH_END) {
-            // Stage A: morph paths only, no dots
             const p = ease(morphP / PATH_END)
             for (let i = 0; i < N_PATHS; i++) {
               const el = paths[i]!
@@ -235,7 +236,6 @@ export default function HeroAnimation() {
               el.setAttribute('fill-opacity', '0')
             }
           } else {
-            // Stage B: paths at final shape, fade dots in
             const fillP = ease((morphP - PATH_END) / (1 - PATH_END))
             for (let i = 0; i < N_PATHS; i++) {
               const el = paths[i]!
@@ -244,14 +244,24 @@ export default function HeroAnimation() {
               el.setAttribute('fill-opacity', String(fillP))
             }
           }
-          cvs.style.clipPath = 'circle(0% at 50% 50%)'
-          animState.activeModelIdx = -1
-          animState.spinProgress = 0
+          // Start revealing 3D slightly before morph ends
+          const earlyStart = T_MORPH - OVERLAP
+          if (local >= earlyStart) {
+            const revealP = ease((local - earlyStart) / OVERLAP)
+            cvs.style.clipPath = `circle(${revealP * 100}% at 50% 50%)`
+            animState.activeModelIdx = shapeIdx
+            animState.spinProgress = 0
+          } else {
+            cvs.style.clipPath = 'circle(0% at 50% 50%)'
+            animState.activeModelIdx = -1
+            animState.spinProgress = 0
+          }
         } else {
-          // 3D spin
+          // 3D spin — fade out SVG over the overlap period
+          const fadeOut = Math.min(1, (local - T_MORPH) / OVERLAP)
           for (let i = 0; i < N_PATHS; i++) {
-            paths[i]!.style.opacity = '0'
-            paths[i]!.setAttribute('fill-opacity', '0')
+            paths[i]!.style.opacity = String(1 - fadeOut)
+            paths[i]!.setAttribute('fill-opacity', String(1 - fadeOut))
           }
           cvs.style.clipPath = 'circle(100% at 50% 50%)'
           animState.activeModelIdx = shapeIdx

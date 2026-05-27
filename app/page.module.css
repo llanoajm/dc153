@@ -120,7 +120,7 @@
   width: 1px;
   height: 250vh;
   top: -125vh;
-  background: #000;
+  background: #000066;
   transform: rotate(var(--axis-angle));
   transform-origin: center center;
 }
@@ -130,7 +130,7 @@
   height: 1px;
   width: 250vw;
   left: -125vw;
-  background: #000;
+  background: #000066;
 }
 
 /* ── Axes ── */

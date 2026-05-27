@@ -52,13 +52,13 @@
   font-weight: 500;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: #133b39;
+  color: #0A1F44;
   text-decoration: none;
   transition: color 0.2s;
 }
 
 .navLink:hover {
-  color: #133b39;
+  color: #0A1F44;
 }
 
 .navCta {
@@ -66,9 +66,9 @@
   font-weight: 500;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: #133b39;
+  color: #0A1F44;
   text-decoration: none;
-  border: 1.5px solid #133b39;
+  border: 1.5px solid #0A1F44;
   padding: 12px 28px;
   transition: background 0.2s, color 0.2s;
   transform: skewX(-12deg);
@@ -80,7 +80,7 @@
 }
 
 .navCta:hover {
-  background: #133b39;
+  background: #0A1F44;
   color: #fff;
 }
 
@@ -145,7 +145,7 @@
 
 .heroTitle {
   font-size: clamp(44px, 5.5vw, 84px);
-  font-weight: 100;
+  font-weight: 300;
   font-style: italic;
   line-height: 1.05;
   margin: 0 0 16px 0;
@@ -180,7 +180,7 @@
   letter-spacing: 0.02em;
   text-transform: none;
   color: #fff;
-  background: #133b39;
+  background: #0A1F44;
   padding: 12px 28px;
   text-decoration: none;
   transition: opacity 0.2s;

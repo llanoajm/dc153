@@ -221,7 +221,7 @@ export default function HeroAnimation() {
       const PATH_END = 0.7    // forward: path morph finishes at 70% of T_MORPH
       const FILL_END = 0.3    // reverse: dot fill fades out by 30% of T_MORPH
 
-      const OVERLAP = 0.03
+      const OVERLAP = 0
 
       if (isModel) {
         // Cube → 3D phase

@@ -95,6 +95,23 @@
   overflow: hidden;
 }
 
+/* ── Grid ── */
+
+.gridWrap {
+  position: absolute;
+  right: 27%;
+  top: 52%;
+  transform: rotate(var(--axis-angle));
+  pointer-events: none;
+  z-index: 0;
+}
+
+.gridCell {
+  position: absolute;
+  border: 1.5px solid transparent;
+  box-sizing: border-box;
+}
+
 /* ── Axes ── */
 
 .axisY {

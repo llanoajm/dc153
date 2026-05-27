@@ -70,7 +70,7 @@ type Interp = (t: number) => string
 
 const animState = { activeModelIdx: -1, spinProgress: 0 }
 
-const BLUE = '#133B39'
+const BLUE = '#000066'
 
 const dotShader = {
   uniforms: { uColor: { value: new THREE.Color(BLUE) } },
@@ -325,7 +325,7 @@ export default function HeroAnimation() {
       <svg className={styles.cubeSvg} viewBox="0 0 460 393" fill="none">
         <defs>
           <pattern id="cubeDotFill" x="0" y="0" width="5" height="5" patternUnits="userSpaceOnUse">
-            <circle cx="2.5" cy="2.5" r="1.2" fill="#133B39" fillOpacity="0.9" />
+            <circle cx="2.5" cy="2.5" r="1.2" fill="#000066" fillOpacity="0.9" />
           </pattern>
         </defs>
         {CUBE.map((d, i) => (
@@ -333,7 +333,7 @@ export default function HeroAnimation() {
             key={i}
             ref={setPathRef(i)}
             d={d}
-            stroke="#133B39"
+            stroke="#000066"
             strokeWidth="2"
             strokeLinejoin="round"
             strokeLinecap="round"

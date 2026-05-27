@@ -33,7 +33,7 @@ export default function HomePage() {
         <div className={styles.gridLines}>
           <div className={styles.gridOrigin}>
             {(() => {
-              const lines: JSX.Element[] = []
+              const lines: React.ReactElement[] = []
               const gap = 24
               const count = 20
               for (let i = -count; i <= count; i++) {

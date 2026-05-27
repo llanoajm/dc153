@@ -20,15 +20,9 @@ report records that the GPU column couldn't be computed in this environment
 from __future__ import annotations
 
 import argparse
-import base64
-import json
-import os
 import sys
-import tempfile
 import time
 import traceback
-import urllib.error
-import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -41,26 +35,22 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import _pypsa_compat  # noqa: F401  must precede pypsa/zap imports
 
 import pandas as pd  # noqa: E402
-import pypsa  # noqa: E402
 
-from smoke_dispatch import run_dispatch  # noqa: E402
+from _gpu_adapter import (  # noqa: E402
+    _coerce_prices,
+    load_grid_app_env,
+    solve_via_modal,
+)
+from smoke_dispatch import _load_network, run_dispatch  # noqa: E402
 
 
 REPORT_PATH = ROOT / "infra" / "modal" / "PARITY_REPORT.md"
-ENV_FILE = ROOT / ".env.local"
 
 
 def _load_env() -> dict[str, str]:
-    env: dict[str, str] = {}
-    if ENV_FILE.exists():
-        for line in ENV_FILE.read_text().splitlines():
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            k, v = line.split("=", 1)
-            env[k.strip()] = v.strip().strip('"').strip("'")
-    env.update(os.environ)
-    return env
+    """Thin wrapper kept for backwards-compat — delegates to the adapter's
+    parser so there's one ``.env.local`` reader in the repo."""
+    return load_grid_app_env()
 
 
 @dataclass
@@ -80,13 +70,6 @@ class NetworkSpec:
     net_dir: Path
     hours: int
     admm_args: dict[str, Any] | None = None
-
-
-def _coerce_prices(raw: Any) -> np.ndarray:
-    arr = np.asarray(raw, dtype=float)
-    if arr.ndim == 1:
-        arr = arr.reshape(-1, 1)
-    return arr
 
 
 def cpu_solve(spec: NetworkSpec) -> SolveRecord:
@@ -113,103 +96,62 @@ def cpu_solve(spec: NetworkSpec) -> SolveRecord:
     )
 
 
-def _export_truncated_netcdf(net_dir: Path, hours: int) -> tuple[bytes, list[str], list[str]]:
-    """Re-import the PyPSA CSV folder, truncate to ``hours``, return netCDF
-    bytes plus the bus_id / snapshot_iso labels callers want for alignment."""
-    pnet = pypsa.Network()
-    pnet.import_from_csv_folder(str(net_dir))
-    if len(pnet.snapshots) == 0:
-        pnet.set_snapshots(pd.date_range("2024-01-01", periods=1, freq="h"))
-    snapshots = pnet.snapshots[:hours]
-    pnet.set_snapshots(snapshots)
-    bus_ids = [str(b) for b in pnet.buses.index]
-    snapshot_iso = [
-        t.isoformat() if hasattr(t, "isoformat") else str(t) for t in snapshots
-    ]
-    with tempfile.NamedTemporaryFile(suffix=".nc", delete=False) as tf:
-        nc_path = tf.name
-    try:
-        pnet.export_to_netcdf(nc_path)
-        nc_bytes = Path(nc_path).read_bytes()
-    finally:
-        Path(nc_path).unlink(missing_ok=True)
-    return nc_bytes, bus_ids, snapshot_iso
-
-
 def gpu_solve(spec: NetworkSpec, env: dict[str, str]) -> SolveRecord:
+    """Solve via Modal and wrap the response in a :class:`SolveRecord`.
+
+    Delegates the netCDF export + HTTP POST + env validation to
+    ``_gpu_adapter.solve_via_modal``. That helper raises ``RuntimeError`` for
+    missing env vars and HTTP/URL failures; we translate those into a
+    SolveRecord with ``error`` set so the report still gets written (the
+    parity report exits 0 even when GPU is unreachable — drift over time is
+    visible in the table)."""
     endpoint = env.get("ZAP_SOLVER_MODAL_URL")
-    api_key = env.get("ZAP_SOLVER_API_KEY")
-    if not endpoint or not api_key:
+    endpoint_label = repr(endpoint) if endpoint else "(unconfigured)"
+    print(
+        f"[gpu] solving {spec.slug} hours={spec.hours} via {endpoint_label}",
+        flush=True,
+    )
+    try:
+        pnet, snapshots = _load_network(spec.net_dir, spec.hours)
+    except Exception as exc:
         return SolveRecord(
             label="GPU",
             solver="MODAL_GPU",
-            machine="unconfigured",
+            machine="unknown",
             elapsed_s=float("nan"),
             prices=np.empty((0, 0)),
             bus_ids=[],
-            error=(
-                "Modal endpoint not configured — set ZAP_SOLVER_MODAL_URL "
-                "and ZAP_SOLVER_API_KEY in grid-app/.env.local"
-            ),
+            error=f"pre-solve network load failed: {exc}",
         )
+    bus_ids = [str(b) for b in pnet.buses.index]
 
-    print(
-        f"[gpu] solving {spec.slug} hours={spec.hours} via {endpoint!r}", flush=True
-    )
-    nc_bytes, bus_ids, _snapshot_iso = _export_truncated_netcdf(
-        spec.net_dir, spec.hours
-    )
-    admm_args: dict[str, Any] = dict(spec.admm_args or {"num_iterations": 1000})
-    body = json.dumps(
-        {
-            "network_nc_b64": base64.b64encode(nc_bytes).decode("ascii"),
-            "args": admm_args,
-            "import_args": {},
-        }
-    ).encode("utf-8")
-    req = urllib.request.Request(
-        endpoint,
-        method="POST",
-        data=body,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
-        },
-    )
-    timeout_s = int(env.get("ZAP_SOLVER_TIMEOUT_S") or 900)
     t0 = time.time()
     try:
-        with urllib.request.urlopen(req, timeout=timeout_s) as resp:
-            payload = json.loads(resp.read().decode())
-    except urllib.error.HTTPError as exc:
-        detail = ""
-        try:
-            detail = exc.read().decode()[:500]
-        except Exception:
-            pass
-        wall = time.time() - t0
-        print(
-            f"[gpu] HTTP {exc.code} after {wall:.1f}s: {detail}", flush=True
+        payload, _adapter_wall = solve_via_modal(
+            pnet,
+            snapshots,
+            admm_args=spec.admm_args,
+            env=env,
         )
+    except RuntimeError as exc:
+        wall = time.time() - t0
+        msg = str(exc)
+        # Preserve the same machine-tag taxonomy the old gpu_solve used so
+        # the report's "GPU machine" column still distinguishes the failure
+        # mode at a glance.
+        if "not configured" in msg:
+            machine = "unconfigured"
+        else:
+            machine = "unknown"
+        print(f"[gpu] {msg} (wall {wall:.1f}s)", flush=True)
         return SolveRecord(
             label="GPU",
             solver="MODAL_GPU",
-            machine="unknown",
-            elapsed_s=wall,
+            machine=machine,
+            elapsed_s=wall if machine != "unconfigured" else float("nan"),
             prices=np.empty((0, 0)),
             bus_ids=[],
-            error=f"HTTP {exc.code}: {detail}",
-        )
-    except urllib.error.URLError as exc:
-        wall = time.time() - t0
-        return SolveRecord(
-            label="GPU",
-            solver="MODAL_GPU",
-            machine="unknown",
-            elapsed_s=wall,
-            prices=np.empty((0, 0)),
-            bus_ids=[],
-            error=f"network: {exc.reason}",
+            error=msg,
         )
 
     wall = time.time() - t0

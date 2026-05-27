@@ -193,14 +193,14 @@ $attempt of $MAX_ATTEMPTS
 - AGENTS.md                       (project rules: harness-first principle, no-zap-edits in end-user mode, no-emoji, no-deps, conventional commits)
 - CLAUDE.md                       (one-line include of AGENTS.md)
 - STATE.md                        (current build cursor — what's freshly shipped, what's wired)
-- infra/modal/solver_app.py       (deployed Modal app; `_run_solve` returns the payload items 1-2 must adapt)
+- infra/modal/solver_app.py       (deployed Modal app; \`_run_solve\` returns the payload items 1-2 must adapt)
 - infra/modal/PARITY_REPORT.md    (item 9's parity numbers — historical 4.22% LMP diff on ieee-30 is the baseline for items 2 and 4)
-- lib/modal-solver.ts             (TS client; `SolveResult` interface mirrors the payload shape on the frontend)
-- scripts/smoke_dispatch.py       (CPU baseline `run_dispatch` returns `(outcome, pnet, snapshots, used_solver, elapsed)` — item 2 extends this; item 3 callers depend on it)
-- scripts/run_artifact.py         (`build_run_view_spec` is the downstream consumer; item 1's adapter output must satisfy this contract)
-- scripts/_gpu_parity_report.py   (item 9; `gpu_solve()` is the reference HTTP-call code for item 2)
-- scripts/user-mcp-server.py      (item 7; `_solve_via_modal()` is the agent-path GPU caller — item 4 smokes it, item 5 cross-checks it against `--gpu` CLI)
-- scripts/seed_networks.py        (item 3 target — adds `--gpu` flag, forwards through run_dispatch)
+- lib/modal-solver.ts             (TS client; \`SolveResult\` interface mirrors the payload shape on the frontend)
+- scripts/smoke_dispatch.py       (CPU baseline \`run_dispatch\` returns \`(outcome, pnet, snapshots, used_solver, elapsed)\` — item 2 extends this; item 3 callers depend on it)
+- scripts/run_artifact.py         (\`build_run_view_spec\` is the downstream consumer; item 1's adapter output must satisfy this contract)
+- scripts/_gpu_parity_report.py   (item 9; \`gpu_solve()\` is the reference HTTP-call code for item 2)
+- scripts/user-mcp-server.py      (item 7; \`_solve_via_modal()\` is the agent-path GPU caller — item 4 smokes it, item 5 cross-checks it against \`--gpu\` CLI)
+- scripts/seed_networks.py        (item 3 target — adds \`--gpu\` flag, forwards through run_dispatch)
 - scripts/ingest_pypsa_folder.py  (item 3 target — same pattern)
 - data/networks/ieee-30/          (the canonical test network referenced by every acceptance bullet)
 - $QUEUE            (the queue you're working from)
@@ -221,15 +221,15 @@ $attempt of $MAX_ATTEMPTS
 
 ## Constraints
 - Do NOT modify /home/agent/zap source. In end-user mode the agent is forbidden from editing zap (AGENTS.md). All work in this loop is in /home/agent/grid-app/scripts/ — zap is consumed as a library.
-- Do NOT delete or alter the CPU path's return shape. `run_dispatch` must still return `(outcome, pnet, snapshots, used_solver, elapsed)` for CPU callers. GPU adapts to CPU, never the other way around (GPU_PARITY_ROADMAP.md §Design).
-- Do NOT introduce a CPU-vs-GPU auto-tiering heuristic. `--gpu` is a manual choice everywhere. Auto-routing is explicitly out of scope (see GPU_PARITY_ROADMAP §Design).
+- Do NOT delete or alter the CPU path's return shape. \`run_dispatch\` must still return \`(outcome, pnet, snapshots, used_solver, elapsed)\` for CPU callers. GPU adapts to CPU, never the other way around (GPU_PARITY_ROADMAP.md §Design).
+- Do NOT introduce a CPU-vs-GPU auto-tiering heuristic. \`--gpu\` is a manual choice everywhere. Auto-routing is explicitly out of scope (see GPU_PARITY_ROADMAP §Design).
 - Do NOT use opencode.ai hosted services (Big Pickle, OpenCode Zen, OpenCode Go free models). Direct providers only.
-- Do NOT commit secrets. `.env.local` holds ZAP_SOLVER_API_KEY, Supabase service-role keys, and OpenRouter keys — never stage them.
+- Do NOT commit secrets. \`.env.local\` holds ZAP_SOLVER_API_KEY, Supabase service-role keys, and OpenRouter keys — never stage them.
 - Do NOT add npm or pip dependencies a few lines of code could replace.
 - No emojis in code or user-facing strings.
-- Modal redeploys take 3-5 min after image changes — none of items 1-5 should need a redeploy (Modal endpoint is unchanged from item 3 of the prior loop). If you find yourself running `modal deploy`, stop and re-read the acceptance criteria.
-- The previous loop archived its state under `.loop-archive/gpu-parity-2026-05/`. Read it if you need history on items 4-6's earlier failed attempts (the original §Phase B.4 / C.5 / C.6 — now renumbered 1-3 in this loop). Do not modify .loop-archive.
-- If `ZAP_SOLVER_MODAL_URL` or `ZAP_SOLVER_API_KEY` is missing from `.env.local`, items 2, 4, and 5 cannot complete. Report this as the genuine blocker rather than rubber-stamping ACCEPTANCE.
+- Modal redeploys take 3-5 min after image changes — none of items 1-5 should need a redeploy (Modal endpoint is unchanged from item 3 of the prior loop). If you find yourself running \`modal deploy\`, stop and re-read the acceptance criteria.
+- The previous loop archived its state under \`.loop-archive/gpu-parity-2026-05/\`. Read it if you need history on items 4-6's earlier failed attempts (the original §Phase B.4 / C.5 / C.6 — now renumbered 1-3 in this loop). Do not modify .loop-archive.
+- If \`ZAP_SOLVER_MODAL_URL\` or \`ZAP_SOLVER_API_KEY\` is missing from \`.env.local\`, items 2, 4, and 5 cannot complete. Report this as the genuine blocker rather than rubber-stamping ACCEPTANCE.
 EOF
 
   echo ">>> [$total] WORK: $item_text (attempt $attempt)"

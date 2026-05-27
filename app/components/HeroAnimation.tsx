@@ -70,7 +70,7 @@ type Interp = (t: number) => string
 
 const animState = { activeModelIdx: -1, spinProgress: 0 }
 
-const BLUE = '#133b39'
+const BLUE = '#2e5e5A'
 
 const dotShader = {
   uniforms: { uColor: { value: new THREE.Color(BLUE) } },
@@ -286,7 +286,7 @@ export default function HeroAnimation() {
             key={i}
             ref={setPathRef(i)}
             d={d}
-            stroke="#133b39"
+            stroke="#2e5e5A"
             strokeWidth="2"
             strokeLinejoin="round"
             strokeLinecap="round"

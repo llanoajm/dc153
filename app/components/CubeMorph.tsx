@@ -140,7 +140,7 @@ export default function CubeMorph() {
             key={i}
             ref={setPathRef(i)}
             d={d}
-            stroke="#133b39"
+            stroke="#2e5e5A"
             strokeWidth="2"
             strokeLinejoin="round"
             strokeLinecap="round"

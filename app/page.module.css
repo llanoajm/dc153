@@ -52,13 +52,13 @@
   font-weight: 500;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: #0A1F44;
+  color: #091717;
   text-decoration: none;
   transition: color 0.2s;
 }
 
 .navLink:hover {
-  color: #0A1F44;
+  color: #091717;
 }
 
 .navCta {
@@ -66,9 +66,9 @@
   font-weight: 500;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: #0A1F44;
+  color: #133B39;
   text-decoration: none;
-  border: 1.5px solid #0A1F44;
+  border: 1.5px solid #133B39;
   padding: 12px 28px;
   transition: background 0.2s, color 0.2s;
   transform: skewX(-12deg);
@@ -80,7 +80,7 @@
 }
 
 .navCta:hover {
-  background: #0A1F44;
+  background: #133B39;
   color: #fff;
 }
 
@@ -165,7 +165,7 @@
   font-size: clamp(15px, 1.3vw, 21px);
   font-weight: 300;
   line-height: 1.5;
-  color: #944454;
+  color: #333;
   margin: 0 0 12px 0;
   font-style: normal;
   text-transform: none;
@@ -180,7 +180,7 @@
   letter-spacing: 0.02em;
   text-transform: none;
   color: #fff;
-  background: #0A1F44;
+  background: #20808D;
   padding: 12px 28px;
   text-decoration: none;
   transition: opacity 0.2s;

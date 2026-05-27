@@ -215,43 +215,85 @@ export default function HeroAnimation() {
       const prevIdx = (shapeIdx - 1 + N_SHAPES) % N_SHAPES
       const isModel = shapeIdx > 0
 
+      // Split the morph into path-shape and dot-fill stages so the SVG resembles
+      // the dotted 3D before the hand-off (forward), and simplifies first on the
+      // way back (reverse). No simultaneous render — clean cuts.
+      const PATH_END = 0.7    // forward: path morph finishes at 70% of T_MORPH
+      const FILL_END = 0.3    // reverse: dot fill fades out by 30% of T_MORPH
+
       if (isModel) {
-        // 3D model phase: morph → 3D spin
+        // Cube → 3D phase
         if (local < T_MORPH) {
-          const p = ease(local / T_MORPH)
-          for (let i = 0; i < N_PATHS; i++) {
-            const el = paths[i]!
-            el.setAttribute('d', morphsRef.current[prevIdx][i](p))
-            el.style.opacity = '1'
+          const morphP = local / T_MORPH
+          if (morphP < PATH_END) {
+            // Stage A: morph paths only, no dots
+            const p = ease(morphP / PATH_END)
+            for (let i = 0; i < N_PATHS; i++) {
+              const el = paths[i]!
+              el.setAttribute('d', morphsRef.current[prevIdx][i](p))
+              el.style.opacity = '1'
+              el.setAttribute('fill-opacity', '0')
+            }
+          } else {
+            // Stage B: paths at final shape, fade dots in
+            const fillP = ease((morphP - PATH_END) / (1 - PATH_END))
+            for (let i = 0; i < N_PATHS; i++) {
+              const el = paths[i]!
+              el.setAttribute('d', morphsRef.current[prevIdx][i](1))
+              el.style.opacity = '1'
+              el.setAttribute('fill-opacity', String(fillP))
+            }
           }
           cvs.style.clipPath = 'circle(0% at 50% 50%)'
           animState.activeModelIdx = -1
+          animState.spinProgress = 0
         } else {
+          // 3D spin
           for (let i = 0; i < N_PATHS; i++) {
             paths[i]!.style.opacity = '0'
+            paths[i]!.setAttribute('fill-opacity', '0')
           }
           cvs.style.clipPath = 'circle(100% at 50% 50%)'
           animState.activeModelIdx = shapeIdx
-          animState.spinProgress = ease(Math.min(1, (local - T_MORPH) / T_SPIN))
+          animState.spinProgress = Math.min(1, (local - T_MORPH) / T_SPIN)
         }
       } else {
-        // Cube (SVG-only) phase: morph → hold strokes
+        // 3D → Cube phase
         if (local < T_MORPH) {
-          const p = ease(local / T_MORPH)
-          for (let i = 0; i < N_PATHS; i++) {
-            const el = paths[i]!
-            el.setAttribute('d', morphsRef.current[prevIdx][i](p))
-            el.style.opacity = '1'
+          const morphP = local / T_MORPH
+          if (morphP < FILL_END) {
+            // Stage A: SVG shows the model's silhouette with dots, fade dots out
+            const fillP = 1 - ease(morphP / FILL_END)
+            for (let i = 0; i < N_PATHS; i++) {
+              const el = paths[i]!
+              el.setAttribute('d', morphsRef.current[prevIdx][i](0))
+              el.style.opacity = '1'
+              el.setAttribute('fill-opacity', String(fillP))
+            }
+          } else {
+            // Stage B: morph paths back to cube, no dots
+            const p = ease((morphP - FILL_END) / (1 - FILL_END))
+            for (let i = 0; i < N_PATHS; i++) {
+              const el = paths[i]!
+              el.setAttribute('d', morphsRef.current[prevIdx][i](p))
+              el.style.opacity = '1'
+              el.setAttribute('fill-opacity', '0')
+            }
           }
+          cvs.style.clipPath = 'circle(0% at 50% 50%)'
+          animState.activeModelIdx = -1
+          animState.spinProgress = 0
         } else {
+          // Hold cube
           for (let i = 0; i < N_PATHS; i++) {
             const el = paths[i]!
             el.setAttribute('d', CUBE[i])
             el.style.opacity = '1'
+            el.setAttribute('fill-opacity', '0')
           }
+          cvs.style.clipPath = 'circle(0% at 50% 50%)'
+          animState.activeModelIdx = -1
         }
-        cvs.style.clipPath = 'circle(0% at 50% 50%)'
-        animState.activeModelIdx = -1
       }
 
       rafRef.current = requestAnimationFrame(tick)
@@ -281,6 +323,11 @@ export default function HeroAnimation() {
       </div>
 
       <svg className={styles.cubeSvg} viewBox="0 0 460 393" fill="none">
+        <defs>
+          <pattern id="cubeDotFill" x="0" y="0" width="5" height="5" patternUnits="userSpaceOnUse">
+            <circle cx="2.5" cy="2.5" r="1.2" fill="#0A1F44" fillOpacity="0.9" />
+          </pattern>
+        </defs>
         {CUBE.map((d, i) => (
           <path
             key={i}
@@ -290,7 +337,8 @@ export default function HeroAnimation() {
             strokeWidth="2"
             strokeLinejoin="round"
             strokeLinecap="round"
-            fill="none"
+            fill="url(#cubeDotFill)"
+            fillOpacity={0}
           />
         ))}
       </svg>

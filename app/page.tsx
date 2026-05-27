@@ -5,6 +5,17 @@ import styles from './page.module.css'
 export default function HomePage() {
   return (
     <div className={styles.page}>
+      <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
+        <filter id="blackToOffblack" colorInterpolationFilters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0.9647 0 0 0 0.0353
+                    0 0.9098 0 0 0.0902
+                    0 0 0.9098 0 0.0902
+                    0 0 0 1 0"
+          />
+        </filter>
+      </svg>
       <nav className={styles.nav}>
         <div className={styles.navLogo}>
           <img className={styles.navMark} src="/spi-mark-filled.png" alt="Steinmetz" />
@@ -25,8 +36,8 @@ export default function HomePage() {
         <div className={styles.heroContent}>
           <span className={styles.heroLabel}></span>
           <h1 className={styles.heroTitle}><span className={styles.step1}>Frontier</span><br /><span className={styles.step2}>Intelligence</span><br /><span className={styles.step3}>For the Grid</span></h1>
-          <p className={styles.heroSub}><span className={styles.step4}>Powering the most ambitious</span><br /><span className={styles.step5}>electrical infrastructure projects</span></p>
-          <a href="https://app.steinmetz.ai" className={`${styles.heroCta} ${styles.step6}`}><span className={styles.heroCtaText}>Try Curie OS</span></a>
+          <p className={styles.heroSub}><span className={styles.step4}>Powering the most critical electrical</span><br /><span className={styles.step5}>infrastructure projects</span></p>
+          <a href="https://app.steinmetz.ai" className={`${styles.heroCta} ${styles.step6}`}><span className={styles.heroCtaText}>Try Steinmetz OS</span></a>
         </div>
 
         <div className={styles.heroCube}>

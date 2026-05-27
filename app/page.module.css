@@ -29,6 +29,7 @@
   width: auto;
   display: block;
   transform: rotate(5deg);
+  filter: url(#blackToOffblack);
 }
 
 .navWord {
@@ -37,6 +38,7 @@
   text-transform: uppercase;
   letter-spacing: 0.02em;
   line-height: 1;
+  color: #091717;
 }
 
 .navLinks {
@@ -50,13 +52,13 @@
   font-weight: 500;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: #133b39;
   text-decoration: none;
   transition: color 0.2s;
 }
 
 .navLink:hover {
-  color: var(--accent);
+  color: #133b39;
 }
 
 .navCta {
@@ -64,9 +66,9 @@
   font-weight: 500;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: #133b39;
   text-decoration: none;
-  border: 1.5px solid var(--accent);
+  border: 1.5px solid #133b39;
   padding: 12px 28px;
   transition: background 0.2s, color 0.2s;
   transform: skewX(-12deg);
@@ -78,7 +80,7 @@
 }
 
 .navCta:hover {
-  background: var(--accent);
+  background: #133b39;
   color: #fff;
 }
 
@@ -143,11 +145,12 @@
 
 .heroTitle {
   font-size: clamp(44px, 5.5vw, 84px);
-  font-weight: 200;
+  font-weight: 100;
   font-style: italic;
   line-height: 1.05;
   margin: 0 0 16px 0;
   letter-spacing: -0.01em;
+  color: #091717;
 }
 
 .step1 { padding-left: clamp(22px, 2.2vw, 34px); }
@@ -158,24 +161,26 @@
 .step6 { margin-left: clamp(-2px, -0.1vw, 0px); }
 
 .heroSub {
-  font-size: clamp(11px, 1vw, 14px);
+  font-family: var(--font-grotesk), 'Helvetica Neue', Arial, sans-serif;
+  font-size: clamp(15px, 1.3vw, 21px);
   font-weight: 300;
-  line-height: 1.7;
+  line-height: 1.5;
   color: #333;
   margin: 0 0 12px 0;
   font-style: normal;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .heroCta {
   display: inline-block;
-  font-size: 11px;
-  font-weight: 400;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+  font-family: var(--font-grotesk), 'Helvetica Neue', Arial, sans-serif;
+  font-size: 17px;
+  font-weight: 300;
+  letter-spacing: 0.02em;
+  text-transform: none;
   color: #fff;
-  background: var(--accent);
+  background: #133b39;
   padding: 12px 28px;
   text-decoration: none;
   transition: opacity 0.2s;

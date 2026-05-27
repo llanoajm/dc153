@@ -30,39 +30,24 @@ export default function HomePage() {
       </nav>
 
       <section className={styles.hero}>
-        <div className={styles.gridWrap}>
-          {(() => {
-            const cells = []
-            const size = 60
-            const cols = 11
-            const rows = 9
-            const cx = Math.floor(cols / 2)
-            const cy = Math.floor(rows / 2)
-            const maxR = 2.2
-            for (let r = 0; r < rows; r++) {
-              for (let c = 0; c < cols; c++) {
-                const dx = c - cx
-                const dy = r - cy
-                const dist = Math.sqrt(dx * dx + dy * dy)
-                const opacity = Math.max(0, 1 - (dist / maxR) ** 1.8) * 0.07
-                if (opacity < 0.003) continue
-                cells.push(
-                  <div
-                    key={`${r}-${c}`}
-                    className={styles.gridCell}
-                    style={{
-                      left: (c - cx) * size,
-                      top: (r - cy) * size,
-                      width: size,
-                      height: size,
-                      borderColor: `rgba(0,0,0,${opacity})`,
-                    }}
-                  />
+        <div className={styles.gridLines}>
+          <div className={styles.gridOrigin}>
+            {(() => {
+              const lines: JSX.Element[] = []
+              const gap = 24
+              const count = 20
+              for (let i = -count; i <= count; i++) {
+                if (i === 0) continue
+                lines.push(
+                  <div key={`v${i}`} className={styles.gridLineV} style={{ left: i * gap }} />
+                )
+                lines.push(
+                  <div key={`h${i}`} className={styles.gridLineH} style={{ top: i * gap }} />
                 )
               }
-            }
-            return cells
-          })()}
+              return lines
+            })()}
+          </div>
         </div>
         <div className={styles.axisY} />
         <div className={styles.axisX} />

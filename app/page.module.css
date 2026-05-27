@@ -97,19 +97,39 @@
 
 /* ── Grid ── */
 
-.gridWrap {
+.gridLines {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.07;
+  -webkit-mask-image: radial-gradient(circle at 73% 52%, black 0%, transparent 300px);
+  mask-image: radial-gradient(circle at 73% 52%, black 0%, transparent 300px);
+}
+
+.gridOrigin {
   position: absolute;
   right: 27%;
   top: 52%;
-  transform: rotate(var(--axis-angle));
-  pointer-events: none;
-  z-index: 0;
 }
 
-.gridCell {
+.gridLineV {
   position: absolute;
-  border: 1.5px solid transparent;
-  box-sizing: border-box;
+  width: 1px;
+  height: 250vh;
+  top: -125vh;
+  background: #000;
+  transform: rotate(var(--axis-angle));
+  transform-origin: center center;
+}
+
+.gridLineH {
+  position: absolute;
+  height: 1px;
+  width: 250vw;
+  left: -125vw;
+  background: #000;
 }
 
 /* ── Axes ── */

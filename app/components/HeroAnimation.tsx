@@ -70,7 +70,7 @@ type Interp = (t: number) => string
 
 const animState = { activeModelIdx: -1, spinProgress: 0 }
 
-const BLUE = '#000066'
+const BLUE = '#000088'
 
 const dotShader = {
   uniforms: { uColor: { value: new THREE.Color(BLUE) } },
@@ -81,7 +81,7 @@ const dotShader = {
       vec2 p = mod(gl_FragCoord.xy, 5.0);
       float d = length(p - 2.5);
       if (d > 1.0) discard;
-      gl_FragColor = vec4(uColor, 0.45);
+      gl_FragColor = vec4(uColor, 0.65);
     }
   `,
 }
@@ -313,7 +313,7 @@ export default function HeroAnimation() {
           <CameraRig />
           <ambientLight intensity={0.6} />
           <directionalLight position={[5, 5, 5]} intensity={1.5} />
-          <directionalLight position={[-3, 2, 3]} intensity={0.5} color="#aaccff" />
+          <directionalLight position={[-3, 2, 3]} intensity={0.5} color="#ffffff" />
           <Suspense fallback={null}>
             {MODEL_URLS.map((url, idx) =>
               url ? <GLBModel key={url} url={url} idx={idx} /> : null

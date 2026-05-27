@@ -153,11 +153,14 @@ def _print_gpu_cpu_parity(
     gpu_outcome,
     pnet,
     snapshots,
-) -> None:
+    max_rel_threshold: float,
+) -> bool:
     """Re-solve on CPU and print ``max(|gpu - cpu|) / max(|cpu|)`` so a
-    ``--gpu`` smoke can be graded against the 5 % parity bar without a
-    companion script. Failures here are non-fatal — we still want the GPU
-    summary to land even if the CPU stack falls over."""
+    ``--gpu`` smoke can be graded against the parity bar without a companion
+    script. Returns ``True`` when the diff is within ``max_rel_threshold``,
+    ``False`` when it exceeds. CPU re-solve failure / no-finite-diff is
+    treated as inconclusive (returns ``True`` so the smoke doesn't fail on
+    infrastructure issues — the message names the cause)."""
     from _gpu_adapter import cpu_gpu_lmp_parity
 
     try:
@@ -166,7 +169,7 @@ def _print_gpu_cpu_parity(
         )
     except Exception as err:
         print(f"     parity: CPU re-solve failed ({err}); skipping diff")
-        return
+        return True
     cpu_prices = np.asarray(cpu_outcome.prices, dtype=float)
     if cpu_prices.ndim == 1:
         cpu_prices = cpu_prices.reshape(-1, 1)
@@ -174,11 +177,16 @@ def _print_gpu_cpu_parity(
     max_abs, max_rel = cpu_gpu_lmp_parity(cpu_prices, gpu_prices)
     if max_rel != max_rel:  # NaN
         print(f"     parity: no finite diff (cpu={cpu_elapsed:.2f}s)")
-        return
+        return True
+    passed = max_rel <= max_rel_threshold
+    verdict = "OK" if passed else "FAIL"
     print(
         f"     parity: max|gpu - cpu| = {max_abs:.4g}, "
-        f"max_rel = {max_rel * 100:.2f}% (cpu {cpu_elapsed:.2f}s)"
+        f"max_rel = {max_rel * 100:.2f}% "
+        f"(threshold {max_rel_threshold * 100:.2f}%, {verdict}; "
+        f"cpu {cpu_elapsed:.2f}s)"
     )
+    return passed
 
 
 def main():
@@ -201,7 +209,18 @@ def main():
             "dispatch via the Modal-hosted ADMM solver instead of the local "
             "CPU stack. Requires ZAP_SOLVER_MODAL_URL and ZAP_SOLVER_API_KEY "
             "in grid-app/.env.local; on every --gpu run, the script also "
-            "re-solves on CPU and prints the GPU↔CPU LMP parity ratio."
+            "re-solves on CPU and grades the GPU↔CPU LMP parity ratio "
+            "against --max-rel."
+        ),
+    )
+    parser.add_argument(
+        "--max-rel",
+        type=float,
+        default=0.05,
+        help=(
+            "max-relative-LMP-diff threshold for the --gpu parity check "
+            "(default: 0.05 = 5%%). Exits non-zero when the GPU↔CPU diff "
+            "exceeds this. Ignored without --gpu."
         ),
     )
     args = parser.parse_args()
@@ -210,14 +229,17 @@ def main():
             Path(args.network_dir), args.hours, args.solver, gpu=args.gpu
         )
         if args.gpu:
-            _print_gpu_cpu_parity(
+            passed = _print_gpu_cpu_parity(
                 Path(args.network_dir),
                 args.hours,
                 args.solver,
                 outcome,
                 pnet,
                 snapshots,
+                max_rel_threshold=args.max_rel,
             )
+            if not passed:
+                sys.exit(1)
     except Exception:
         traceback.print_exc()
         sys.exit(1)

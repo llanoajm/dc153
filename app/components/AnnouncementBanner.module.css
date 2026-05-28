@@ -1,0 +1,42 @@
+.banner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 9px 48px;
+  background: #E4E3D4;
+  color: #133B39;
+  border: 1px solid #133B39;
+}
+
+.text {
+  font-size: 13px;
+  font-weight: 300;
+  letter-spacing: 0.03em;
+}
+
+.close {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid #133B39;
+  background: transparent;
+  color: #133B39;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.85;
+  transition: opacity 0.2s;
+}
+
+.close:hover {
+  opacity: 1;
+}

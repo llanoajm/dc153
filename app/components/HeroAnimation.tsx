@@ -36,13 +36,22 @@ const SOLAR = [
   'M 230,196 L 230.1,196 L 230.1,196.1 Z',
 ]
 
-const ALL_SHAPES = [CUBE, SOLAR]
+const WINDMILL = [
+  'M 224,382 L 236,382 L 233,156 L 227,156 Z',
+  'M 224,150 L 236,150 L 232,42 L 228,42 Z',
+  'M 227,144.8 L 233,155.2 L 137.5,205.7 L 135.5,202.3 Z',
+  'M 227,155.2 L 233,144.8 L 324.5,202.3 L 322.5,205.7 Z',
+]
+
+const ALL_SHAPES = [CUBE, SOLAR, CUBE, WINDMILL]
 const N_PATHS = 4
 const N_SHAPES = ALL_SHAPES.length
 
 const MODEL_URLS = [
   null,
   '/models/solar.glb',
+  null,
+  '/models/windturbine.glb',
 ]
 
 const T_MORPH = 1.5
@@ -52,7 +61,7 @@ const T_SVG_PHASE = T_MORPH + T_HOLD
 const T_3D_PHASE = T_MORPH + T_SPIN + 0.4
 
 function phaseDur(s: number) {
-  return s === 0 ? T_SVG_PHASE : T_3D_PHASE
+  return MODEL_URLS[s] === null ? T_SVG_PHASE : T_3D_PHASE
 }
 
 let TOTAL = 0
@@ -70,7 +79,7 @@ type Interp = (t: number) => string
 
 const animState = { activeModelIdx: -1, spinProgress: 0 }
 
-const BLUE = '#000088'
+const BLUE = '#0000BB'
 
 const dotShader = {
   uniforms: { uColor: { value: new THREE.Color(BLUE) } },
@@ -213,7 +222,7 @@ export default function HeroAnimation() {
       }
       const local = t - PHASE_STARTS[shapeIdx]
       const prevIdx = (shapeIdx - 1 + N_SHAPES) % N_SHAPES
-      const isModel = shapeIdx > 0
+      const isModel = MODEL_URLS[shapeIdx] !== null
 
       // Split the morph into path-shape and dot-fill stages so the SVG resembles
       // the dotted 3D before the hand-off (forward), and simplifies first on the
@@ -325,7 +334,7 @@ export default function HeroAnimation() {
       <svg className={styles.cubeSvg} viewBox="0 0 460 393" fill="none">
         <defs>
           <pattern id="cubeDotFill" x="0" y="0" width="5" height="5" patternUnits="userSpaceOnUse">
-            <circle cx="2.5" cy="2.5" r="1.2" fill="#000066" fillOpacity="0.9" />
+            <circle cx="2.5" cy="2.5" r="1.2" fill="#0000BB" fillOpacity="0.9" />
           </pattern>
         </defs>
         {CUBE.map((d, i) => (
@@ -333,7 +342,7 @@ export default function HeroAnimation() {
             key={i}
             ref={setPathRef(i)}
             d={d}
-            stroke="#000066"
+            stroke="#0000BB"
             strokeWidth="2"
             strokeLinejoin="round"
             strokeLinecap="round"

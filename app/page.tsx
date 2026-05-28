@@ -62,7 +62,6 @@ export default function HomePage() {
       <footer className={styles.footer}>
         <div className={styles.footerTop}>
           <div className={styles.footerBrand}>
-            <img className={styles.footerMark} src="/spi-mark-filled.png" alt="" aria-hidden="true" />
             <span className={styles.footerWord}>Steinmetz</span>
             <span className={styles.footerSep} aria-hidden="true">|</span>
             <span className={styles.footerTag}>Power Infrastructure</span>

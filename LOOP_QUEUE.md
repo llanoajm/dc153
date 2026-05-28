@@ -22,7 +22,7 @@ planning hero (12-15) → polish (16). Process top-to-bottom.
     - `supabase/schema.sql` updated so a fresh paste includes the new objects
     - SQL is NOT applied to the live DB; parse-check only (or mark `[!]` if no parser available, noting why)
 
-- [ ] 2. Backfill script: default workspace per user (ROADMAP §2)
+- [x] 2. Backfill script: default workspace per user (ROADMAP §2)
   - context: §4.3; one-time, service-role, idempotent.
   - acceptance:
     - `scripts/backfill_workspaces.(py|ts)` creates a default "My workspace" per user, sets `workspace_id` on their artifacts/features, leaves canonical (`user_id NULL`) networks at `workspace_id NULL`

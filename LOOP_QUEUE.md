@@ -15,7 +15,7 @@ planning hero (12-15) → polish (16). Process top-to-bottom.
 
 ---
 
-- [ ] 1. Additive schema migration: workspaces table + artifacts.workspace_id (ROADMAP §1)
+- [x] 1. Additive schema migration: workspaces table + artifacts.workspace_id (ROADMAP §1)
   - context: idempotent SQL from WORKSPACE_REDESIGN.md §4.1–4.2; RLS mirrors artifacts.
   - acceptance:
     - new `supabase/migrations/0001_workspaces.sql` with the `workspaces` table, 4 RLS policies, and `artifacts.workspace_id` column + index, verbatim from §4.1/§4.2, re-pasteable on top of `supabase/schema.sql`

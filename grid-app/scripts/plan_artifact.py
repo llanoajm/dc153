@@ -27,9 +27,21 @@ The default zap solver is MOSEK, which isn't installed here; we pass
 
 Kept best-effort: a network whose generators carry no ``capital_cost`` simply
 reports ``inv_cost == 0`` (the loss curve and capacity trajectory still tell the
-planning story). Item 13 (LOOP_QUEUE) builds the rich ``plan`` renderer; here
-we emit a complete-but-minimal ``view_spec`` so the artifact is already
-renderable and metadata carries the history + final caps item 12 asks for.
+planning story).
+
+The ``view_spec`` (consumed by ``components/renderers/plan.tsx``) carries the
+five panels ``WORKSPACE_REDESIGN.md`` §7 calls for, each independently optional:
+
+  * ``loss`` / ``op_cost`` / ``inv_cost`` — the per-iteration objective curves,
+  * ``trajectory`` — per-generator capacity over iterations (``PARAM`` tracker),
+  * ``capacity_table`` — the final build (before → after → Δ → capex),
+  * ``dispatch`` — a Run view_spec solved at the final capacities (reuses the
+    ``run`` renderer's LMP / carrier / flow charts),
+  * ``cost_emissions`` — achieved (op_cost, emissions) point(s) for the
+    cost-vs-emissions panel.
+
+A panel whose data couldn't be produced (e.g. emissions unavailable, dispatch
+re-solve failed) is simply omitted; the renderer degrades gracefully.
 """
 from __future__ import annotations
 
@@ -58,6 +70,8 @@ from zap.planning import (  # noqa: E402
     PlanningProblem,
 )
 import zap.planning.trackers as trackers  # noqa: E402
+
+from run_artifact import build_run_view_spec  # noqa: E402
 
 
 OP_COST = "op_cost"
@@ -135,6 +149,114 @@ def _history_to_json(history: dict) -> dict[str, list]:
     return out
 
 
+# How many of the most-moved generators to keep in the per-iteration capacity
+# trajectory, so a many-generator network doesn't bloat the artifact / chart.
+MAX_TRAJECTORY_SERIES = 12
+
+
+def _capacity_trajectory(
+    history: dict, gen_names: list[str]
+) -> list[dict[str, Any]]:
+    """Long-format per-generator capacity over iterations from the ``PARAM``
+    tracker (``history['param'][k]['generator']`` is the state at iteration k).
+
+    Returns ``[{iteration, device, capacity}]`` for the generators that move
+    the most (top :data:`MAX_TRAJECTORY_SERIES` by absolute first→last delta),
+    so the chart stays legible. Returns ``[]`` if the tracker is absent."""
+    param_series = history.get(trackers.PARAM)
+    if not param_series:
+        return []
+    # Materialize the per-iteration capacity matrix (iterations × generators).
+    caps_per_iter: list[np.ndarray] = []
+    for snap in param_series:
+        gen = snap.get("generator") if isinstance(snap, dict) else None
+        if gen is None:
+            continue
+        caps_per_iter.append(np.asarray(_as_numpy(gen), dtype=float).ravel())
+    if not caps_per_iter:
+        return []
+    n_gen = min(len(gen_names), min(c.size for c in caps_per_iter))
+    if n_gen == 0:
+        return []
+    # Pick the generators that actually moved (first → last absolute change).
+    deltas = np.abs(caps_per_iter[-1][:n_gen] - caps_per_iter[0][:n_gen])
+    keep = (
+        set(np.argsort(deltas)[-MAX_TRAJECTORY_SERIES:].tolist())
+        if n_gen > MAX_TRAJECTORY_SERIES
+        else set(range(n_gen))
+    )
+    rows: list[dict[str, Any]] = []
+    for it, caps in enumerate(caps_per_iter):
+        for g in range(n_gen):
+            if g not in keep:
+                continue
+            v = _to_float(caps[g])
+            if v is None:
+                continue
+            rows.append({"iteration": it, "device": gen_names[g], "capacity": v})
+    return rows
+
+
+def _as_numpy(x: Any):
+    """Detach a torch tensor (or pass through an array) to a numpy array."""
+    if hasattr(x, "detach"):
+        return x.detach().cpu().numpy()
+    return np.asarray(x)
+
+
+def _capex_for(capacity_table: list[dict[str, Any]], capital_cost) -> None:
+    """Annotate the final-build rows with a per-generator ``delta`` and
+    ``capex`` (``capital_cost * max(delta, 0)``) in place.
+
+    ``capital_cost`` may be ``None`` (no cost data on the device), in which case
+    only ``delta`` is filled and ``capex`` is left ``None``."""
+    cc = None
+    if capital_cost is not None:
+        cc = np.asarray(_as_numpy(capital_cost), dtype=float).ravel()
+    for i, row in enumerate(capacity_table):
+        before = row.get("before")
+        after = row.get("after")
+        delta = (after - before) if (before is not None and after is not None) else None
+        row["delta"] = _to_float(delta) if delta is not None else None
+        if cc is not None and i < cc.size and delta is not None:
+            row["capex"] = _to_float(float(cc[i]) * max(delta, 0.0))
+        else:
+            row["capex"] = None
+
+
+def _final_dispatch_spec(layer, state, pnet, snapshots) -> dict[str, Any] | None:
+    """Re-solve dispatch at the optimized capacities and build a ``run``
+    view_spec from the outcome (LMP / carrier / flow charts via the shared
+    ``run_artifact`` builder). Best-effort: returns ``None`` if the re-solve or
+    extraction fails so the rest of the plan still renders."""
+    try:
+        outcome = layer.forward(**state)
+        return build_run_view_spec(outcome, pnet, snapshots)
+    except Exception:
+        return None
+
+
+def _emissions_point(
+    devices, layer, state, op_cost: float | None, emissions_weight: float
+) -> dict[str, Any] | None:
+    """Compute the achieved (op_cost, emissions) pair at the final capacities
+    for the cost-vs-emissions panel. Best-effort — returns ``None`` if emissions
+    can't be evaluated (e.g. devices carry no emission rates)."""
+    try:
+        outcome = layer.forward(**state)
+        emissions = EmissionsObjective(devices)(outcome, la=np)
+        em = _to_float(emissions)
+        if em is None:
+            return None
+        return {
+            "op_cost": op_cost,
+            "emissions": em,
+            "emissions_weight": float(emissions_weight),
+        }
+    except Exception:
+        return None
+
+
 def run_plan(
     net_dir: Path,
     *,
@@ -194,7 +316,13 @@ def run_plan(
     state, history = problem.solve(
         num_iterations=int(num_iterations),
         algorithm=GradientDescent(step_size=float(step_size), clip=1e4),
-        trackers=[trackers.LOSS, OP_COST, INV_COST, trackers.GRAD_NORM],
+        trackers=[
+            trackers.LOSS,
+            OP_COST,
+            INV_COST,
+            trackers.GRAD_NORM,
+            trackers.PARAM,
+        ],
         verbosity=0,
     )
 
@@ -216,15 +344,23 @@ def run_plan(
         }
         for i in range(final_caps.size)
     ]
+    _capex_for(capacity_table, getattr(devices[gen_idx], "capital_cost", None))
+
+    final_op_cost = _to_float(problem.get_op_cost())
 
     return {
         "history": _history_to_json(history),
+        "trajectory": _capacity_trajectory(history, gen_names),
         "iterations": int(num_iterations),
         "emissions_weight": float(emissions_weight),
         "solver": solver,
         "hours": int(len(snapshots)),
         "capacity_table": capacity_table,
-        "final_op_cost": _to_float(problem.get_op_cost()),
+        "dispatch": _final_dispatch_spec(layer, state, pnet, snapshots),
+        "cost_emissions": _emissions_point(
+            devices, layer, state, final_op_cost, emissions_weight
+        ),
+        "final_op_cost": final_op_cost,
         "final_inv_cost": _to_float(problem.get_inv_cost()),
         "final_loss": (
             _to_float(history[trackers.LOSS][-1])
@@ -238,21 +374,33 @@ def run_plan(
 
 
 def build_plan_view_spec(plan: dict[str, Any]) -> dict[str, Any]:
-    """Minimal, renderable ``plan`` view_spec.
+    """``plan`` view_spec consumed by ``components/renderers/plan.tsx``.
 
-    Item 13 (LOOP_QUEUE) authors ``components/renderers/plan.tsx`` and a richer
-    spec (loss curve, capacity trajectory, dispatch reuse, cost-vs-emissions);
-    here we encode the loss/cost history and the final-build table so the
-    artifact is already useful and self-describing."""
+    Encodes the five panels from ``WORKSPACE_REDESIGN.md`` §7 — the loss /
+    objective curves, the per-generator capacity trajectory, the final-build
+    table, the resulting dispatch (a ``run`` sub-spec the plan renderer hands to
+    the shared ``RunView``), and the cost-vs-emissions panel. Every field is
+    optional; the renderer omits any panel whose data is empty/absent."""
     history = plan.get("history") or {}
-    return {
+    spec: dict[str, Any] = {
         "renderer": "plan",
         "loss": history.get("loss", []),
         "op_cost": history.get(OP_COST, []),
         "inv_cost": history.get(INV_COST, []),
+        "trajectory": plan.get("trajectory", []),
         "capacity_table": plan.get("capacity_table", []),
         "emissions_weight": plan.get("emissions_weight", 0.0),
     }
+    # A nested `run` view_spec; the plan renderer delegates it to RunView so the
+    # LMP / carrier / flow charts are not re-implemented (§7 "resulting dispatch").
+    dispatch = plan.get("dispatch")
+    if dispatch:
+        spec["dispatch"] = dispatch
+    # The cost-vs-emissions panel needs at least the achieved point.
+    cost_emissions = plan.get("cost_emissions")
+    if cost_emissions:
+        spec["cost_emissions"] = cost_emissions
+    return spec
 
 
 def build_plan_row(

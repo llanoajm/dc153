@@ -1,5 +1,5 @@
-## Current item (from LOOP_QUEUE.md line 91)
-- [ ] 12. solve_plan MCP tool wrapping PlanningProblem.solve (ROADMAP §12)
+## Current item (from LOOP_QUEUE.md line 97)
+- [ ] 13. kind='plan' view_spec + renderer (ROADMAP §13)
 
 ## Attempt
 1 of 5
@@ -33,13 +33,3 @@
 - Per-user/per-workspace isolation: end-user creations live per-workspace (filesystem + Supabase), never in shared zap/opencode git history.
 - No new heavy dependencies for what a few lines solve. Match existing patterns (Tailwind utility-first; server components do IO; client components are thin and "use client"). No emojis in UI or code.
 - If an item's acceptance cannot be met safely under these constraints, set its line in LOOP_QUEUE.md to `[!]` and record why in LOOP_ALERTS.md — do not force it or weaken the guardrails.
-
-STATUS: done
-SUMMARY: Added the solve_plan MCP builtin wrapping zap's PlanningProblem.solve (scripts/plan_artifact.py) — runs a small CPU capacity-expansion plan on a network artifact and writes a kind='plan' artifact carrying the loss/op_cost/inv_cost history + final per-generator build.
-NEXT_STEPS:
-ACCEPTANCE:
-- PASS: driving the MCP server over stdio (initialize + tools/list + tools/call), solve_plan runs a small CPU plan (3 iters) on data/networks/ieee-30 end-to-end. scripts/_smoke_solve_plan.py's e2e layer wrote a real plan artifact (e0042bb4-51d9-4e16-9de5-596d567f2db9) against canonical ieee-30 f25eaa9b-…, returning a plan_artifact_id; metadata.history carries loss/op_cost/inv_cost per iteration and metadata.final_caps the per-generator before→after build.
-- PASS: CPU-only (solver=HIGHS, never Modal/GPU), bounded iterations, finishes in ~1–2s — well under the per-item timeout.
-- PASS (checks): `npx tsc --noEmit` exit 0 (no TS added); `npm run test:unit` 46/46 pass; solve_opf CPU smoke still green after the shared _resolve_network_artifact refactor.
-- NOTE: ieee-30 generators have no capital_cost so inv_cost==0 (loss curve + capacity trajectory still demonstrate the loop). view_spec is minimal-but-renderable; the rich kind='plan' renderer is item 13's deliverable.
-VERIFIED: yes

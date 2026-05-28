@@ -33,25 +33,6 @@ export default function HomePage() {
       </nav>
 
       <section className={styles.hero}>
-        <div className={styles.gridLines}>
-          <div className={styles.gridOrigin}>
-            {(() => {
-              const lines: React.ReactElement[] = []
-              const gap = 24
-              const count = 20
-              for (let i = -count; i <= count; i++) {
-                if (i === 0) continue
-                lines.push(
-                  <div key={`v${i}`} className={styles.gridLineV} style={{ left: i * gap }} />
-                )
-                lines.push(
-                  <div key={`h${i}`} className={styles.gridLineH} style={{ top: i * gap }} />
-                )
-              }
-              return lines
-            })()}
-          </div>
-        </div>
         <div className={styles.axisY} />
         <div className={styles.axisX} />
 

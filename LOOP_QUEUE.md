@@ -36,7 +36,7 @@ planning hero (12-15) → polish (16). Process top-to-bottom.
     - opencode session creation accepts a `workspaceId` and opens with `cwd` = that dir (thread through lib/opencode-client.ts)
     - `npx tsc --noEmit` passes; existing per-user path still compiles
 
-- [ ] 4. Chat persistence + chats store (ROADMAP §4)
+- [x] 4. Chat persistence + chats store (ROADMAP §4)
   - context: §10; chats stored per workspace, mapping title + opencode session id.
   - acceptance:
     - new `supabase/migrations/0002_chats.sql` (a `chats` table) OR documented `kind='chat'` artifact approach; first message persists a chat (workspace id, session id, title, created_at)

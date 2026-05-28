@@ -4,7 +4,6 @@ import { ReactNode, Suspense, useEffect, useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { LeftRail } from "./LeftRail"
 import { CenterTabs, type CenterTab } from "./CenterTabs"
-import { RightRail } from "./RightRail"
 import { CommandPalette } from "./CommandPalette"
 import type { PinnedDashboard } from "./types"
 
@@ -97,7 +96,6 @@ function WorkspaceShellInner({
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [leftCollapsed, setLeftCollapsed] = useState(false)
-  const [rightCollapsed, setRightCollapsed] = useState(true)
   const [primaryNetworkName, setPrimaryNetworkName] = useState<string | null>(null)
 
   const activeChatId = searchParams.get("chat")
@@ -179,10 +177,6 @@ function WorkspaceShellInner({
         onOpenChat={handleOpenChat}
       />
       <CenterTabs tabs={tabs} activeId="primary" onSelect={() => {}} />
-      <RightRail
-        collapsed={rightCollapsed}
-        onToggle={() => setRightCollapsed((c) => !c)}
-      />
       <CommandPalette />
     </div>
   )

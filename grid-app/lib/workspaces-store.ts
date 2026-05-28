@@ -95,6 +95,14 @@ export interface WorkspaceDbClient {
     insert(row: Record<string, unknown>): {
       select(): { single(): Promise<{ data: unknown; error: { message: string } | null }> }
     }
+    update(row: Record<string, unknown>): {
+      eq(
+        column: string,
+        value: string,
+      ): {
+        select(): { single(): Promise<{ data: unknown; error: { message: string } | null }> }
+      }
+    }
   }
 }
 
@@ -113,6 +121,26 @@ export async function createWorkspaceWith(
     cover_image_url: input.cover_image_url ?? null,
   }
   const { data, error } = await db.from("workspaces").insert(row).select().single()
+  if (error) throw new Error(error.message)
+  return data as Workspace
+}
+
+// Swap (or clear) a workspace's anchored primary network — the Data Source tab's
+// only mutation (WORKSPACE_REDESIGN.md §5). Pure/injectable like the create core
+// so it's unit-testable; the RLS-checked wrapper lives in lib/workspaces.ts.
+// A null primary network is valid (a deferred-source workspace). RLS on the
+// real client governs whether the caller may touch this row at all.
+export async function updatePrimaryNetworkWith(
+  db: WorkspaceDbClient,
+  workspaceId: string,
+  primaryNetworkId: string | null,
+): Promise<Workspace> {
+  const { data, error } = await db
+    .from("workspaces")
+    .update({ primary_network_id: primaryNetworkId, updated_at: new Date().toISOString() })
+    .eq("id", workspaceId)
+    .select()
+    .single()
   if (error) throw new Error(error.message)
   return data as Workspace
 }

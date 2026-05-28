@@ -4,6 +4,15 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { useSearchParams } from "next/navigation"
 import { ToolCallCard } from "@/components/chat/ToolCallCard"
 import type { ToolPart, ToolState } from "@/components/chat/cards/types"
+import {
+  ATTACH_ACCEPT,
+  encodeAttachments,
+  formatBytes,
+  isSupportedAttachment,
+  splitAttachments,
+  type PendingAttachment,
+  type SentAttachment,
+} from "@/lib/chat-upload"
 
 // ---------- shared types (a minimal mirror of opencode's Part union) ----------
 
@@ -99,6 +108,10 @@ function ChatPageInner() {
   const [bootstrapping, setBootstrapping] = useState(true)
   const [networks, setNetworks] = useState<NetworkOption[]>([])
   const [activeNetworkId, setActiveNetworkId] = useState<string | null>(null)
+  // Files attached in the composer, awaiting (or just finished) upload. Cleared
+  // once they're sent with a message. (WORKSPACE_REDESIGN §10.)
+  const [attachments, setAttachments] = useState<PendingAttachment[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const messagesEnd = useRef<HTMLDivElement>(null)
 
   // Load the networks the user can see for the composer picker, and restore
@@ -134,6 +147,66 @@ function ChatPageInner() {
     } catch {
       // localStorage unavailable (private mode) — selection still works in-memory.
     }
+  }, [])
+
+  // Upload one attached file through the existing source-document route so it
+  // also lands in the Sources tab; track its status as a chip in the composer.
+  const uploadAttachment = useCallback(async (file: File) => {
+    const localId = `att-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    setAttachments((prev) => [
+      ...prev,
+      {
+        localId,
+        filename: file.name,
+        bytes: file.size,
+        status: "uploading",
+      },
+    ])
+    try {
+      const fd = new FormData()
+      fd.append("file", file)
+      const r = await fetch("/api/upload/source", { method: "POST", body: fd })
+      const data = await r.json().catch(() => ({}) as { id?: string; error?: string })
+      if (!r.ok || !data.id) {
+        setAttachments((prev) =>
+          prev.map((a) =>
+            a.localId === localId
+              ? { ...a, status: "error", error: data.error ?? `upload failed: ${r.status}` }
+              : a,
+          ),
+        )
+        return
+      }
+      setAttachments((prev) =>
+        prev.map((a) =>
+          a.localId === localId ? { ...a, status: "ready", artifactId: data.id } : a,
+        ),
+      )
+    } catch (e) {
+      setAttachments((prev) =>
+        prev.map((a) =>
+          a.localId === localId ? { ...a, status: "error", error: String(e) } : a,
+        ),
+      )
+    }
+  }, [])
+
+  const onPickFiles = useCallback(
+    (fileList: FileList | null) => {
+      if (!fileList) return
+      for (const file of Array.from(fileList)) {
+        if (!isSupportedAttachment(file)) {
+          setError(`unsupported file type: ${file.name}`)
+          continue
+        }
+        void uploadAttachment(file)
+      }
+    },
+    [uploadAttachment],
+  )
+
+  const removeAttachment = useCallback((localId: string) => {
+    setAttachments((prev) => prev.filter((a) => a.localId !== localId))
   }, [])
 
   // Keep a ref in lockstep so the SSE handler can mutate without stale closures.
@@ -185,6 +258,7 @@ function ChatPageInner() {
         }
         chatIdRef.current = chatId
         setMessages([])
+        setAttachments([])
         messageIndex.current = new Map()
         setSessionId(data.session_id)
       } catch (e) {
@@ -419,14 +493,31 @@ function ChatPageInner() {
     }
   }, [])
 
+  const readyAttachments = useMemo(
+    () => attachments.filter((a) => a.status === "ready"),
+    [attachments],
+  )
+  const hasUploading = useMemo(
+    () => attachments.some((a) => a.status === "uploading"),
+    [attachments],
+  )
+
   const onSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault()
-      if (!input.trim() || !sessionId || pending) return
+      if (!sessionId || pending || hasUploading) return
       const raw = input.trim()
+      // Allow sending when there's text OR at least one finished upload.
+      if (!raw && readyAttachments.length === 0) return
+      const sent: SentAttachment[] = readyAttachments.map((a) => ({
+        filename: a.filename,
+        artifactId: a.artifactId as string,
+      }))
+      const body = encodeAttachments(raw, sent)
       const active = networks.find((n) => n.id === activeNetworkId)
-      const text = active ? `${buildNetworkContext(active.name, active.id)}\n\n${raw}` : raw
+      const text = active ? `${buildNetworkContext(active.name, active.id)}\n\n${body}` : body
       setInput("")
+      setAttachments([])
       setPending(true)
       setError(null)
       try {
@@ -438,20 +529,29 @@ function ChatPageInner() {
           body: JSON.stringify({ text }),
         })
         if (!r.ok) {
-          const body = await r.json().catch(() => ({}))
-          setError(body.error ?? `prompt failed: ${r.status}`)
+          const errBody = await r.json().catch(() => ({}))
+          setError(errBody.error ?? `prompt failed: ${r.status}`)
           setPending(false)
         } else {
           // Persist the chat on its first message (REDESIGN §4) so it shows up
           // in the sidebar history; bump recency on subsequent messages.
-          void persistChat(sessionId, raw)
+          void persistChat(sessionId, raw || sent.map((a) => a.filename).join(", "))
         }
       } catch (e) {
         setError(String(e))
         setPending(false)
       }
     },
-    [input, sessionId, pending, networks, activeNetworkId, persistChat],
+    [
+      input,
+      sessionId,
+      pending,
+      hasUploading,
+      readyAttachments,
+      networks,
+      activeNetworkId,
+      persistChat,
+    ],
   )
 
   const hasAnyRenderableContent = useMemo(
@@ -620,7 +720,51 @@ function ChatPageInner() {
             </span>
           ) : null}
         </div>
+        {attachments.length > 0 ? (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {attachments.map((a) => (
+              <ComposerAttachmentChip
+                key={a.localId}
+                attachment={a}
+                onRemove={() => removeAttachment(a.localId)}
+              />
+            ))}
+          </div>
+        ) : null}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={ATTACH_ACCEPT}
+          multiple
+          className="hidden"
+          aria-hidden="true"
+          tabIndex={-1}
+          onChange={(e) => {
+            onPickFiles(e.target.files)
+            // Reset so re-selecting the same file fires change again.
+            e.target.value = ""
+          }}
+        />
         <div className="flex gap-2 items-stretch">
+          <button
+            type="button"
+            aria-label="Attach a file"
+            title="Attach a file"
+            disabled={!sessionId || pending}
+            onClick={() => fileInputRef.current?.click()}
+            className="shrink-0 px-3 font-mark disabled:opacity-40"
+            style={{
+              fontSize: 16,
+              lineHeight: 1,
+              color: "var(--ink-app)",
+              background: "var(--bg-card)",
+              border: "1px solid var(--bor-3)",
+              borderRadius: "var(--r-2)",
+              transition: "border-color var(--t-input)",
+            }}
+          >
+            +
+          </button>
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -659,7 +803,12 @@ function ChatPageInner() {
           />
           <button
             type="submit"
-            disabled={!sessionId || pending || !input.trim()}
+            disabled={
+              !sessionId ||
+              pending ||
+              hasUploading ||
+              (!input.trim() && readyAttachments.length === 0)
+            }
             className="font-mark px-5 disabled:opacity-40"
             style={{
               fontSize: 11,
@@ -719,7 +868,13 @@ function PartView({ part, role }: { part: AnyPart; role: "user" | "assistant" })
     if (!text) return null
     const isUser = role === "user"
     const ctx = splitNetworkContext(text)
-    const body = ctx ? ctx.body : text
+    const afterNetwork = ctx ? ctx.body : text
+    // Attachments may lead the message body (after any network context line);
+    // peel them off so they render as chips instead of raw preamble text.
+    const att = splitAttachments(afterNetwork)
+    const sentAttachments = att ? att.attachments : []
+    const body = att ? att.body : afterNetwork
+    const hasBody = body.trim().length > 0
     return (
       <div className={`flex flex-col gap-1 ${isUser ? "items-end" : "items-start"}`}>
         {ctx ? (
@@ -730,20 +885,29 @@ function PartView({ part, role }: { part: AnyPart; role: "user" | "assistant" })
             ↳ on {ctx.networkName}
           </span>
         ) : null}
-        <div
-          className="whitespace-pre-wrap"
-          style={{
-            fontFamily: "var(--font-sora)",
-            fontSize: 12.5,
-            lineHeight: 1.5,
-            padding: "8px 12px",
-            borderRadius: "var(--r-4)",
-            background: isUser ? "var(--ink-app)" : "var(--bg-tint-warm)",
-            color: isUser ? "var(--bg-card)" : "var(--ink-app)",
-          }}
-        >
-          {body}
-        </div>
+        {sentAttachments.length > 0 ? (
+          <div className={`flex flex-wrap gap-2 ${isUser ? "justify-end" : ""}`}>
+            {sentAttachments.map((a) => (
+              <SentAttachmentChip key={a.artifactId} attachment={a} />
+            ))}
+          </div>
+        ) : null}
+        {hasBody ? (
+          <div
+            className="whitespace-pre-wrap"
+            style={{
+              fontFamily: "var(--font-sora)",
+              fontSize: 12.5,
+              lineHeight: 1.5,
+              padding: "8px 12px",
+              borderRadius: "var(--r-4)",
+              background: isUser ? "var(--ink-app)" : "var(--bg-tint-warm)",
+              color: isUser ? "var(--bg-card)" : "var(--ink-app)",
+            }}
+          >
+            {body}
+          </div>
+        ) : null}
       </div>
     )
   }
@@ -785,6 +949,83 @@ function PartView({ part, role }: { part: AnyPart; role: "user" | "assistant" })
     return <ToolCallCard part={part as ToolPart} />
   }
   return null
+}
+
+// ---------- attachment chips ----------
+
+function chipShellStyle(): React.CSSProperties {
+  return {
+    fontFamily: "var(--font-jetbrains)",
+    fontSize: 11,
+    color: "var(--ink-app)",
+    background: "var(--bg-card)",
+    border: "1px solid var(--bor-3)",
+    borderRadius: "var(--r-2)",
+    padding: "4px 8px",
+  }
+}
+
+// A chip in the composer for a file the user attached but hasn't sent yet.
+// Shows upload progress / error and a remove (×) control.
+function ComposerAttachmentChip({
+  attachment,
+  onRemove,
+}: {
+  attachment: PendingAttachment
+  onRemove: () => void
+}) {
+  const { filename, bytes, status, error } = attachment
+  return (
+    <span
+      className="inline-flex items-center gap-2 max-w-[260px]"
+      style={chipShellStyle()}
+      title={error ?? filename}
+    >
+      <span className="truncate" style={{ maxWidth: 150 }}>
+        {filename}
+      </span>
+      <span style={{ color: "var(--fg-mute-4)", fontSize: 10 }}>
+        {status === "uploading"
+          ? "uploading…"
+          : status === "error"
+            ? "failed"
+            : formatBytes(bytes)}
+      </span>
+      <button
+        type="button"
+        aria-label={`Remove ${filename}`}
+        onClick={onRemove}
+        className="shrink-0"
+        style={{
+          color: "var(--fg-mute-4)",
+          fontSize: 13,
+          lineHeight: 1,
+          background: "transparent",
+        }}
+      >
+        ×
+      </button>
+    </span>
+  )
+}
+
+// A chip in a sent message: a link to the uploaded artifact's viewer.
+function SentAttachmentChip({ attachment }: { attachment: SentAttachment }) {
+  return (
+    <a
+      href={`/app/artifacts/${attachment.artifactId}`}
+      className="inline-flex items-center gap-1.5 max-w-[260px] no-underline hover:opacity-80"
+      style={chipShellStyle()}
+      title={attachment.filename}
+    >
+      <span aria-hidden="true" style={{ color: "var(--fg-mute-4)" }}>
+        ↟
+      </span>
+      <span className="truncate" style={{ maxWidth: 200 }}>
+        {attachment.filename}
+      </span>
+    </a>
+  )
 }
 
 function isRenderablePart(p: AnyPart): boolean {

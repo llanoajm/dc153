@@ -12,3 +12,4 @@
 [2026-05-28T22:28:22+00:00] DONE: - [ ] 7. In-chat file upload (+ in composer) (ROADMAP §7)
 [2026-05-28T22:35:23+00:00] DONE: - [ ] 8. Premium visual refresh of the chat surface (ROADMAP §8)
 [2026-05-28T22:47:39+00:00] DONE: - [ ] 9. Workspace gallery at /app (ROADMAP §9)
+[2026-05-28T22:53:23+00:00] DONE: - [ ] 10. Creation wizard (ROADMAP §10)

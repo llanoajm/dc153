@@ -296,27 +296,56 @@
   position: relative;
   z-index: 2;
   background: #06143a;
-  color: #cdd5e6;
+  color: #b8c2d6;
   padding: clamp(48px, 6vw, 88px) clamp(32px, 6vw, 88px) clamp(28px, 3vw, 40px);
-  font-family: var(--font-grotesk), 'Helvetica Neue', Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .footerTop {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 40px;
   flex-wrap: wrap;
 }
 
-.footerWord {
-  font-family: var(--font-sora), sans-serif;
-  font-size: clamp(18px, 1.6vw, 22px);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #ffffff;
+.footerBrand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   line-height: 1;
+}
+
+.footerMark {
+  width: auto;
+  height: clamp(18px, 1.7vw, 22px);
+  color: #ffffff;
+  transform: rotate(5deg);
+  flex-shrink: 0;
+}
+
+.footerWord {
+  font-size: clamp(15px, 1.35vw, 18px);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: #ffffff;
+}
+
+.footerSep {
+  font-weight: 200;
+  color: rgba(255, 255, 255, 0.28);
+  font-size: clamp(15px, 1.35vw, 18px);
+  margin: 0 2px;
+}
+
+.footerTag {
+  font-size: clamp(14px, 1.25vw, 17px);
+  font-weight: 300;
+  letter-spacing: 0.01em;
+  color: #b8c2d6;
 }
 
 .footerNav {
@@ -325,11 +354,11 @@
 }
 
 .footerLink {
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.16em;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: #cdd5e6;
+  color: #b8c2d6;
   text-decoration: none;
   transition: color 0.15s ease;
 }

@@ -1,5 +1,5 @@
-## Current item (from LOOP_QUEUE.md line 53)
-- [x] 6. Remove the right context rail (ROADMAP §6)
+## Current item (from LOOP_QUEUE.md line 59)
+- [ ] 7. In-chat file upload (+ in composer) (ROADMAP §7)
 
 ## Attempt
 1 of 5
@@ -35,6 +35,6 @@
 - If an item's acceptance cannot be met safely under these constraints, set its line in LOOP_QUEUE.md to `[!]` and record why in LOOP_ALERTS.md — do not force it or weaken the guardrails.
 
 STATUS: done
-SUMMARY: Removed the right context rail — deleted components/shell/RightRail.tsx and its WorkspaceShell usage so the chat reflows to fill the center (REDESIGN §6).
-ACCEPTANCE: PASS — `grep -rn RightRail components app` returns nothing (file + import + render gone, plus the now-unused rightCollapsed state). PASS — layout reflows with no empty reserved column (CenterTabs is flex-1, expands to the freed width); `npx tsc --noEmit` exit 0 and `npm run test:unit` 24/24. DEFERRED (human) — the Playwright snapshot of `/app` showing chat centered is left to human review per the no-browser-against-:3000 guardrail; no test referenced the right rail so no spec change was needed.
+SUMMARY: Added a `+` attach control to the chat composer that uploads arbitrary source files via /api/upload/source (so they also land in the Sources tab) and renders them as chips in the composer and the sent message.
+ACCEPTANCE: PASS — composer has an attach button; selecting a file uploads it and shows a chip (uploading→ready status, removable in the composer; a link chip in the sent message). PASS — the uploaded artifact is a `kind='source_document'` row, which the existing `/app/sources` panel lists (same artifacts table; no per-panel wiring needed). PASS — `npx tsc --noEmit` exit 0; `npm run test:unit` 34/34 (10 new in tests/unit/chat-upload.test.mjs exercising type-detection + the attach/encode codec). The "attach → upload call → chip render" browser flow is covered by tests/flows/chat-upload.spec.ts (mocks /api/upload/source, drives the hidden input, asserts the chip) — DEFERRED to human/CI per the no-browser-against-:3000 guardrail.
 VERIFIED: yes

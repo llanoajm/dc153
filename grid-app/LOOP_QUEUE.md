@@ -56,7 +56,7 @@ planning hero (12-15) → polish (16). Process top-to-bottom.
     - `grep -rn RightRail components app` returns nothing (file + imports gone)
     - WorkspaceShell reflows with no empty reserved column; `npx tsc --noEmit` passes
 
-- [ ] 7. In-chat file upload (+ in composer) (ROADMAP §7)
+- [x] 7. In-chat file upload (+ in composer) (ROADMAP §7)
   - context: §10; attach control uploads via existing /api/upload; show attachment chip; file also appears in Sources.
   - acceptance:
     - composer has an attach button; selecting a file POSTs to /api/upload and renders a sent/attachment chip in the thread

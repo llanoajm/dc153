@@ -4,19 +4,23 @@
 // the client.
 
 import { test, expect } from "@playwright/test"
+import { ensureTestWorkspaceChatPath } from "./_workspace"
 
 const PLACEHOLDER = /ask the agent|loading/i
 
+// Redesign §5: the chat moved from /app (now the gallery) to /app/w/[id]. Each
+// test seeds a workspace and navigates into its chat. Requires the workspaces
+// migration applied to the dev DB (see ensureTestWorkspaceChatPath).
 test.describe("chat input edge cases (logged in)", () => {
-  test("textarea + Send button mount on /app", async ({ page }) => {
-    await page.goto("/app")
+  test("textarea + Send button mount on the workspace chat", async ({ page }) => {
+    await page.goto(await ensureTestWorkspaceChatPath(page))
     const textarea = page.getByPlaceholder(PLACEHOLDER)
     await expect(textarea).toBeVisible({ timeout: 15_000 })
     await expect(page.getByRole("button", { name: /^send$/i })).toBeVisible()
   })
 
   test("Send is disabled while input is empty or whitespace", async ({ page }) => {
-    await page.goto("/app")
+    await page.goto(await ensureTestWorkspaceChatPath(page))
     const textarea = page.getByPlaceholder(PLACEHOLDER)
     await expect(textarea).toBeEnabled({ timeout: 15_000 })
     const send = page.getByRole("button", { name: /^send$/i })
@@ -28,7 +32,7 @@ test.describe("chat input edge cases (logged in)", () => {
   })
 
   test("textarea accepts a 10kb paste without freezing the UI", async ({ page }) => {
-    await page.goto("/app")
+    await page.goto(await ensureTestWorkspaceChatPath(page))
     const textarea = page.getByPlaceholder(PLACEHOLDER)
     await expect(textarea).toBeEnabled({ timeout: 15_000 })
     const big = "lorem ipsum ".repeat(900) // ~10800 chars
@@ -40,7 +44,7 @@ test.describe("chat input edge cases (logged in)", () => {
   })
 
   test("Cmd+Enter binding is documented in the input footer", async ({ page }) => {
-    await page.goto("/app")
+    await page.goto(await ensureTestWorkspaceChatPath(page))
     // Footer shows the ⌘ / ⏎ keycaps next to a "to send" hint.
     await expect(page.getByText(/to send/i).first()).toBeVisible({ timeout: 15_000 })
   })
@@ -62,7 +66,7 @@ test.describe("chat input edge cases (logged in)", () => {
       })
     })
 
-    await page.goto("/app")
+    await page.goto(await ensureTestWorkspaceChatPath(page))
 
     // Banner with the captured error text is visible (regardless of empty
     // message list). Filtering by text disambiguates the banner from

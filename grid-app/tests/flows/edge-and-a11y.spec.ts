@@ -12,7 +12,10 @@ import { test, expect } from "@playwright/test"
 
 test.describe("real-world weirdness (logged in)", () => {
   test("back/forward across rail navigation preserves the shell", async ({ page }) => {
-    await page.goto("/app")
+    // Redesign §5: the shell (rail + More group) lives on the workspace + the
+    // legacy secondary routes, not on /app (now the gallery). Start on a
+    // secondary route that mounts the shell without needing a workspace row.
+    await page.goto("/app/networks")
     // Secondary sections (Networks/Runs) sit under the collapsed "More" group.
     await page.getByRole("button", { name: /^more$/i }).click()
     await page.getByRole("button", { name: /^networks$/i }).first().click()
@@ -27,8 +30,8 @@ test.describe("real-world weirdness (logged in)", () => {
     await expect(page.getByText(/workspace/i).first()).toBeVisible()
   })
 
-  test("refreshing /app re-mounts cleanly", async ({ page }) => {
-    await page.goto("/app")
+  test("refreshing a shell route re-mounts cleanly", async ({ page }) => {
+    await page.goto("/app/networks")
     await page.reload()
     // The profile circle (which holds Sign out) is the stable authed marker now.
     await expect(page.getByRole("button", { name: /account menu/i })).toBeVisible({

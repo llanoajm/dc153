@@ -28,6 +28,12 @@ const RAIL_ROUTES: Record<string, string> = {
   settings: "/app/settings",
 }
 
+// Extract the workspace id from a /app/w/[id] path, else null.
+function workspaceIdFromPath(pathname: string): string | null {
+  const m = pathname.match(/^\/app\/w\/([^/]+)/)
+  return m ? m[1] : null
+}
+
 function currentRailKey(pathname: string, pinned: PinnedDashboard[]): string {
   if (pathname.startsWith("/app/sources")) return "sources"
   if (pathname.startsWith("/app/networks")) return "networks"
@@ -99,14 +105,31 @@ function WorkspaceShellInner({
   const [primaryNetworkName, setPrimaryNetworkName] = useState<string | null>(null)
 
   const activeChatId = searchParams.get("chat")
+  // The workspace this shell is scoped to, when we're on /app/w/[id]. Chats are
+  // listed/created against this id; new/open-chat navigations stay inside the
+  // workspace. Null on legacy/secondary routes (the rail then lists all chats).
+  const workspaceId = workspaceIdFromPath(pathname)
+  const workspaceBase = workspaceId ? `/app/w/${workspaceId}` : "/app"
 
-  // Resolve the workspace's single network to show at the top of the rail. No
-  // workspace is bound yet (REDESIGN items 9-10), so mirror the chat composer:
-  // the active-network selection (localStorage) is the closest legible answer
-  // to "which network?". Once workspaces land, this reads the bound network.
+  // Resolve the workspace's single network to show at the top of the rail. When
+  // scoped to a workspace (/app/w/[id]), read the bound primary network; on
+  // legacy/secondary routes fall back to the composer's active-network
+  // selection (localStorage) — the closest legible answer to "which network?".
   useEffect(() => {
     let aborted = false
     ;(async () => {
+      if (workspaceId) {
+        try {
+          const r = await fetch(`/api/workspaces/${workspaceId}`)
+          if (!r.ok) return
+          const ws: { primary_network_name?: string | null } = await r.json()
+          if (aborted) return
+          setPrimaryNetworkName(ws.primary_network_name ?? null)
+        } catch {
+          // non-fatal: the rail just shows "No network yet"
+        }
+        return
+      }
       let savedId: string | null = null
       try {
         savedId = localStorage.getItem(ACTIVE_NETWORK_STORAGE_KEY)
@@ -131,7 +154,7 @@ function WorkspaceShellInner({
     return () => {
       aborted = true
     }
-  }, [pathname, activeChatId])
+  }, [pathname, activeChatId, workspaceId])
 
   const tabs: CenterTab[] = [
     {
@@ -154,12 +177,13 @@ function WorkspaceShellInner({
 
   const handleNewChat = () => {
     // Unique value so repeated clicks always re-bootstrap a fresh session even
-    // when already on /app (the chat page keys its bootstrap effect on ?new).
-    router.push(`/app?new=${Date.now()}`)
+    // when already on the chat (the chat page keys its bootstrap effect on
+    // ?new). Stays inside the workspace when one is bound.
+    router.push(`${workspaceBase}?new=${Date.now()}`)
   }
 
   const handleOpenChat = (id: string) => {
-    router.push(`/app?chat=${encodeURIComponent(id)}`)
+    router.push(`${workspaceBase}?chat=${encodeURIComponent(id)}`)
   }
 
   return (
@@ -172,6 +196,7 @@ function WorkspaceShellInner({
         pinnedDashboards={pinnedDashboards}
         email={email}
         primaryNetworkName={primaryNetworkName}
+        workspaceId={workspaceId}
         activeChatId={activeChatId}
         onNewChat={handleNewChat}
         onOpenChat={handleOpenChat}

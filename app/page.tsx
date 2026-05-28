@@ -36,9 +36,13 @@ export default function HomePage() {
         </div>
         <div className={styles.navLinks}>
           <a href="#" className={styles.navLink}>Research</a>
-          <a href="#" className={styles.navLink}>How it works</a>
+          <a href="#" className={styles.navLink}>Models</a>
+          <a href="#" className={styles.navLink}>How It Works</a>
         </div>
-        <a href="/login" className={styles.navCta}><span className={styles.navCtaText}>Contact Us</span></a>
+        <div className={styles.navActions}>
+          <a href="/login" className={`${styles.navCta} ${styles.navCtaLight}`}><span className={styles.navCtaText}>Log in</span></a>
+          <a href="/login" className={styles.navCta}><span className={styles.navCtaText}>Book a demo</span></a>
+        </div>
       </nav>
 
       <section className={styles.hero}>

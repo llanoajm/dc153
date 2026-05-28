@@ -19,6 +19,7 @@ const {
   deriveChatTitle,
   createChatWith,
   listChatsWith,
+  listMyChatsWith,
   getChatWith,
   touchChatWith,
 } = mod
@@ -58,22 +59,28 @@ function makeFakeDb() {
           }
         },
         select() {
+          const sortDesc = (list, orderCol, ascending) =>
+            list.slice().sort((a, b) => {
+              const av = a[orderCol]
+              const bv = b[orderCol]
+              return ascending ? (av < bv ? -1 : 1) : av < bv ? 1 : -1
+            })
           return {
             eq(col, val) {
               const matches = rows.filter((r) => r[col] === val)
               return {
                 async order(orderCol, { ascending }) {
-                  const sorted = matches.slice().sort((a, b) => {
-                    const av = a[orderCol]
-                    const bv = b[orderCol]
-                    return ascending ? (av < bv ? -1 : 1) : av < bv ? 1 : -1
-                  })
-                  return { data: sorted, error: null }
+                  return { data: sortDesc(matches, orderCol, ascending), error: null }
                 },
                 async maybeSingle() {
                   return { data: matches[0] ?? null, error: null }
                 },
               }
+            },
+            // Unscoped list (listMyChatsWith) — no .eq() filter; RLS does the
+            // owner scoping in prod, so the fake returns every row.
+            async order(orderCol, { ascending }) {
+              return { data: sortDesc(rows, orderCol, ascending), error: null }
             },
           }
         },
@@ -173,6 +180,34 @@ test("list returns a workspace's chats most-recent first", async () => {
   assert.deepEqual(
     list.map((c) => c.title),
     ["second", "first"],
+  )
+})
+
+test("listMyChats returns all chats across workspaces, most-recent first", async () => {
+  const db = makeFakeDb()
+  await createChatWith(db, {
+    workspace_id: "ws-1",
+    session_id: "s1",
+    user_id: "u1",
+    title: "first",
+  })
+  await createChatWith(db, {
+    workspace_id: null,
+    session_id: "s2",
+    user_id: "u1",
+    title: "unbound",
+  })
+  await createChatWith(db, {
+    workspace_id: "ws-2",
+    session_id: "s3",
+    user_id: "u1",
+    title: "other ws",
+  })
+  const list = await listMyChatsWith(db)
+  assert.equal(list.length, 3)
+  assert.deepEqual(
+    list.map((c) => c.title),
+    ["other ws", "unbound", "first"],
   )
 })
 

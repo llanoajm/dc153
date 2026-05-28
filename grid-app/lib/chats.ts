@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import {
   createChatWith,
   listChatsWith,
+  listMyChatsWith,
   getChatWith,
   touchChatWith,
   type Chat,
@@ -34,6 +35,11 @@ export async function createChat(
 export async function listChats(workspaceId: string): Promise<Chat[]> {
   const supabase = await createClient()
   return listChatsWith(supabase as unknown as ChatDbClient, workspaceId)
+}
+
+export async function listMyChats(): Promise<Chat[]> {
+  const supabase = await createClient()
+  return listMyChatsWith(supabase as unknown as ChatDbClient)
 }
 
 export async function getChat(id: string): Promise<Chat | null> {

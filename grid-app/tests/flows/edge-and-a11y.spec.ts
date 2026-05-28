@@ -13,8 +13,11 @@ import { test, expect } from "@playwright/test"
 test.describe("real-world weirdness (logged in)", () => {
   test("back/forward across rail navigation preserves the shell", async ({ page }) => {
     await page.goto("/app")
+    // Secondary sections (Networks/Runs) sit under the collapsed "More" group.
+    await page.getByRole("button", { name: /^more$/i }).click()
     await page.getByRole("button", { name: /^networks$/i }).first().click()
     await page.waitForURL(/\/app\/networks$/)
+    await page.getByRole("button", { name: /^more$/i }).click()
     await page.getByRole("button", { name: /^runs$/i }).first().click()
     await page.waitForURL(/\/app\/runs$/)
     await page.goBack()
@@ -27,7 +30,10 @@ test.describe("real-world weirdness (logged in)", () => {
   test("refreshing /app re-mounts cleanly", async ({ page }) => {
     await page.goto("/app")
     await page.reload()
-    await expect(page.getByRole("button", { name: /sign out/i })).toBeVisible({ timeout: 15_000 })
+    // The profile circle (which holds Sign out) is the stable authed marker now.
+    await expect(page.getByRole("button", { name: /account menu/i })).toBeVisible({
+      timeout: 15_000,
+    })
   })
 })
 

@@ -53,14 +53,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <Lockup size="sm" />
         <div className="flex items-center gap-6">
           <OrgSwitcher memberships={memberships} activeOrgId={activeOrgId} />
-          <form action="/auth/signout" method="POST">
-            <button type="submit" className="nav-signout">
-              Sign out
-            </button>
-          </form>
         </div>
       </header>
-      <WorkspaceShell pinnedDashboards={pinnedDashboards}>{children}</WorkspaceShell>
+      <WorkspaceShell pinnedDashboards={pinnedDashboards} email={user.email ?? null}>
+        {children}
+      </WorkspaceShell>
     </div>
   )
 }

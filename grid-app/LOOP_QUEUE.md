@@ -43,7 +43,7 @@ planning hero (12-15) → polish (16). Process top-to-bottom.
     - a GET route lists a workspace's chats; opening a past chat reloads its messages
     - `npx tsc --noEmit && npm run test:unit` passes; a unit test covers create→list→reopen of the store layer
 
-- [ ] 5. Left sidebar: {single Network, Chats, profile} (ROADMAP §5)
+- [x] 5. Left sidebar: {single Network, Chats, profile} (ROADMAP §5)
   - context: §10; rework components/shell/LeftRail.tsx + WorkspaceShell.
   - acceptance:
     - sidebar shows the single network at top, a chat-history list with a new-chat button, and a profile circle pinned bottom-left whose menu holds account + Sign out

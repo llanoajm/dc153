@@ -55,6 +55,7 @@ export function deriveChatTitle(firstMessage?: string): string {
 
 // Minimal structural type for the bits of the Supabase client the store uses.
 // Lets the unit test inject a fake without pulling the real SDK in.
+type OrderResult = Promise<{ data: unknown; error: { message: string } | null }>
 export interface ChatDbClient {
   from(table: string): {
     insert(row: Record<string, unknown>): {
@@ -62,12 +63,13 @@ export interface ChatDbClient {
     }
     select(cols: string): {
       eq(col: string, val: unknown): {
-        order(
-          col: string,
-          opts: { ascending: boolean },
-        ): Promise<{ data: unknown; error: { message: string } | null }>
+        order(col: string, opts: { ascending: boolean }): OrderResult
         maybeSingle(): Promise<{ data: unknown; error: { message: string } | null }>
       }
+      // Unscoped recency-ordered list. RLS already limits the rows to the
+      // caller's own (or org-visible) chats, so no explicit owner filter is
+      // needed here — this backs the sidebar before a workspace is bound.
+      order(col: string, opts: { ascending: boolean }): OrderResult
     }
     update(row: Record<string, unknown>): {
       eq(col: string, val: unknown): Promise<{ error: { message: string } | null }>
@@ -101,6 +103,18 @@ export async function listChatsWith(
     .from("chats")
     .select("*")
     .eq("workspace_id", workspaceId)
+    .order("last_message_at", { ascending: false })
+  if (error) throw new Error(error.message)
+  return (data ?? []) as Chat[]
+}
+
+// List every chat the caller can see (RLS-scoped), most-recent first. Used by
+// the sidebar history before a workspace is bound (REDESIGN items 9-10); once a
+// workspace exists, prefer the workspace-scoped listChatsWith.
+export async function listMyChatsWith(db: ChatDbClient): Promise<Chat[]> {
+  const { data, error } = await db
+    .from("chats")
+    .select("*")
     .order("last_message_at", { ascending: false })
   if (error) throw new Error(error.message)
   return (data ?? []) as Chat[]

@@ -82,7 +82,7 @@ planning hero (12-15) → polish (16). Process top-to-bottom.
     - focus is multi-select; data-source step can pick a canonical template or defer
     - `npx tsc --noEmit && npm run test:unit` passes; a unit test covers the create-workspace happy path
 
-- [ ] 11. Data Source tab (singular network) (ROADMAP §11)
+- [x] 11. Data Source tab (singular network) (ROADMAP §11)
   - context: §5; /app/w/[id]/source shows the one anchored grid; allow swap/add; template picker; "ask the agent to fetch" entry.
   - acceptance:
     - tab renders the workspace's primary network (topology + bus/line/carrier counts); changing it updates `workspaces.primary_network_id`

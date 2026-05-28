@@ -1,5 +1,5 @@
-## Current item (from LOOP_QUEUE.md line 78)
-- [x] 10. Creation wizard (ROADMAP §10)
+## Current item (from LOOP_QUEUE.md line 85)
+- [x] 11. Data Source tab (singular network) (ROADMAP §11)
 
 ## Attempt
 1 of 5
@@ -35,8 +35,8 @@
 - If an item's acceptance cannot be met safely under these constraints, set its line in LOOP_QUEUE.md to `[!]` and record why in LOOP_ALERTS.md — do not force it or weaken the guardrails.
 
 STATUS: done
-SUMMARY: Added the creation wizard at /app/new (name → focus multi-select → data source) that creates a workspaces row and lands the user in /app/w/[id], backed by a pure unit-tested workspaces-store core.
-NEXT_STEPS: (none — item complete) Item 11 (Data Source tab at /app/w/[id]/source) is next.
-ACCEPTANCE: PASS — wizard creates a workspaces row with name + focus[] + optional primary_network_id and redirects to /app/w/[id] (POST /api/workspaces → router.push); PASS — focus is multi-select (toggle cards from FOCUS_TAGS) and the data-source step picks a canonical reference network OR defers ("Skip for now"); PASS — `npx tsc --noEmit` exit 0 and `npm run test:unit` 42/42 (8 new in tests/unit/workspaces-store.test.mjs covering the create-workspace happy path). DEFERRED (human/CI, guardrails): visual review of the wizard + a real end-to-end create requires migration 0001 (workspaces table) applied to the live DB; the data-source step shows beyond "Skip for now" only once canonical networks are seeded.
+SUMMARY: Added the Data Source tab at /app/w/[id]/source — renders the workspace's single anchored network (topology + bus/line/carrier counts) and lets the user swap/clear it via PATCH workspaces.primary_network_id, with the rail's network button routing here inside a workspace.
+NEXT_STEPS: n/a (done)
+ACCEPTANCE: PASS — tab renders the workspace's primary network (topology graph reusing NetworkGraphRenderer + a buses/lines/carriers counts strip); PASS — changing it updates workspaces.primary_network_id (Swap picker → PATCH /api/workspaces/[id] → router.refresh); PASS — `npx tsc --noEmit` exit 0 and `npm run test:unit` 46/46 (4 new tests for the swap/clear/updated_at/db-error paths). Template-pick is folded into the same picker (lists canonical templates + own networks); "ask the agent to fetch" is a chat hand-off per §5; visual rendering deferred to human review (no browser run against prod :3000).
 
 VERIFIED: yes

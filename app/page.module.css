@@ -5,7 +5,7 @@
   background: #F4F3F3;
   color: #000;
   position: relative;
-  overflow: hidden;
+  overflow-x: clip;
 }
 
 /* ── Navbar ── */
@@ -14,8 +14,21 @@
   display: flex;
   align-items: center;
   padding: 20px clamp(24px, 4vw, 56px);
-  position: relative;
-  z-index: 10;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(244, 243, 243, 0);
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  transition: background 0.25s ease, backdrop-filter 0.25s ease, -webkit-backdrop-filter 0.25s ease, border-color 0.25s ease;
+  border-bottom: 1px solid transparent;
+}
+
+:global(body[data-scrolled="true"]) .nav {
+  background: rgba(244, 243, 243, 0.72);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  border-bottom-color: rgba(9, 23, 23, 0.06);
 }
 
 .navLogo {

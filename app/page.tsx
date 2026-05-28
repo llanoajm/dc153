@@ -1,10 +1,13 @@
 /* eslint-disable @next/next/no-img-element */
 import HeroAnimationLoader from './components/HeroAnimationLoader'
+import ScrollCards from './components/ScrollCards'
+import NavScrollClass from './components/NavScrollClass'
 import styles from './page.module.css'
 
 export default function HomePage() {
   return (
     <div className={styles.page}>
+      <NavScrollClass />
       <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
         <filter id="blackToOffblack" colorInterpolationFilters="sRGB">
           <feColorMatrix
@@ -63,6 +66,8 @@ export default function HomePage() {
           <HeroAnimationLoader />
         </div>
       </section>
+
+      <ScrollCards />
     </div>
   )
 }

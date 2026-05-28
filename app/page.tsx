@@ -68,6 +68,26 @@ export default function HomePage() {
       </section>
 
       <ScrollCards />
+
+      <footer className={styles.footer}>
+        <div className={styles.footerTop}>
+          <span className={styles.footerWord}>Steinmetz</span>
+          <nav className={styles.footerNav}>
+            <a href="#" className={styles.footerLink}>Research</a>
+            <a href="#" className={styles.footerLink}>Platform</a>
+            <a href="#" className={styles.footerLink}>Solutions</a>
+            <a href="/login" className={styles.footerLink}>Contact</a>
+          </nav>
+        </div>
+        <div className={styles.footerRule} />
+        <div className={styles.footerBottom}>
+          <span className={styles.footerCopy}>© 2026 Steinmetz Power Intelligence</span>
+          <div className={styles.footerLegal}>
+            <a href="#" className={styles.footerLink}>Privacy</a>
+            <a href="#" className={styles.footerLink}>Terms</a>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }

@@ -2,6 +2,7 @@ import "server-only"
 import { createClient } from "@/lib/supabase/server"
 import {
   createWorkspaceWith,
+  updatePrimaryNetworkWith,
   type Workspace,
   type CreateWorkspaceCoreInput,
 } from "@/lib/workspaces-store"
@@ -133,4 +134,21 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<Work
   }
   const created = await createWorkspaceWith(supabase as never, coreInput)
   return normalizeWorkspace(created as unknown as Record<string, unknown>)
+}
+
+// Swap (or clear) the workspace's anchored grid (Data Source tab — §5). RLS on
+// the per-request user client governs visibility/authorship; the update policy
+// admits the personal owner or an org owner/admin. Returns null when the id is
+// route-shaped junk (clean 404 rather than a uuid-parse 500).
+export async function updatePrimaryNetwork(
+  workspaceId: string,
+  primaryNetworkId: string | null,
+): Promise<Workspace | null> {
+  if (!UUID_RE.test(workspaceId)) return null
+  if (primaryNetworkId !== null && !UUID_RE.test(primaryNetworkId)) {
+    throw new Error("invalid primary_network_id")
+  }
+  const supabase = await createClient()
+  const updated = await updatePrimaryNetworkWith(supabase as never, workspaceId, primaryNetworkId)
+  return normalizeWorkspace(updated as unknown as Record<string, unknown>)
 }

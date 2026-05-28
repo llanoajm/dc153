@@ -35,6 +35,9 @@ function workspaceIdFromPath(pathname: string): string | null {
 }
 
 function currentRailKey(pathname: string, pinned: PinnedDashboard[]): string {
+  // Workspace Data Source tab — the rail's single-network button maps here when
+  // we're inside a workspace (WORKSPACE_REDESIGN.md §5).
+  if (/^\/app\/w\/[^/]+\/source/.test(pathname)) return "networks"
   if (pathname.startsWith("/app/sources")) return "sources"
   if (pathname.startsWith("/app/networks")) return "networks"
   if (pathname.startsWith("/app/runs")) return "runs"
@@ -54,6 +57,7 @@ function currentRailKey(pathname: string, pinned: PinnedDashboard[]): string {
 }
 
 function primaryTabLabel(pathname: string, pinned: PinnedDashboard[]): string {
+  if (/^\/app\/w\/[^/]+\/source/.test(pathname)) return "Data source"
   if (pathname.startsWith("/app/sources")) return "Sources"
   if (pathname.startsWith("/app/networks")) return "Networks"
   if (pathname.startsWith("/app/runs/compare")) return "Compare runs"
@@ -169,6 +173,12 @@ function WorkspaceShellInner({
     if (key.startsWith("pin:")) {
       const id = key.slice("pin:".length)
       router.push(`/app/artifacts/${id}`)
+      return
+    }
+    // Inside a workspace, the single-network button opens that workspace's Data
+    // Source tab rather than the global networks list (WORKSPACE_REDESIGN.md §5).
+    if (key === "networks" && workspaceId) {
+      router.push(`${workspaceBase}/source`)
       return
     }
     const href = RAIL_ROUTES[key]

@@ -15,7 +15,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const jiti = createJiti(import.meta.url)
 const mod = await jiti.import(path.resolve(__dirname, "../../lib/workspaces-store.ts"))
 
-const { createWorkspaceWith, sanitizeFocus, FOCUS_TAGS } = mod
+const { createWorkspaceWith, updatePrimaryNetworkWith, sanitizeFocus, FOCUS_TAGS } = mod
 
 // ---- in-memory fake of the narrow Supabase surface the store uses ----
 function makeFakeDb() {
@@ -44,6 +44,25 @@ function makeFakeDb() {
                   }
                   rows.push(full)
                   return { data: full, error: null }
+                },
+              }
+            },
+          }
+        },
+        update(patch) {
+          return {
+            eq(column, value) {
+              assert.equal(column, "id")
+              return {
+                select() {
+                  return {
+                    async single() {
+                      const target = rows.find((r) => r.id === value)
+                      if (!target) return { data: null, error: { message: "no rows" } }
+                      Object.assign(target, patch)
+                      return { data: target, error: null }
+                    },
+                  }
                 },
               }
             },
@@ -118,6 +137,50 @@ test("create surfaces the db error", async () => {
   await assert.rejects(
     () => createWorkspaceWith(db, { name: "x", user_id: "u" }),
     /rls denied/,
+  )
+})
+
+// ---------- swap the anchored primary network (Data Source tab, item 11) ----------
+
+test("updatePrimaryNetwork swaps the anchored grid", async () => {
+  const db = makeFakeDb()
+  const ws = await createWorkspaceWith(db, {
+    name: "Scratch",
+    user_id: "u",
+    primary_network_id: "net-old",
+  })
+  const updated = await updatePrimaryNetworkWith(db, ws.id, "net-new")
+  assert.equal(updated.id, ws.id)
+  assert.equal(updated.primary_network_id, "net-new")
+  assert.equal(db._rows[0].primary_network_id, "net-new")
+})
+
+test("updatePrimaryNetwork can clear the anchored grid (null)", async () => {
+  const db = makeFakeDb()
+  const ws = await createWorkspaceWith(db, {
+    name: "Scratch",
+    user_id: "u",
+    primary_network_id: "net-old",
+  })
+  const updated = await updatePrimaryNetworkWith(db, ws.id, null)
+  assert.equal(updated.primary_network_id, null)
+})
+
+test("updatePrimaryNetwork bumps updated_at", async () => {
+  const db = makeFakeDb()
+  const ws = await createWorkspaceWith(db, { name: "Scratch", user_id: "u" })
+  const before = db._rows[0].updated_at
+  // ensure a measurable tick even on fast clocks
+  await new Promise((r) => setTimeout(r, 2))
+  const updated = await updatePrimaryNetworkWith(db, ws.id, "net-x")
+  assert.notEqual(updated.updated_at, before)
+})
+
+test("updatePrimaryNetwork surfaces the db error (e.g. RLS / missing row)", async () => {
+  const db = makeFakeDb()
+  await assert.rejects(
+    () => updatePrimaryNetworkWith(db, "ws-does-not-exist", "net-x"),
+    /no rows/,
   )
 })
 

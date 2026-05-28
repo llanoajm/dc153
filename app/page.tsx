@@ -18,12 +18,12 @@ export default function HomePage() {
                     0 0 0 1 0"
           />
         </filter>
-        <filter id="blackToDeepNavy" colorInterpolationFilters="sRGB">
+        <filter id="blackToFooterBg" colorInterpolationFilters="sRGB">
           <feColorMatrix
             type="matrix"
-            values="0.886 0     0     0 0.114
-                    0     0.827 0     0 0.173
-                    0     0     0.631 0 0.369
+            values="0.976 0     0     0 0.024
+                    0     0.922 0     0 0.078
+                    0     0     0.773 0 0.227
                     0     0     0     1 0"
           />
         </filter>

@@ -63,7 +63,7 @@ planning hero (12-15) → polish (16). Process top-to-bottom.
     - the uploaded artifact appears in the existing Sources/Networks listing
     - `npx tsc --noEmit && npm run test:unit` passes; a unit test covers the upload-call wiring
 
-- [ ] 8. Premium visual refresh of the chat surface (ROADMAP §8)
+- [x] 8. Premium visual refresh of the chat surface (ROADMAP §8)
   - context: §10; ChatGPT/Gemini-grade, simple but premium; reuse existing CSS vars/fonts; no heavy deps.
   - acceptance:
     - chat page (message rows, empty state, composer) restyled to a clean modern layout; tool-call cards still render correctly

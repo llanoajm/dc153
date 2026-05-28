@@ -1,5 +1,5 @@
-## Current item (from LOOP_QUEUE.md line 59)
-- [ ] 7. In-chat file upload (+ in composer) (ROADMAP §7)
+## Current item (from LOOP_QUEUE.md line 66)
+- [x] 8. Premium visual refresh of the chat surface (ROADMAP §8)
 
 ## Attempt
 1 of 5
@@ -35,6 +35,7 @@
 - If an item's acceptance cannot be met safely under these constraints, set its line in LOOP_QUEUE.md to `[!]` and record why in LOOP_ALERTS.md — do not force it or weaken the guardrails.
 
 STATUS: done
-SUMMARY: Added a `+` attach control to the chat composer that uploads arbitrary source files via /api/upload/source (so they also land in the Sources tab) and renders them as chips in the composer and the sent message.
-ACCEPTANCE: PASS — composer has an attach button; selecting a file uploads it and shows a chip (uploading→ready status, removable in the composer; a link chip in the sent message). PASS — the uploaded artifact is a `kind='source_document'` row, which the existing `/app/sources` panel lists (same artifacts table; no per-panel wiring needed). PASS — `npx tsc --noEmit` exit 0; `npm run test:unit` 34/34 (10 new in tests/unit/chat-upload.test.mjs exercising type-detection + the attach/encode codec). The "attach → upload call → chip render" browser flow is covered by tests/flows/chat-upload.spec.ts (mocks /api/upload/source, drives the hidden input, asserts the chip) — DEFERRED to human/CI per the no-browser-against-:3000 guardrail.
+SUMMARY: Restyled the chat surface (centered empty state with suggested prompts, plain-text assistant turns + ink user bubbles, single focused composer pill) using only existing CSS vars/fonts; tool-call cards unaffected.
+ACCEPTANCE: PASS — chat page (message rows, empty state, composer) restyled to a clean modern layout and tool-call cards still render correctly (rendered unchanged in the full-width assistant column via ToolCallCard/BaseCard); `npx tsc --noEmit` passes and `npm run test:unit` is 34/34. PENDING (by design, not run in-loop per guardrails) — the "premium feel" is a visual criterion deferred to human review; noted in LOOP_JOURNAL.md with the specific things to eyeball and the deferred empty/populated Playwright snapshot specs as the review artifact. No browser was run against :3000.
+
 VERIFIED: yes

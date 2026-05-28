@@ -18,12 +18,12 @@ export default function HomePage() {
                     0 0 0 1 0"
           />
         </filter>
-        <filter id="blackToOffwhite" colorInterpolationFilters="sRGB">
+        <filter id="blackToLightGray" colorInterpolationFilters="sRGB">
           <feColorMatrix
             type="matrix"
-            values="0.043 0 0 0 0.957
-                    0 0.047 0 0 0.953
-                    0 0 0.047 0 0.953
+            values="0.25 0 0 0 0.75
+                    0 0.25 0 0 0.75
+                    0 0 0.25 0 0.75
                     0 0 0 1 0"
           />
         </filter>
@@ -62,6 +62,7 @@ export default function HomePage() {
       <footer className={styles.footer}>
         <div className={styles.footerTop}>
           <div className={styles.footerBrand}>
+            <img className={styles.footerMark} src="/spi-mark-favicon.png" alt="" aria-hidden="true" />
             <span className={styles.footerWord}>Steinmetz</span>
             <span className={styles.footerSep} aria-hidden="true">|</span>
             <span className={styles.footerTag}>Power Infrastructure</span>

@@ -27,7 +27,7 @@ export default async function ArtifactPage({
             <div className="text-[11px] font-mark tracking-wider uppercase text-black/50">
               {artifact.kind} · {renderer} · {artifact.status}
             </div>
-            <h1 className="font-serif-soft text-2xl mt-1">{artifact.name}</h1>
+            <h1 className="font-soft text-2xl mt-1">{artifact.name}</h1>
             {artifact.slug ? (
               <div className="font-mono text-[11px] text-black/40 mt-1">{artifact.slug}</div>
             ) : null}

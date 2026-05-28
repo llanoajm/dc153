@@ -34,8 +34,8 @@ export default function DemosPage() {
             <div className="text-[11px] font-mark tracking-wider uppercase text-black/50">
               Demos
             </div>
-            <h1 className="font-serif-soft text-2xl mt-1">Validated-flow walkthroughs</h1>
-            <p className="text-sm font-serif-soft text-black/60 mt-2 max-w-prose">
+            <h1 className="font-soft text-2xl mt-1">Validated-flow walkthroughs</h1>
+            <p className="text-sm font-soft text-black/60 mt-2 max-w-prose">
               One short recording per validated flow from the Phase F.10 Playwright suite.
               Clips are produced by{" "}
               <span className="font-mono text-black/80">
@@ -47,7 +47,7 @@ export default function DemosPage() {
           </div>
 
           {available.length === 0 ? (
-            <div className="border border-dashed border-black/15 px-4 py-12 text-center text-sm font-serif-soft text-black/50">
+            <div className="border border-dashed border-black/15 px-4 py-12 text-center text-sm font-soft text-black/50">
               No recordings on disk yet. Run{" "}
               <span className="font-mono">
                 npx playwright test --config=playwright.demos.config.ts
@@ -61,7 +61,7 @@ export default function DemosPage() {
                 <li key={clip.slug} className="border-t border-black/10 pt-6">
                   <div className="flex items-baseline justify-between gap-4">
                     <div>
-                      <h2 className="font-serif-soft text-lg text-black">{clip.title}</h2>
+                      <h2 className="font-soft text-lg text-black">{clip.title}</h2>
                       <div className="text-[11px] font-mark tracking-wider uppercase text-black/40 mt-0.5">
                         {clip.flow}
                       </div>
@@ -70,7 +70,7 @@ export default function DemosPage() {
                       {formatBytes(clip.sizeBytes)} · {clip.slug}.webm
                     </div>
                   </div>
-                  <p className="text-sm font-serif-soft text-black/70 mt-2 max-w-prose">
+                  <p className="text-sm font-soft text-black/70 mt-2 max-w-prose">
                     {clip.description}
                   </p>
                   <video

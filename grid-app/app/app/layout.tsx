@@ -39,16 +39,22 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }))
 
   return (
-    <div className="flex-1 flex flex-col bg-white text-black min-h-0">
-      <header className="border-b border-black/10 px-6 py-3 flex items-center justify-between shrink-0">
+    <div
+      className="flex-1 flex flex-col text-black min-h-0"
+      style={{ background: "var(--bg-app)" }}
+    >
+      <header
+        className="px-6 py-3 flex items-center justify-between shrink-0"
+        style={{
+          background: "var(--bg-card)",
+          borderBottom: "1px solid var(--bor-1)",
+        }}
+      >
         <Lockup size="sm" />
         <div className="flex items-center gap-6">
           <OrgSwitcher memberships={memberships} activeOrgId={activeOrgId} />
           <form action="/auth/signout" method="POST">
-            <button
-              type="submit"
-              className="text-xs font-mark tracking-wider text-black/60 hover:text-black"
-            >
+            <button type="submit" className="nav-signout">
               Sign out
             </button>
           </form>

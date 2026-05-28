@@ -1,17 +1,23 @@
 import type { Metadata } from "next"
-import { Sora, EB_Garamond } from "next/font/google"
+import { Sora, Space_Grotesk, JetBrains_Mono } from "next/font/google"
 import "./globals.css"
 
 const sora = Sora({
   variable: "--font-sora",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["100", "200", "300", "400", "500", "600", "700"],
 })
 
-const garamond = EB_Garamond({
-  variable: "--font-garamond",
+const grotesk = Space_Grotesk({
+  variable: "--font-grotesk",
   subsets: ["latin"],
-  weight: ["400"],
+  weight: ["300", "400", "500"],
+})
+
+const jetbrains = JetBrains_Mono({
+  variable: "--font-jetbrains",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
 })
 
 export const metadata: Metadata = {
@@ -22,7 +28,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${sora.variable} ${garamond.variable} h-full antialiased`}>
+    <html
+      lang="en"
+      className={`${sora.variable} ${grotesk.variable} ${jetbrains.variable} h-full antialiased`}
+    >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   )

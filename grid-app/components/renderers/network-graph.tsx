@@ -70,11 +70,11 @@ export function NetworkGraphRenderer({ artifact }: RendererProps) {
       {payload ? (
         <Graph payload={payload} />
       ) : loadErr ? (
-        <div className="text-sm font-serif-soft text-black/50 border border-black/10 px-3 py-6 text-center">
+        <div className="text-sm font-soft text-black/50 border border-black/10 px-3 py-6 text-center">
           Could not load topology: <span className="font-mono">{loadErr}</span>
         </div>
       ) : (
-        <div className="text-sm font-serif-soft text-black/50 border border-black/10 px-3 py-6 text-center">
+        <div className="text-sm font-soft text-black/50 border border-black/10 px-3 py-6 text-center">
           Loading topology…
         </div>
       )}
@@ -148,7 +148,7 @@ function Graph({ payload }: { payload: TopologyPayload }) {
 
   if (buses.length === 0) {
     return (
-      <div className="text-sm font-serif-soft text-black/50 border border-black/10 px-3 py-6 text-center">
+      <div className="text-sm font-soft text-black/50 border border-black/10 px-3 py-6 text-center">
         No buses in topology.
       </div>
     )
@@ -178,7 +178,7 @@ function Graph({ payload }: { payload: TopologyPayload }) {
                 y1={a.y}
                 x2={b.x}
                 y2={b.y}
-                stroke="rgba(0,0,0,0.35)"
+                stroke="rgba(9,23,23,0.35)"
                 strokeWidth={w}
               />
             )
@@ -195,8 +195,8 @@ function Graph({ payload }: { payload: TopologyPayload }) {
                 cx={p.x}
                 cy={p.y}
                 r={isHover ? 4 : 2.5}
-                fill="#111"
-                stroke={isHover ? "#1F8FFF" : "rgba(0,0,0,0.1)"}
+                fill="#091717"
+                stroke={isHover ? "#20808D" : "rgba(9,23,23,0.1)"}
                 strokeWidth={isHover ? 2 : 0.5}
                 onMouseEnter={() => setHover(bus.id)}
                 onMouseLeave={() => setHover(null)}

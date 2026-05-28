@@ -122,8 +122,8 @@ export function SourcesPanel() {
           <div className="text-[11px] font-mark tracking-wider uppercase text-black/50">
             Sources
           </div>
-          <h1 className="font-serif-soft text-2xl mt-1">Source documents</h1>
-          <p className="font-serif-soft text-sm text-black/60 mt-2 max-w-prose">
+          <h1 className="font-soft text-2xl mt-1">Source documents</h1>
+          <p className="font-soft text-sm text-black/60 mt-2 max-w-prose">
             Drop a file below to ingest. PDFs, PPTX decks, images (PNG/JPEG/
             GIF/WEBP), and audio (MP3/WAV/M4A/OGG/FLAC) all go through the
             same pipeline — text is extracted (or images/audio captioned),
@@ -141,7 +141,7 @@ export function SourcesPanel() {
           }}
           onDragLeave={() => setDragOver(false)}
           onDrop={onDrop}
-          className={`border border-dashed px-4 py-8 text-center text-sm font-serif-soft transition-colors ${
+          className={`border border-dashed px-4 py-8 text-center text-sm font-soft transition-colors ${
             dragOver ? "border-black bg-black/[0.04] text-black" : "border-black/30 text-black/60"
           }`}
         >
@@ -173,7 +173,7 @@ export function SourcesPanel() {
               : `${artifacts.length} document${artifacts.length === 1 ? "" : "s"}`}
           </div>
           {artifacts.length === 0 && !loading ? (
-            <div className="text-sm font-serif-soft text-black/50 px-2 py-6 text-center">
+            <div className="text-sm font-soft text-black/50 px-2 py-6 text-center">
               No source documents yet. Drop a PDF, PPTX, image, or audio
               file above to start building your glossary and
               company-context docs.
@@ -187,7 +187,7 @@ export function SourcesPanel() {
                   className="block px-4 py-3 hover:bg-black/[0.03] flex items-center gap-3"
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-serif-soft truncate">{a.name}</div>
+                    <div className="text-sm font-soft truncate">{a.name}</div>
                     <div className="text-[11px] font-mono text-black/40 truncate">
                       {sourceSubtitle(a)}
                     </div>

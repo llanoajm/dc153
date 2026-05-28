@@ -63,8 +63,8 @@ export function OrgsPanel({
           <div className="text-[11px] font-mark tracking-wider uppercase text-black/50">
             Orgs &amp; teams
           </div>
-          <h1 className="font-serif-soft text-2xl mt-1">Orgs</h1>
-          <p className="font-serif-soft text-sm text-black/60 mt-2 max-w-prose">
+          <h1 className="font-soft text-2xl mt-1">Orgs</h1>
+          <p className="font-soft text-sm text-black/60 mt-2 max-w-prose">
             Orgs share canonical features, glossary, and company-context with
             their members. New members see the org&apos;s canonical features
             and glossary on first login; their personal glossary layers on
@@ -77,7 +77,7 @@ export function OrgsPanel({
             <span className="font-mono text-[12px] text-black/80">Your orgs</span>
           </header>
           {memberships.length === 0 ? (
-            <div className="p-6 text-sm font-serif-soft text-black/50">
+            <div className="p-6 text-sm font-soft text-black/50">
               You&apos;re not in any orgs yet. Create one below to share
               features and glossary with a team.
             </div>
@@ -92,7 +92,7 @@ export function OrgsPanel({
                   onClick={() => setSelectedOrgId(m.org_id)}
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="font-serif-soft text-sm truncate">
+                    <div className="font-soft text-sm truncate">
                       {m.org.name}
                     </div>
                     <div className="font-mono text-[11px] text-black/40 truncate">
@@ -120,7 +120,7 @@ export function OrgsPanel({
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="Acme Power Co."
-                className="mt-1 w-full border border-black/20 px-2 py-1.5 text-sm font-serif-soft focus:outline-none focus:border-black"
+                className="mt-1 w-full border border-black/20 px-2 py-1.5 text-sm font-soft focus:outline-none focus:border-black"
               />
             </div>
             <button
@@ -306,7 +306,7 @@ function OrgDetail({
           <div className="text-[11px] font-mark tracking-wider uppercase text-black/50">
             What this org shares
           </div>
-          <p className="font-serif-soft text-xs text-black/60">
+          <p className="font-soft text-xs text-black/60">
             These two markdown documents are loaded into every member&apos;s
             agent session before their personal glossary / context. Org
             canonical features (under{" "}

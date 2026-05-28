@@ -42,15 +42,16 @@ export async function proxy(request: NextRequest) {
     path.startsWith("/api/settings") ||
     path.startsWith("/api/admin")
   const isAuthRoute = path === "/login" || path === "/signup"
+  const isRoot = path === "/"
 
-  if (!user && isAppRoute) {
+  if (!user && (isAppRoute || isRoot)) {
     const url = request.nextUrl.clone()
     url.pathname = "/login"
-    url.searchParams.set("next", path)
+    if (isAppRoute) url.searchParams.set("next", path)
     return NextResponse.redirect(url)
   }
 
-  if (user && isAuthRoute) {
+  if (user && (isAuthRoute || isRoot)) {
     const url = request.nextUrl.clone()
     url.pathname = "/app"
     return NextResponse.redirect(url)
@@ -61,6 +62,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/",
     "/((?!_next/static|_next/image|favicon\\.ico|favicon\\.png|spi-mark.*|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 }

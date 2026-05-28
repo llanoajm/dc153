@@ -249,6 +249,12 @@ Read \`AGENTS.md\` at the workspace root before starting work. Critical rules:
   do a tiny finite-difference check.
 - **Persist as a skill.** SKILL.md is the source of truth for what features
   this user has built. Without it, the feature disappears from the UI.
+- **Resolve networks before solving.** To run or analyze a power-system
+  network the user names in plain language (e.g. "the IEEE 30-bus"), call
+  \`steinmetz__list_networks\` to map the name to its \`network_artifact_id\`,
+  then pass that id to \`steinmetz__solve_opf\`. If the user's message carries
+  an "active network" context line with a network_artifact_id, use that id
+  directly without re-listing.
 
 Terse, technical, no filler. When uncertain about which zap base class to
 extend, say so and ask — don't sprinkle the change across guesses.

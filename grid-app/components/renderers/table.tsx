@@ -11,7 +11,7 @@ export function TableRenderer({ artifact }: RendererProps) {
   const rows = Array.isArray(spec.rows) ? spec.rows : []
   if (rows.length === 0) {
     return (
-      <div className="text-sm font-serif-soft text-black/50">
+      <div className="text-sm font-soft text-black/50">
         Empty table. Set <code className="font-mono">view_spec.rows</code>.
       </div>
     )
@@ -42,7 +42,7 @@ export function TableRenderer({ artifact }: RendererProps) {
         </tbody>
       </table>
       {rows.length > 500 ? (
-        <div className="px-3 py-2 text-[11px] text-black/50 font-serif-soft border-t border-black/5">
+        <div className="px-3 py-2 text-[11px] text-black/50 font-soft border-t border-black/5">
           Showing first 500 of {rows.length} rows.
         </div>
       ) : null}

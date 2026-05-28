@@ -18,7 +18,7 @@ export function FileRenderer({ artifact }: RendererProps) {
     <div className="space-y-3">
       <div className="border border-black/10 divide-y divide-black/5">
         {fields.length === 0 ? (
-          <div className="px-3 py-2 text-sm font-serif-soft text-black/50">
+          <div className="px-3 py-2 text-sm font-soft text-black/50">
             No file metadata available.
           </div>
         ) : (

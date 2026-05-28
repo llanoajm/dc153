@@ -70,10 +70,10 @@ type Interp = (t: number) => string
 
 const animState = { activeModelIdx: -1, spinProgress: 0 }
 
-const BLUE = '#0000BB'
+const ACCENT = '#B81D24'
 
 const dotShader = {
-  uniforms: { uColor: { value: new THREE.Color(BLUE) } },
+  uniforms: { uColor: { value: new THREE.Color(ACCENT) } },
   vertexShader: `void main() { gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
   fragmentShader: `
     uniform vec3 uColor;
@@ -135,7 +135,7 @@ function GLBModel({ url, idx }: { url: string; idx: number }) {
         side: THREE.DoubleSide,
         depthWrite: false,
       })
-      const lineMat = new THREE.LineBasicMaterial({ color: BLUE })
+      const lineMat = new THREE.LineBasicMaterial({ color: ACCENT })
 
       for (const mesh of meshes) {
         mesh.material = fillMat
@@ -325,7 +325,7 @@ export default function HeroAnimation() {
       <svg className={styles.cubeSvg} viewBox="0 0 460 393" fill="none">
         <defs>
           <pattern id="cubeDotFill" x="0" y="0" width="5" height="5" patternUnits="userSpaceOnUse">
-            <circle cx="2.5" cy="2.5" r="1.2" fill="#0000BB" fillOpacity="0.9" />
+            <circle cx="2.5" cy="2.5" r="1.2" fill="#B81D24" fillOpacity="0.9" />
           </pattern>
         </defs>
         {CUBE.map((d, i) => (
@@ -333,7 +333,7 @@ export default function HeroAnimation() {
             key={i}
             ref={setPathRef(i)}
             d={d}
-            stroke="#0000BB"
+            stroke="#B81D24"
             strokeWidth="2"
             strokeLinejoin="round"
             strokeLinecap="round"

@@ -5,9 +5,9 @@
   justify-content: center;
   gap: 16px;
   padding: 9px 48px;
-  background: #E4E3D4;
-  color: #133B39;
-  border: 1px solid #133B39;
+  background: #F4F3F3;
+  color: #000;
+  border: 1px solid #000;
 }
 
 .text {
@@ -27,9 +27,9 @@
   width: 22px;
   height: 22px;
   padding: 0;
-  border: 1px solid #133B39;
+  border: 1px solid #000;
   background: transparent;
-  color: #133B39;
+  color: #000;
   font-size: 16px;
   line-height: 1;
   cursor: pointer;

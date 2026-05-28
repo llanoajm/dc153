@@ -48,7 +48,7 @@ export default function HomePage() {
         <div className={styles.heroContent}>
           <span className={styles.heroLabel}></span>
           <h1 className={styles.heroTitle}><span className={styles.step1}>Frontier</span><br /><span className={styles.step2}>Intelligence</span><br /><span className={styles.step3}>For the Grid</span></h1>
-          <p className={styles.heroSub}><span className={styles.step4}>Powering the most critical electrical</span><br /><span className={styles.step5}>infrastructure projects</span></p>
+          <p className={styles.heroSub}><span className={styles.step4}>Planning, de-risking, and accelerating</span><br /><span className={styles.step5}>the most critical electrical infrastructure projects</span></p>
           <a href="https://app.steinmetz.ai" className={`${styles.heroCta} ${styles.step6}`}><span className={styles.heroCtaText}>Try Steinmetz 1.1<svg className={styles.heroCtaArrow} width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></span></a>
         </div>
 

@@ -88,7 +88,7 @@ planning hero (12-15) → polish (16). Process top-to-bottom.
     - tab renders the workspace's primary network (topology + bus/line/carrier counts); changing it updates `workspaces.primary_network_id`
     - `npx tsc --noEmit` passes
 
-- [ ] 12. solve_plan MCP tool wrapping PlanningProblem.solve (ROADMAP §12)
+- [x] 12. solve_plan MCP tool wrapping PlanningProblem.solve (ROADMAP §12)
   - context: §7; builtin in scripts/user-mcp-server.py building DispatchLayer → MultiObjective → InvestmentObjective → PlanningProblem(...).solve(...), writing a kind='plan' artifact.
   - acceptance:
     - driving the MCP server over stdio (as the existing list_networks verification does), `solve_plan` runs a SMALL CPU plan (few iterations) on `data/networks/ieee-30` end-to-end, returns a plan artifact id, and metadata carries history (loss, op_cost, inv_cost) + final caps

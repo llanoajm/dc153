@@ -16,7 +16,7 @@ const grotesk = Space_Grotesk({
 
 export const metadata: Metadata = {
   title: 'Steinmetz',
-  icons: { icon: '/spi-mark-filled.png' },
+  icons: { icon: '/spi-mark-favicon.png' },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -8,3 +8,4 @@
 [2026-05-28T22:01:32+00:00] DONE: - [ ] 3. ensureWorkspace(workspaceId) + per-workspace dir (ROADMAP §3)
 [2026-05-28T22:09:31+00:00] DONE: - [ ] 4. Chat persistence + chats store (ROADMAP §4)
 [2026-05-28T22:19:20+00:00] DONE: - [ ] 5. Left sidebar: {single Network, Chats, profile} (ROADMAP §5)
+[2026-05-28T22:21:49+00:00] DONE: - [ ] 6. Remove the right context rail (ROADMAP §6)

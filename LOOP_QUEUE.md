@@ -29,7 +29,7 @@ planning hero (12-15) → polish (16). Process top-to-bottom.
     - `--dry-run` prints planned changes and writes nothing (real apply gated behind explicit `--apply`)
     - re-running `--dry-run` post-apply would be a no-op (idempotent by design)
 
-- [ ] 3. ensureWorkspace(workspaceId) + per-workspace dir (ROADMAP §3)
+- [x] 3. ensureWorkspace(workspaceId) + per-workspace dir (ROADMAP §3)
   - context: §4.4; generalize lib/user-workspace.ts to per-workspace dir; keep a back-compat shim.
   - acceptance:
     - `lib/workspace.ts` exports `ensureWorkspace(workspaceId)` materializing `grid-workspaces/<workspace-id>/` and recording the primary network in `.steinmetz/workspace.json`

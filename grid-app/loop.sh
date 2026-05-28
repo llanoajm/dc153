@@ -190,7 +190,7 @@ $attempt of $MAX_ATTEMPTS
 ## Context to load before working
 - WORKSPACE_REDESIGN.md  (the design: ontology, schema §4, IA §5, focus→problem §6, hero planning loop §7, chat-centric UX §10, and the §11 build guardrails — READ THIS FIRST)
 - REDESIGN_ROADMAP.md    (the ordered backlog this queue derives from; per-item context + acceptance, and a GUARDRAILS block — obey it)
-- AGENTS.md              (project brief; CRITICAL: Next.js 16 breaking changes, and PROD is served from THIS VM via `next start` on :3000 — do not disturb it or run any next build/dev)
+- AGENTS.md              (project brief; CRITICAL: Next.js 16 breaking changes, and PROD is served from THIS VM via "next start" on :3000 — do not disturb it or run any next build/dev)
 - STATE.md               (current build cursor / app state)
 - $QUEUE            (the queue you're working from)
 - recent tail of $JOURNAL

@@ -69,7 +69,7 @@ planning hero (12-15) → polish (16). Process top-to-bottom.
     - chat page (message rows, empty state, composer) restyled to a clean modern layout; tool-call cards still render correctly
     - `npx tsc --noEmit` passes; note in LOOP_JOURNAL.md that the "premium feel" is pending human visual review (do not run a browser against :3000)
 
-- [ ] 9. Workspace gallery at /app (ROADMAP §9)
+- [x] 9. Workspace gallery at /app (ROADMAP §9)
   - context: §5; cards (cover image, name, grid, focus chips, last activity) + a New-workspace card; workspaces under /app/w/[id].
   - acceptance:
     - `/app` lists the user's workspaces as cards from the `workspaces` table; "＋" opens the wizard (item 10); a card opens `/app/w/[id]`

@@ -10,3 +10,4 @@
 [2026-05-28T22:19:20+00:00] DONE: - [ ] 5. Left sidebar: {single Network, Chats, profile} (ROADMAP §5)
 [2026-05-28T22:21:49+00:00] DONE: - [ ] 6. Remove the right context rail (ROADMAP §6)
 [2026-05-28T22:28:22+00:00] DONE: - [ ] 7. In-chat file upload (+ in composer) (ROADMAP §7)
+[2026-05-28T22:35:23+00:00] DONE: - [ ] 8. Premium visual refresh of the chat surface (ROADMAP §8)

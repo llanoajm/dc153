@@ -1,5 +1,5 @@
-## Current item (from LOOP_QUEUE.md line 46)
-- [x] 5. Left sidebar: {single Network, Chats, profile} (ROADMAP §5)
+## Current item (from LOOP_QUEUE.md line 53)
+- [x] 6. Remove the right context rail (ROADMAP §6)
 
 ## Attempt
 1 of 5
@@ -35,6 +35,6 @@
 - If an item's acceptance cannot be met safely under these constraints, set its line in LOOP_QUEUE.md to `[!]` and record why in LOOP_ALERTS.md — do not force it or weaken the guardrails.
 
 STATUS: done
-SUMMARY: Reworked the left rail into {single Network, Chats history + new-chat, profile menu with account + Sign out at bottom-left}, removed the header logout, and wired chat reopen via ?chat/?new.
-ACCEPTANCE: PASS — sidebar shows single network at top, chat-history list with a new-chat (+) button, and a bottom-left profile circle whose menu holds account + Sign out; PASS — header logout removed (app/app/layout.tsx header now only has lockup + OrgSwitcher; grep shows no header signout); PASS — `npx tsc --noEmit` exit 0; PASS — Playwright spec (zz-logout.spec.ts) asserts Sign out is absent from the header and reachable from the bottom-left "Account menu" (spec is the deliverable; not browser-run here per the :3000 guardrail — live run + premium-feel visual review deferred to human, noted in LOOP_JOURNAL.md). Bonus: npm run test:unit 24/24 (added listMyChats coverage).
+SUMMARY: Removed the right context rail — deleted components/shell/RightRail.tsx and its WorkspaceShell usage so the chat reflows to fill the center (REDESIGN §6).
+ACCEPTANCE: PASS — `grep -rn RightRail components app` returns nothing (file + import + render gone, plus the now-unused rightCollapsed state). PASS — layout reflows with no empty reserved column (CenterTabs is flex-1, expands to the freed width); `npx tsc --noEmit` exit 0 and `npm run test:unit` 24/24. DEFERRED (human) — the Playwright snapshot of `/app` showing chat centered is left to human review per the no-browser-against-:3000 guardrail; no test referenced the right rail so no spec change was needed.
 VERIFIED: yes

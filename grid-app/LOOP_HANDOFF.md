@@ -1,5 +1,5 @@
-## Current item (from LOOP_QUEUE.md line 66)
-- [x] 8. Premium visual refresh of the chat surface (ROADMAP §8)
+## Current item (from LOOP_QUEUE.md line 72)
+- [ ] 9. Workspace gallery at /app (ROADMAP §9)
 
 ## Attempt
 1 of 5
@@ -35,7 +35,6 @@
 - If an item's acceptance cannot be met safely under these constraints, set its line in LOOP_QUEUE.md to `[!]` and record why in LOOP_ALERTS.md — do not force it or weaken the guardrails.
 
 STATUS: done
-SUMMARY: Restyled the chat surface (centered empty state with suggested prompts, plain-text assistant turns + ink user bubbles, single focused composer pill) using only existing CSS vars/fonts; tool-call cards unaffected.
-ACCEPTANCE: PASS — chat page (message rows, empty state, composer) restyled to a clean modern layout and tool-call cards still render correctly (rendered unchanged in the full-width assistant column via ToolCallCard/BaseCard); `npx tsc --noEmit` passes and `npm run test:unit` is 34/34. PENDING (by design, not run in-loop per guardrails) — the "premium feel" is a visual criterion deferred to human review; noted in LOOP_JOURNAL.md with the specific things to eyeball and the deferred empty/populated Playwright snapshot specs as the review artifact. No browser was run against :3000.
-
+SUMMARY: Added the workspace gallery at /app (cards from the workspaces table + a New-workspace card) and moved the chat to /app/w/[id], with a pathname-aware chrome split and a workspaces DB/API layer.
+ACCEPTANCE: PASS — /app lists the user's workspaces as cards (lib/workspaces.listMyWorkspaceCards via GET /api/workspaces, RLS-scoped) with cover/name/grid/focus-chips/last-activity; the "+" New-workspace card opens the wizard route /app/new (placeholder until item 10); a card opens /app/w/[id] (the workspace chat). PASS — `npx tsc --noEmit` exit 0 and `npm run test:unit` 34/34. Deferred to human review (not loop-verifiable per guardrails): the inherently-visual gallery/chat look, and that migration 0001 + the item-2 backfill must be applied to the live Supabase DB before real cards appear / /app/w/[id] resolves (pre-migration it degrades to just the New-workspace card and clean 404s). Out-of-loop demo recordings (tests/demos) need re-recording for the new /app IA.
 VERIFIED: yes

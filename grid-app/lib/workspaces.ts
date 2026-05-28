@@ -1,23 +1,23 @@
 import "server-only"
 import { createClient } from "@/lib/supabase/server"
+import {
+  createWorkspaceWith,
+  type Workspace,
+  type CreateWorkspaceCoreInput,
+} from "@/lib/workspaces-store"
 
 // Workspace DB-access (WORKSPACE_REDESIGN.md §3–§5). A Workspace anchors a
 // single primary network (the permanent answer to "which network?") plus an
 // intent (focus tags) and its chats/objectives/runs/plans. The `workspaces`
 // table is added in supabase/migrations/0001_workspaces.sql; these helpers are
 // RLS-scoped via the per-request user client (own personal + member-org rows).
+//
+// The pure/injectable insert core + the focus-tag catalog live in
+// lib/workspaces-store.ts (no `server-only`, so it's unit-testable); this module
+// adds the RLS-checked createClient()-backed wrappers the routes call.
 
-export interface Workspace {
-  id: string
-  user_id: string | null
-  org_id: string | null
-  name: string
-  focus: string[]
-  primary_network_id: string | null
-  cover_image_url: string | null
-  created_at: string
-  updated_at: string
-}
+export type { Workspace } from "@/lib/workspaces-store"
+export { FOCUS_TAGS, sanitizeFocus, type FocusTag } from "@/lib/workspaces-store"
 
 // A workspace plus the resolved name of its primary network, for the gallery
 // cards (avoids the client doing a second lookup per card).
@@ -123,21 +123,14 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<Work
   } = await supabase.auth.getUser()
   if (!user) throw new Error("unauthorized")
 
-  const row = {
-    // Exactly one owner kind (the table's check constraint): org-owned when an
-    // org is given, else personal.
-    user_id: input.org_id ? null : user.id,
-    org_id: input.org_id ?? null,
-    name: input.name.trim() || "Untitled workspace",
-    focus: input.focus ?? [],
+  const coreInput: CreateWorkspaceCoreInput = {
+    name: input.name,
+    user_id: user.id,
+    focus: input.focus,
     primary_network_id: input.primary_network_id ?? null,
     cover_image_url: input.cover_image_url ?? null,
+    org_id: input.org_id ?? null,
   }
-  const { data, error } = await supabase
-    .from("workspaces")
-    .insert(row)
-    .select()
-    .single()
-  if (error) throw new Error(error.message)
-  return normalizeWorkspace(data as Record<string, unknown>)
+  const created = await createWorkspaceWith(supabase as never, coreInput)
+  return normalizeWorkspace(created as unknown as Record<string, unknown>)
 }

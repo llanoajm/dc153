@@ -12,18 +12,6 @@
   padding: clamp(80px, 10vh, 140px) clamp(32px, 7vw, 140px);
   --p1: 0;
   --p2: 0;
-  --p3: 0;
-}
-
-.label {
-  font-family: var(--font-grotesk), 'Helvetica Neue', Arial, sans-serif;
-  font-size: clamp(13px, 1vw, 16px);
-  font-weight: 500;
-  letter-spacing: 0.18em;
-  color: #000066;
-  margin-bottom: clamp(20px, 2.6vw, 36px);
-  display: block;
-  font-feature-settings: 'tnum';
 }
 
 .title {
@@ -61,16 +49,7 @@
   line-height: 1.5;
   margin: 0;
   max-width: 620px;
-  color: transparent;
-  background-image: linear-gradient(
-    to right,
-    #2a2f33 calc(var(--p3) * 100%),
-    rgba(42, 47, 51, 0.18) calc(var(--p3) * 100%)
-  );
-  background-clip: text;
-  -webkit-background-clip: text;
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
+  color: #2a2f33;
 }
 
 @media (max-width: 768px) {

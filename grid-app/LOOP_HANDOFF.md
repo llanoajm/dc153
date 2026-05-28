@@ -1,5 +1,5 @@
-## Current item (from LOOP_QUEUE.md line 32)
-- [x] 3. ensureWorkspace(workspaceId) + per-workspace dir (ROADMAP §3)
+## Current item (from LOOP_QUEUE.md line 39)
+- [x] 4. Chat persistence + chats store (ROADMAP §4)
 
 ## Attempt
 1 of 5
@@ -35,7 +35,7 @@
 - If an item's acceptance cannot be met safely under these constraints, set its line in LOOP_QUEUE.md to `[!]` and record why in LOOP_ALERTS.md — do not force it or weaken the guardrails.
 
 STATUS: done
-SUMMARY: Added lib/workspace.ts with ensureWorkspace(workspaceId) (per-workspace dir + .steinmetz/workspace.json primary-network record) reusing an extracted materializeWorkspaceDir, and threaded an optional workspaceId through lib/opencode-client.ts so sessions can open with cwd = the workspace dir; legacy per-user path unchanged.
-NEXT_STEPS:
-ACCEPTANCE: PASS — lib/workspace.ts exports ensureWorkspace(workspaceId) returning grid-workspaces/<id>/ and materializes .opencode/, features/, venv via the shared materializeWorkspaceDir, recording the primary network in .steinmetz/workspace.json (read/write/setPrimaryNetwork helpers). PASS — opencode session creation/getMessages/sendPrompt/abortSession accept a workspaceId and open with cwd = that dir (resolveWorkspaceDir in lib/opencode-client.ts); no call site passes it yet so the per-user flow is byte-identical. PASS — `npx tsc --noEmit` exit 0 and the existing per-user path (ensureUserWorkspace) still compiles; `npm run test:unit` 13/13. Note: per-workspace re-keying of Linux-account/cgroup hardening (§4.4) is intentionally deferred (gates off in dev) — ensureWorkspace does dir bootstrap + meta only.
+SUMMARY: Added a durable per-workspace chats store (0002_chats.sql + lib/chats-store.ts/chats.ts + GET/POST /api/chats) that persists a chat on first message mapping workspace→opencode session id + title, with a create→list→reopen unit test.
+NEXT_STEPS: Item 5 (left sidebar) consumes this store: GET /api/chats?workspace_id= for the history list, new-chat button creates a fresh session, opening a chat loads its messages via the chat's session_id (existing /api/opencode/session/[id]/message). Human must paste migrations 0001 then 0002 into Supabase before /api/chats is live.
+ACCEPTANCE: PASS — new supabase/migrations/0002_chats.sql (dedicated `chats` table chosen over kind='chat' artifact; rationale documented in the migration header + journal); first message persists a chat (workspace_id, session_id, derived title, created_at) via app/app/page.tsx → POST /api/chats. PASS — GET /api/chats?workspace_id= lists a workspace's chats; GET /api/chats/[id] returns the reopen handle (session_id) and the client reloads messages via the existing session message route. PASS — `npx tsc --noEmit` exit 0 and `npm run test:unit` 23/23 (10 new in tests/unit/chats-store.test.mjs cover create→list→reopen of the store layer). SQL parse-checked with pglast (13/135/148 statements); NOT applied to the live DB per guardrails.
 VERIFIED: yes

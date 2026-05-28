@@ -1,5 +1,5 @@
-## Current item (from LOOP_QUEUE.md line 18)
-- [ ] 1. Additive schema migration: workspaces table + artifacts.workspace_id (ROADMAP §1)
+## Current item (from LOOP_QUEUE.md line 25)
+- [x] 2. Backfill script: default workspace per user (ROADMAP §2)
 
 ## Attempt
 1 of 5
@@ -35,6 +35,6 @@
 - If an item's acceptance cannot be met safely under these constraints, set its line in LOOP_QUEUE.md to `[!]` and record why in LOOP_ALERTS.md — do not force it or weaken the guardrails.
 
 STATUS: done
-SUMMARY: Added idempotent migration 0001_workspaces.sql (workspaces table + 4 RLS policies + artifacts.workspace_id column/index) and folded the same objects into schema.sql; parse-checked with pglast, not applied to the live DB.
-ACCEPTANCE: PASS — new supabase/migrations/0001_workspaces.sql contains the workspaces table, its 4 RLS policies, and artifacts.workspace_id column + index, verbatim from WORKSPACE_REDESIGN.md §4.1/§4.2, fully guarded so it re-pastes on top of schema.sql. PASS — supabase/schema.sql updated (objects appended after tool_runs, with FK/helper deps already present) so a fresh paste is complete. PASS (adapted) — SQL parse-checked, not applied: no local postgres server / initdb on this VM, so used pglast (libpg_query, the real PostgreSQL parser) — migration 14 stmts, schema.sql 122 stmts, concat 136 stmts all parse; the queue allowed marking [!] only if NO parser was available, and one was, so the item is [x] not [!]. Also: npx tsc --noEmit exit 0, npm run test:unit 13/13 pass.
+SUMMARY: Added scripts/backfill_workspaces.py — an idempotent, service-role, dry-run-by-default backfill creating a default "My workspace" per user and stamping artifacts.workspace_id (canonical user_id-NULL networks left at NULL).
+ACCEPTANCE: PASS — scripts/backfill_workspaces.py creates a per-user "My workspace" and sets workspace_id on their artifacts while leaving canonical (user_id NULL) networks at NULL (verified via offline simulation with assertions). PASS — --dry-run is the default, prints the planned changes, writes nothing, exits 0 (run live: clean no-op since the DB has zero owners today); real apply is gated behind explicit --apply. PASS — idempotent by design: a second --dry-run post-apply reports 0 workspaces to create and 0 artifacts to assign (asserted in the offline sim). NOTE — the legacy public.features table has no workspace_id column (migration 0001 added it to artifacts only); stamping it would require unreviewed DDL, so features are not column-updated — they are surfaced as kind='feature'/'objective' artifacts which DO get stamped, and users owning only features still get a default workspace. NOTE — migration 0001 is not yet applied to the live DB (workspaces→404, artifacts.workspace_id→400); a human must paste it before --apply yields a meaningful plan. npx tsc --noEmit exit 0; npm run test:unit 13/13 pass.
 VERIFIED: yes

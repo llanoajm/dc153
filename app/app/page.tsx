@@ -1,6 +1,7 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { ToolCallCard } from "@/components/chat/ToolCallCard"
 import type { ToolPart, ToolState } from "@/components/chat/cards/types"
 
@@ -69,6 +70,20 @@ function splitNetworkContext(
 // ---------- chat ----------
 
 export default function ChatPage() {
+  // useSearchParams (reads ?chat / ?new from the sidebar) must sit under a
+  // Suspense boundary to stay build-safe.
+  return (
+    <Suspense fallback={null}>
+      <ChatPageInner />
+    </Suspense>
+  )
+}
+
+function ChatPageInner() {
+  const searchParams = useSearchParams()
+  const chatParam = searchParams.get("chat")
+  const newParam = searchParams.get("new")
+
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [messages, setMessages] = useState<UiMessage[]>([])
   const messagesRef = useRef<UiMessage[]>([])
@@ -150,12 +165,54 @@ export default function ChatPage() {
     }
   }, [])
 
-  // Create the session on mount.
+  // Reopen a past chat (sidebar → /app?chat=<id>): fetch its opencode
+  // session id and adopt it instead of bootstrapping a fresh one. The initial
+  // message backfill + SSE effects below key off sessionId, so they reload the
+  // transcript automatically once it's set.
+  const reopenChat = useCallback(
+    async (chatId: string, signal?: AbortSignal) => {
+      setBootstrapping(true)
+      setError(null)
+      try {
+        const r = await fetch(`/api/chats/${chatId}`, { signal })
+        const data = await r
+          .json()
+          .catch(() => ({}) as { session_id?: string; error?: string })
+        if (signal?.aborted) return
+        if (!r.ok || data.error || !data.session_id) {
+          setError(data.error ?? `could not open chat: HTTP ${r.status}`)
+          return
+        }
+        chatIdRef.current = chatId
+        setMessages([])
+        messageIndex.current = new Map()
+        setSessionId(data.session_id)
+      } catch (e) {
+        if ((e as { name?: string }).name === "AbortError") return
+        setError(String(e))
+      } finally {
+        if (!signal?.aborted) setBootstrapping(false)
+      }
+    },
+    [],
+  )
+
+  // On mount / when the sidebar changes the ?chat or ?new param: reopen the
+  // requested chat, or start a fresh session otherwise.
   useEffect(() => {
     const ac = new AbortController()
-    bootstrapSession(ac.signal)
+    if (chatParam) {
+      void reopenChat(chatParam, ac.signal)
+    } else {
+      // Fresh chat (default, or explicit ?new=1): clear any prior reopened
+      // chat handle so the next first message persists a new row.
+      chatIdRef.current = null
+      bootstrapSession(ac.signal)
+    }
     return () => ac.abort()
-  }, [bootstrapSession])
+    // newParam is included so clicking "New chat" while already on a fresh
+    // session still re-bootstraps a brand-new session.
+  }, [bootstrapSession, reopenChat, chatParam, newParam])
 
   // Initial backfill: GET existing messages so reloads aren't blank. Then
   // open the SSE stream.

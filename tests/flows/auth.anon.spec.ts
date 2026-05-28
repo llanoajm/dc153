@@ -68,7 +68,9 @@ test.describe("auth (signed out)", () => {
     await page.getByLabel("Password").fill(password)
     await page.getByRole("button", { name: /sign in/i }).click()
     await page.waitForURL(/\/app(\/|$)/, { timeout: 30_000 })
-    // The authed header includes a Sign out button.
+    // Redesign §5: Sign out moved into the bottom-left profile menu (no longer
+    // in the header). Opening the profile circle reveals it.
+    await page.getByRole("button", { name: /account menu/i }).click()
     await expect(page.getByRole("button", { name: /sign out/i })).toBeVisible()
   })
 })

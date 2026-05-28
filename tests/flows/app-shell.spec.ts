@@ -7,20 +7,22 @@ import { test, expect } from "@playwright/test"
 test.describe("app shell (logged in)", () => {
   test("/app renders the workspace shell with rail + chat tab", async ({ page }) => {
     await page.goto("/app")
-    await expect(page.getByRole("button", { name: /sign out/i })).toBeVisible()
-    // Rail entries (LeftRail) — match a couple of stable labels.
-    await expect(page.getByRole("button", { name: /networks/i }).first()).toBeVisible()
-    await expect(page.getByRole("button", { name: /runs/i }).first()).toBeVisible()
-    // Chat textarea is the default tab content. Placeholder is
-    // "Describe a feature… ('add a nitrogen-emissions objective', etc.)"
-    // once the session has been minted, or "Loading…" before that.
-    await expect(page.getByPlaceholder(/describe a feature|loading/i).first()).toBeVisible({
+    // Redesign §5: the rail leads with the single Network + a Chats history;
+    // the account/Sign out live behind the bottom-left profile menu.
+    await expect(page.getByRole("button", { name: /account menu/i })).toBeVisible()
+    await expect(page.getByText(/^network$/i).first()).toBeVisible()
+    await expect(page.getByText(/^chats$/i).first()).toBeVisible()
+    // Chat textarea is the default tab content; placeholder is the agent prompt
+    // once the session is minted, or "Loading…" before that.
+    await expect(page.getByPlaceholder(/ask the agent|loading/i).first()).toBeVisible({
       timeout: 15_000,
     })
   })
 
   test("rail item Networks routes to /app/networks and back", async ({ page }) => {
     await page.goto("/app")
+    // Secondary sections live under the collapsed "More" group now.
+    await page.getByRole("button", { name: /^more$/i }).click()
     await page.getByRole("button", { name: /^networks$/i }).first().click()
     await page.waitForURL(/\/app\/networks$/)
     await expect(page.locator("main, body").first()).toBeVisible()
@@ -28,6 +30,7 @@ test.describe("app shell (logged in)", () => {
 
   test("rail item Runs routes to /app/runs", async ({ page }) => {
     await page.goto("/app")
+    await page.getByRole("button", { name: /^more$/i }).click()
     await page.getByRole("button", { name: /^runs$/i }).first().click()
     await page.waitForURL(/\/app\/runs$/)
   })

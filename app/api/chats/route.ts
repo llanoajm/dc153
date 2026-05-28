@@ -1,9 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import { createChat, listChats } from "@/lib/chats"
+import { createChat, listChats, listMyChats } from "@/lib/chats"
 
-// GET /api/chats?workspace_id=<uuid>
-//   Lists a workspace's chats (most-recent first) for the sidebar history.
+// GET /api/chats[?workspace_id=<uuid>]
+//   With workspace_id: lists that workspace's chats (most-recent first).
+//   Without it: lists all of the caller's chats (RLS-scoped) — the sidebar
+//   history uses this before a workspace is bound (REDESIGN items 9-10).
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
   const {
@@ -12,11 +14,8 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
 
   const workspaceId = req.nextUrl.searchParams.get("workspace_id")
-  if (!workspaceId) {
-    return NextResponse.json({ error: "missing workspace_id" }, { status: 400 })
-  }
   try {
-    const chats = await listChats(workspaceId)
+    const chats = workspaceId ? await listChats(workspaceId) : await listMyChats()
     return NextResponse.json(chats)
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 })

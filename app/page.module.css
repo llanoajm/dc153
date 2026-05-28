@@ -324,7 +324,7 @@
   height: clamp(22px, 2.4vw, 28px);
   display: block;
   transform: rotate(5deg);
-  filter: url(#blackToLightGray);
+  filter: url(#blackToApricot);
   flex-shrink: 0;
 }
 

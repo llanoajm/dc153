@@ -18,13 +18,13 @@ export default function HomePage() {
                     0 0 0 1 0"
           />
         </filter>
-        <filter id="blackToLightGray" colorInterpolationFilters="sRGB">
+        <filter id="blackToApricot" colorInterpolationFilters="sRGB">
           <feColorMatrix
             type="matrix"
-            values="0.25 0 0 0 0.75
-                    0 0.25 0 0 0.75
-                    0 0 0.25 0 0.75
-                    0 0 0 1 0"
+            values="0    0     0     0 1.0
+                    0    0.176 0     0 0.824
+                    0    0     0.349 0 0.651
+                    0    0     0     1 0"
           />
         </filter>
       </svg>

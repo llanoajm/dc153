@@ -322,8 +322,9 @@
 .footerMark {
   width: auto;
   height: clamp(22px, 2.4vw, 28px);
-  color: #ffffff;
+  display: block;
   transform: rotate(5deg);
+  filter: url(#blackToOffwhite);
   flex-shrink: 0;
 }
 

@@ -36,22 +36,13 @@ const SOLAR = [
   'M 230,196 L 230.1,196 L 230.1,196.1 Z',
 ]
 
-const WINDMILL = [
-  'M 224,382 L 236,382 L 233,156 L 227,156 Z',
-  'M 224,150 L 236,150 L 232,42 L 228,42 Z',
-  'M 227,144.8 L 233,155.2 L 137.5,205.7 L 135.5,202.3 Z',
-  'M 227,155.2 L 233,144.8 L 324.5,202.3 L 322.5,205.7 Z',
-]
-
-const ALL_SHAPES = [CUBE, SOLAR, CUBE, WINDMILL]
+const ALL_SHAPES = [CUBE, SOLAR]
 const N_PATHS = 4
 const N_SHAPES = ALL_SHAPES.length
 
 const MODEL_URLS = [
   null,
   '/models/solar.glb',
-  null,
-  '/models/windturbine.glb',
 ]
 
 const T_MORPH = 1.5
@@ -61,7 +52,7 @@ const T_SVG_PHASE = T_MORPH + T_HOLD
 const T_3D_PHASE = T_MORPH + T_SPIN + 0.4
 
 function phaseDur(s: number) {
-  return MODEL_URLS[s] === null ? T_SVG_PHASE : T_3D_PHASE
+  return s === 0 ? T_SVG_PHASE : T_3D_PHASE
 }
 
 let TOTAL = 0
@@ -222,7 +213,7 @@ export default function HeroAnimation() {
       }
       const local = t - PHASE_STARTS[shapeIdx]
       const prevIdx = (shapeIdx - 1 + N_SHAPES) % N_SHAPES
-      const isModel = MODEL_URLS[shapeIdx] !== null
+      const isModel = shapeIdx > 0
 
       // Split the morph into path-shape and dot-fill stages so the SVG resembles
       // the dotted 3D before the hand-off (forward), and simplifies first on the

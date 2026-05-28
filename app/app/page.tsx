@@ -35,6 +35,37 @@ interface UiMessage {
   partIndex: Map<string, number>
 }
 
+interface NetworkOption {
+  id: string
+  name: string
+  status: string
+}
+
+// ---------- active-network context ----------
+// The chat has no implicit "current network": solve_opf needs a network
+// artifact uuid. When the user picks one in the composer we prepend a compact
+// context line to the prompt so the agent defaults to it (and can pass the id
+// straight to solve_opf without calling list_networks). The same marker is
+// stripped back out for display so the transcript shows a tidy "on <network>"
+// chip instead of the raw preamble.
+const NETWORK_CTX_PREFIX = "[active-network]"
+const ACTIVE_NETWORK_STORAGE_KEY = "steinmetz.activeNetworkId"
+const NETWORK_CTX_RE =
+  /^\[active-network\] "(.+?)" \(network_artifact_id: ([0-9a-fA-F-]{36})\)[^\n]*\n\n([\s\S]*)$/
+
+function buildNetworkContext(name: string, id: string): string {
+  return `${NETWORK_CTX_PREFIX} "${name}" (network_artifact_id: ${id}) — use this network for any solve or analysis unless I specify another.`
+}
+
+function splitNetworkContext(
+  text: string,
+): { networkName: string; body: string } | null {
+  if (!text.startsWith(NETWORK_CTX_PREFIX)) return null
+  const m = text.match(NETWORK_CTX_RE)
+  if (!m) return null
+  return { networkName: m[1], body: m[3] }
+}
+
 // ---------- chat ----------
 
 export default function ChatPage() {
@@ -47,7 +78,44 @@ export default function ChatPage() {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [bootstrapping, setBootstrapping] = useState(true)
+  const [networks, setNetworks] = useState<NetworkOption[]>([])
+  const [activeNetworkId, setActiveNetworkId] = useState<string | null>(null)
   const messagesEnd = useRef<HTMLDivElement>(null)
+
+  // Load the networks the user can see for the composer picker, and restore
+  // the last selection if that network still exists.
+  useEffect(() => {
+    let aborted = false
+    ;(async () => {
+      try {
+        const r = await fetch("/api/artifacts?kind=network&limit=200")
+        if (!r.ok) return
+        const rows: Array<{ id: string; name: string; status: string }> = await r.json()
+        if (aborted) return
+        const opts = rows.map((a) => ({ id: a.id, name: a.name, status: a.status }))
+        setNetworks(opts)
+        const saved = localStorage.getItem(ACTIVE_NETWORK_STORAGE_KEY)
+        if (saved && opts.some((o) => o.id === saved)) setActiveNetworkId(saved)
+      } catch {
+        // non-fatal: the picker just shows empty and the agent falls back to
+        // list_networks / asking.
+      }
+    })()
+    return () => {
+      aborted = true
+    }
+  }, [])
+
+  const onPickNetwork = useCallback((id: string) => {
+    const next = id || null
+    setActiveNetworkId(next)
+    try {
+      if (next) localStorage.setItem(ACTIVE_NETWORK_STORAGE_KEY, next)
+      else localStorage.removeItem(ACTIVE_NETWORK_STORAGE_KEY)
+    } catch {
+      // localStorage unavailable (private mode) — selection still works in-memory.
+    }
+  }, [])
 
   // Keep a ref in lockstep so the SSE handler can mutate without stale closures.
   useEffect(() => {
@@ -267,7 +335,9 @@ export default function ChatPage() {
     async (e: React.FormEvent) => {
       e.preventDefault()
       if (!input.trim() || !sessionId || pending) return
-      const text = input.trim()
+      const raw = input.trim()
+      const active = networks.find((n) => n.id === activeNetworkId)
+      const text = active ? `${buildNetworkContext(active.name, active.id)}\n\n${raw}` : raw
       setInput("")
       setPending(true)
       setError(null)
@@ -289,7 +359,7 @@ export default function ChatPage() {
         setPending(false)
       }
     },
-    [input, sessionId, pending],
+    [input, sessionId, pending, networks, activeNetworkId],
   )
 
   const hasAnyRenderableContent = useMemo(
@@ -298,16 +368,39 @@ export default function ChatPage() {
   )
 
   return (
-    <div className="h-full flex flex-col max-w-3xl mx-auto w-full">
-      <div className="flex-1 overflow-y-auto px-6 py-8 space-y-6">
+    <div
+      className="h-full flex flex-col max-w-3xl mx-auto w-full"
+      style={{ background: "var(--bg-app)" }}
+    >
+      <div className="flex-1 overflow-y-auto px-6 py-8 space-y-5">
         {!hasAnyRenderableContent && !pending ? (
-          <div className="text-center text-sm font-serif-soft mt-24">
-            <p className="text-base text-black/60">
+          <div className="mt-24 mx-auto max-w-md">
+            <p
+              className="label-eyebrow"
+              style={{ color: "var(--navy-pop)", marginBottom: 10 }}
+            >
+              Steinmetz Studio
+            </p>
+            <p
+              style={{
+                fontFamily: "var(--font-sora)",
+                fontSize: 14,
+                lineHeight: 1.55,
+                color: "var(--fg-mute)",
+              }}
+            >
               {sessionId
                 ? "Describe what you want — an objective, a constraint, an analysis. The agent will build it in your workspace."
                 : "Preparing your workspace…"}
             </p>
-            {error && sessionId ? <p className="text-red-600 mt-3">{error}</p> : null}
+            {error && sessionId ? (
+              <p
+                className="font-mono"
+                style={{ fontSize: 11, color: "var(--err)", marginTop: 12 }}
+              >
+                {error}
+              </p>
+            ) : null}
           </div>
         ) : null}
         {messages.map((m) => (
@@ -315,48 +408,156 @@ export default function ChatPage() {
         ))}
         {pending ? (
           <div className="max-w-[85%]">
-            <div className="px-4 py-3 text-sm bg-black/[0.04] text-black/60">Working…</div>
+            <span
+              className="chat-msg-role"
+              style={{ marginBottom: 4, display: "block" }}
+            >
+              Agent
+            </span>
+            <span
+              style={{
+                fontFamily: "var(--font-sora)",
+                fontSize: 12,
+                fontStyle: "italic",
+                color: "var(--fg-mute-4)",
+              }}
+            >
+              thinking…
+            </span>
           </div>
         ) : null}
         {error && hasAnyRenderableContent ? (
-          <div className="text-xs text-red-600 font-mono">{error}</div>
+          <div className="error-toast inline-block">{error}</div>
         ) : null}
         <div ref={messagesEnd} />
       </div>
       {!sessionId && error ? (
         <div
           role="alert"
-          className="border-t border-red-300 bg-red-50 px-4 py-3 flex items-start justify-between gap-3"
+          className="px-4 py-3 flex items-start justify-between gap-3"
+          style={{
+            background: "var(--err-bg)",
+            borderTop: "1px solid var(--err-border)",
+          }}
         >
-          <div className="text-sm text-red-700">
-            <p className="font-mark tracking-wider text-xs uppercase">Chat is offline</p>
-            <p className="mt-1 font-mono text-[12px] break-words">{error}</p>
+          <div style={{ color: "var(--err-fg)" }}>
+            <p
+              className="font-mark"
+              style={{ fontSize: 11, letterSpacing: "var(--track-nav)" }}
+            >
+              Chat is offline
+            </p>
+            <p
+              className="font-mono mt-1 break-words"
+              style={{ fontSize: 12 }}
+            >
+              {error}
+            </p>
           </div>
           <button
             type="button"
             onClick={() => bootstrapSession()}
             disabled={bootstrapping}
-            className="shrink-0 border border-red-700 text-red-700 px-3 py-1 text-xs font-mark tracking-wider disabled:opacity-40"
+            className="shrink-0 px-3 py-1 font-mark disabled:opacity-40"
+            style={{
+              fontSize: 11,
+              letterSpacing: "var(--track-nav)",
+              color: "var(--err-fg)",
+              border: "1px solid var(--err-border)",
+              borderRadius: "var(--r-2)",
+              background: "var(--bg-card)",
+            }}
           >
             {bootstrapping ? "Retrying…" : "Retry"}
           </button>
         </div>
       ) : null}
-      <form onSubmit={onSubmit} className="border-t border-black/10 p-4">
-        <div className="flex gap-2">
+      <form
+        onSubmit={onSubmit}
+        className="p-4"
+        style={{
+          background: "var(--bg-card)",
+          borderTop: "1px solid var(--bor-1)",
+        }}
+      >
+        <div className="flex items-center gap-2 mb-2">
+          <label
+            htmlFor="active-network"
+            className="font-mark"
+            style={{
+              fontSize: 10,
+              letterSpacing: "var(--track-meta)",
+              textTransform: "uppercase",
+              color: "var(--fg-mute-4)",
+            }}
+          >
+            Network
+          </label>
+          <select
+            id="active-network"
+            value={activeNetworkId ?? ""}
+            onChange={(e) => onPickNetwork(e.target.value)}
+            className="px-2 py-1 outline-none"
+            style={{
+              fontFamily: "var(--font-jetbrains)",
+              fontSize: 11,
+              color: "var(--ink-app)",
+              background: "var(--bg-card)",
+              border: "1px solid var(--bor-3)",
+              borderRadius: "var(--r-2)",
+              maxWidth: 320,
+            }}
+          >
+            <option value="">— none (agent will ask) —</option>
+            {networks.map((n) => (
+              <option key={n.id} value={n.id}>
+                {n.name}
+                {n.status !== "canonical" && n.status !== "ready" ? ` · ${n.status}` : ""}
+              </option>
+            ))}
+          </select>
+          {networks.length === 0 ? (
+            <span
+              style={{
+                fontFamily: "var(--font-jetbrains)",
+                fontSize: 10.5,
+                color: "var(--fg-mute-4)",
+              }}
+            >
+              no networks yet — add one in Networks
+            </span>
+          ) : null}
+        </div>
+        <div className="flex gap-2 items-stretch">
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={
               sessionId
-                ? "Describe a feature… ('add a nitrogen-emissions objective', etc.)"
+                ? "Ask the agent — describe an objective, a constraint, or an analysis"
                 : error
                   ? "Chat is offline — see error above"
                   : "Loading…"
             }
             disabled={!sessionId || pending}
             rows={3}
-            className="flex-1 border border-black/20 focus:border-black px-3 py-2 outline-none text-sm font-sans resize-none"
+            className="flex-1 outline-none resize-none px-3 py-2"
+            style={{
+              fontFamily: "var(--font-sora)",
+              fontSize: 13,
+              lineHeight: 1.5,
+              color: "var(--ink-app)",
+              background: "var(--bg-card)",
+              border: "1px solid var(--bor-3)",
+              borderRadius: "var(--r-3)",
+              transition: "border-color var(--t-input)",
+            }}
+            onFocus={(e) =>
+              (e.currentTarget.style.borderColor = "var(--ink-app)")
+            }
+            onBlur={(e) =>
+              (e.currentTarget.style.borderColor = "var(--bor-3)")
+            }
             onKeyDown={(e) => {
               if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault()
@@ -367,13 +568,30 @@ export default function ChatPage() {
           <button
             type="submit"
             disabled={!sessionId || pending || !input.trim()}
-            className="bg-black text-white px-5 text-sm font-mark tracking-wider disabled:opacity-40"
+            className="font-mark px-5 disabled:opacity-40"
+            style={{
+              fontSize: 11,
+              letterSpacing: "var(--track-meta)",
+              background: "var(--ink-app)",
+              color: "var(--bg-card)",
+              borderRadius: "var(--r-2)",
+              transition: "background var(--t-hover)",
+            }}
           >
             Send
           </button>
         </div>
-        <p className="mt-2 text-[11px] font-serif-soft">
-          ⌘/Ctrl+Enter to send. Agent runs on Claude Sonnet via OpenRouter.
+        <p
+          className="mt-2 flex items-center gap-2"
+          style={{
+            fontFamily: "var(--font-jetbrains)",
+            fontSize: 10.5,
+            color: "var(--fg-mute-4)",
+          }}
+        >
+          <span className="mono-kbd">⌘</span>
+          <span className="mono-kbd">⏎</span>
+          <span>to send · agent runs on Claude Sonnet via OpenRouter</span>
         </p>
       </form>
     </div>
@@ -386,9 +604,15 @@ function MessageBlock({ message }: { message: UiMessage }) {
   const role = message.info.role
   const parts = message.parts.filter(isRenderablePart)
   if (parts.length === 0) return null
+  const isUser = role === "user"
   return (
-    <div className={`w-full ${role === "user" ? "flex justify-end" : ""}`}>
-      <div className={`${role === "user" ? "max-w-[85%]" : "max-w-full w-full"} space-y-2`}>
+    <div
+      className={`w-full flex flex-col gap-1 ${isUser ? "items-end" : "items-start"}`}
+    >
+      <span className="chat-msg-role">{isUser ? "you" : "agent"}</span>
+      <div
+        className={`${isUser ? "max-w-[85%]" : "max-w-full w-full"} flex flex-col gap-2`}
+      >
         {parts.map((p) => (
           <PartView key={p.id} part={p} role={role} />
         ))}
@@ -401,13 +625,33 @@ function PartView({ part, role }: { part: AnyPart; role: "user" | "assistant" })
   if (part.type === "text") {
     const text = (part as TextPart).text
     if (!text) return null
+    const isUser = role === "user"
+    const ctx = splitNetworkContext(text)
+    const body = ctx ? ctx.body : text
     return (
-      <div
-        className={`px-4 py-3 text-sm whitespace-pre-wrap leading-relaxed ${
-          role === "user" ? "bg-black text-white" : "bg-black/[0.04] text-black"
-        }`}
-      >
-        {text}
+      <div className={`flex flex-col gap-1 ${isUser ? "items-end" : "items-start"}`}>
+        {ctx ? (
+          <span
+            className="font-mono"
+            style={{ fontSize: 10, color: "var(--fg-mute-4)" }}
+          >
+            ↳ on {ctx.networkName}
+          </span>
+        ) : null}
+        <div
+          className="whitespace-pre-wrap"
+          style={{
+            fontFamily: "var(--font-sora)",
+            fontSize: 12.5,
+            lineHeight: 1.5,
+            padding: "8px 12px",
+            borderRadius: "var(--r-4)",
+            background: isUser ? "var(--ink-app)" : "var(--bg-tint-warm)",
+            color: isUser ? "var(--bg-card)" : "var(--ink-app)",
+          }}
+        >
+          {body}
+        </div>
       </div>
     )
   }
@@ -415,9 +659,33 @@ function PartView({ part, role }: { part: AnyPart; role: "user" | "assistant" })
     const text = (part as ReasoningPart).text
     if (!text) return null
     return (
-      <details className="text-[11px] font-serif-soft border-l-2 border-black/15 pl-3 py-1">
-        <summary className="cursor-pointer text-black/50 select-none">reasoning</summary>
-        <div className="mt-1 whitespace-pre-wrap text-black/70">{text}</div>
+      <details
+        className="py-1"
+        style={{
+          fontFamily: "var(--font-sora)",
+          fontSize: 11,
+          borderLeft: "2px solid var(--bor-1)",
+          paddingLeft: 12,
+        }}
+      >
+        <summary
+          className="cursor-pointer select-none"
+          style={{
+            color: "var(--fg-mute-4)",
+            textTransform: "uppercase",
+            letterSpacing: "var(--track-pane)",
+            fontSize: 9,
+            fontWeight: 600,
+          }}
+        >
+          reasoning
+        </summary>
+        <div
+          className="mt-1 whitespace-pre-wrap"
+          style={{ color: "var(--fg-mute-2)" }}
+        >
+          {text}
+        </div>
       </details>
     )
   }

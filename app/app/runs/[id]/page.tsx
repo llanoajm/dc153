@@ -18,7 +18,7 @@ export default async function RunPage({
           <div className="text-[11px] font-mark tracking-wider uppercase text-black/50">
             Not a run
           </div>
-          <p className="font-serif-soft text-sm text-black/70">
+          <p className="font-soft text-sm text-black/70">
             Artifact <code className="font-mono">{artifact.id}</code> has kind{" "}
             <code className="font-mono">{artifact.kind}</code>, not <code className="font-mono">run</code>.
           </p>
@@ -41,7 +41,7 @@ export default async function RunPage({
             <div className="text-[11px] font-mark tracking-wider uppercase text-black/50">
               run · {artifact.status}
             </div>
-            <h1 className="font-serif-soft text-2xl mt-1">{artifact.name}</h1>
+            <h1 className="font-soft text-2xl mt-1">{artifact.name}</h1>
             {artifact.slug ? (
               <div className="font-mono text-[11px] text-black/40 mt-1">{artifact.slug}</div>
             ) : null}

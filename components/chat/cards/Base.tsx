@@ -18,46 +18,135 @@ export function BaseCard({ label, state, subtitle, body, defaultExpanded = false
   const [expanded, setExpanded] = useState(defaultExpanded)
   const status = state.status
   return (
-    <div className="border border-black/15 bg-white text-[12px]">
+    <div
+      style={{
+        background: "var(--bg-card)",
+        border: "1px solid var(--bor-1)",
+        borderRadius: "var(--r-2)",
+        fontSize: 12,
+      }}
+    >
       <button
         type="button"
         onClick={() => body && setExpanded((e) => !e)}
         className={`w-full flex items-center gap-2 px-3 py-1.5 text-left ${
-          body ? "cursor-pointer hover:bg-black/[0.03]" : "cursor-default"
+          body ? "cursor-pointer" : "cursor-default"
         }`}
+        style={{ transition: "background var(--t-hover)" }}
+        onMouseEnter={(e) => {
+          if (body) e.currentTarget.style.background = "var(--bg-hairline)"
+        }}
+        onMouseLeave={(e) => {
+          if (body) e.currentTarget.style.background = "transparent"
+        }}
       >
         <StatusDot status={status} />
-        <span className="font-mark text-[10px] tracking-wider text-black/70 shrink-0">{label}</span>
+        <span
+          className="shrink-0"
+          style={{
+            fontFamily: "var(--font-jetbrains)",
+            fontSize: 10.5,
+            fontWeight: 700,
+            color: "var(--ink-app)",
+          }}
+        >
+          {label}
+        </span>
         {subtitle ? (
-          <span className="truncate text-black/80 font-mono text-[11px]" title={typeof subtitle === "string" ? subtitle : undefined}>
+          <span
+            className="truncate"
+            style={{
+              fontFamily: "var(--font-jetbrains)",
+              fontSize: 11,
+              color: "var(--fg-mute-2)",
+            }}
+            title={typeof subtitle === "string" ? subtitle : undefined}
+          >
             {subtitle}
           </span>
         ) : null}
-        <span className="ml-auto text-black/40 text-[10px]">
-          {status === "error" ? "failed" : status === "completed" ? "" : status}
-          {body ? <span className="ml-2">{expanded ? "−" : "+"}</span> : null}
+        <span
+          className="ml-auto"
+          style={{
+            fontFamily: "var(--font-jetbrains)",
+            fontSize: 10.5,
+            color: statusColor(status),
+          }}
+        >
+          {status === "error"
+            ? "failed"
+            : status === "completed"
+              ? "done"
+              : status}
+          {body ? (
+            <span style={{ marginLeft: 8, color: "var(--fg-mute-4)" }}>
+              {expanded ? "−" : "+"}
+            </span>
+          ) : null}
         </span>
       </button>
-      {body && expanded ? <div className="border-t border-black/10 px-3 py-2">{body}</div> : null}
+      {body && expanded ? (
+        <div
+          className="px-3 py-2"
+          style={{ borderTop: "1px solid var(--bor-1)" }}
+        >
+          {body}
+        </div>
+      ) : null}
     </div>
   )
 }
 
+function statusColor(status: ToolStatus): string {
+  switch (status) {
+    case "completed":
+      return "var(--ok)"
+    case "running":
+      return "var(--warn)"
+    case "error":
+      return "var(--err)"
+    default:
+      return "var(--fg-mute-2)"
+  }
+}
+
 function StatusDot({ status }: { status: ToolStatus }) {
-  const color =
-    status === "completed"
-      ? "bg-black"
-      : status === "error"
-        ? "bg-red-600"
-        : status === "running"
-          ? "bg-amber-500 animate-pulse"
-          : "bg-black/30"
-  return <span className={`inline-block w-1.5 h-1.5 rounded-full ${color} shrink-0`} aria-hidden />
+  let bg = "var(--fg-mute-4)"
+  let pulse = false
+  if (status === "completed") bg = "var(--ok)"
+  else if (status === "error") bg = "var(--err)"
+  else if (status === "running") {
+    bg = "var(--warn)"
+    pulse = true
+  }
+  return (
+    <span
+      className={`inline-block shrink-0 ${pulse ? "animate-pulse" : ""}`}
+      style={{
+        width: 6,
+        height: 6,
+        borderRadius: "9999px",
+        background: bg,
+      }}
+      aria-hidden
+    />
+  )
 }
 
 export function Pre({ children }: { children: ReactNode }) {
   return (
-    <pre className="whitespace-pre-wrap font-mono text-[11px] leading-snug text-black/80 max-h-72 overflow-auto">
+    <pre
+      className="whitespace-pre-wrap max-h-72 overflow-auto"
+      style={{
+        fontFamily: "var(--font-jetbrains)",
+        fontSize: 11,
+        lineHeight: 1.45,
+        color: "var(--fg-mute)",
+        background: "var(--bg-hairline)",
+        borderRadius: "var(--r-2)",
+        padding: 8,
+      }}
+    >
       {children}
     </pre>
   )
@@ -65,16 +154,48 @@ export function Pre({ children }: { children: ReactNode }) {
 
 export function KV({ k, v }: { k: string; v: ReactNode }) {
   return (
-    <div className="grid grid-cols-[80px_1fr] gap-2 text-[11px] py-0.5">
-      <span className="font-mark text-[9px] tracking-wider text-black/50">{k}</span>
-      <span className="font-mono text-black/80 break-all">{v}</span>
+    <div
+      className="grid gap-2 py-0.5"
+      style={{ gridTemplateColumns: "80px 1fr" }}
+    >
+      <span
+        style={{
+          fontFamily: "var(--font-sora)",
+          fontSize: 9,
+          fontWeight: 600,
+          textTransform: "uppercase",
+          letterSpacing: "var(--track-pane)",
+          color: "var(--fg-mute-3)",
+        }}
+      >
+        {k}
+      </span>
+      <span
+        className="break-all"
+        style={{
+          fontFamily: "var(--font-jetbrains)",
+          fontSize: 11,
+          color: "var(--ink-app)",
+        }}
+      >
+        {v}
+      </span>
     </div>
   )
 }
 
 export function ErrorBlock({ error }: { error: string }) {
   return (
-    <div className="mt-1 border-l-2 border-red-600 pl-2 text-[11px] text-red-700 font-mono whitespace-pre-wrap">
+    <div
+      className="mt-1 whitespace-pre-wrap"
+      style={{
+        borderLeft: "2px solid var(--err)",
+        paddingLeft: 8,
+        fontFamily: "var(--font-jetbrains)",
+        fontSize: 11,
+        color: "var(--err-fg)",
+      }}
+    >
       {error}
     </div>
   )

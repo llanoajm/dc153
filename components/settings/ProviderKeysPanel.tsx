@@ -98,8 +98,8 @@ export function ProviderKeysPanel({
           <div className="text-[11px] font-mark tracking-wider uppercase text-black/50">
             Account
           </div>
-          <h1 className="font-serif-soft text-2xl mt-1">Settings</h1>
-          <p className="font-serif-soft text-sm text-black/60 mt-2 max-w-prose">
+          <h1 className="font-soft text-2xl mt-1">Settings</h1>
+          <p className="font-soft text-sm text-black/60 mt-2 max-w-prose">
             Provider keys are stored encrypted and used only by your own
             sessions. Until you add one, your sessions bill against the shared
             OpenRouter key in the server&apos;s environment.
@@ -124,7 +124,7 @@ export function ProviderKeysPanel({
               return (
                 <li key={provider} className="p-4 space-y-3">
                   <div className="flex items-baseline gap-3">
-                    <span className="font-serif-soft text-sm">{meta.name}</span>
+                    <span className="font-soft text-sm">{meta.name}</span>
                     <span className="font-mono text-[11px] text-black/40">
                       {provider}
                     </span>
@@ -143,7 +143,7 @@ export function ProviderKeysPanel({
                       </button>
                     </div>
                   ) : (
-                    <div className="text-[12px] font-serif-soft text-black/50">
+                    <div className="text-[12px] font-soft text-black/50">
                       No key set — using shared env key.
                     </div>
                   )}
@@ -171,7 +171,7 @@ export function ProviderKeysPanel({
                       </button>
                     </div>
                     {meta.where ? (
-                      <div className="text-[11px] font-serif-soft text-black/40">
+                      <div className="text-[11px] font-soft text-black/40">
                         {meta.where}
                       </div>
                     ) : null}

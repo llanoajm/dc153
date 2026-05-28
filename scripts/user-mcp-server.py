@@ -200,6 +200,24 @@ def _builtin_tools() -> list[dict]:
             "_builtin": "write_custom_importer",
         },
         {
+            "name": "steinmetz__list_networks",
+            "description": (
+                "List the power-system network artifacts visible to this user: "
+                "the canonical reference networks that ship with Steinmetz plus "
+                "any the user has uploaded or fetched. Returns one entry per "
+                "network with its `id` (the uuid `solve_opf` needs as "
+                "`network_artifact_id`), `name`, `slug`, `status`, and "
+                "bus/line/generator counts when known. Call this FIRST to "
+                "resolve a network the user names in plain language (e.g. 'the "
+                "IEEE 30-bus', 'the German grid') into the artifact id before "
+                "calling solve_opf. If the user's message carries an 'active "
+                "network' context line with a network_artifact_id, use that id "
+                "directly instead."
+            ),
+            "inputSchema": {"type": "object", "properties": {}},
+            "_builtin": "list_networks",
+        },
+        {
             "name": "steinmetz__solve_opf",
             "description": (
                 "Run an OPF dispatch on a network artifact and write a "
@@ -612,6 +630,48 @@ def _solve_via_modal(
     return outcome, pnet, snapshots, "MODAL_GPU", elapsed, extra
 
 
+def _builtin_list_networks() -> str:
+    """List `kind='network'` artifacts this user can see (canonical + own).
+
+    Uses the service-role key (which bypasses RLS), so we re-apply the
+    visibility rule by hand: a network is visible when it has no owner
+    (canonical reference networks, `user_id IS NULL`) or is owned by this
+    user. Org-scoped networks aren't included here yet — the MCP server only
+    knows STEINMETZ_USER_ID, not the user's org memberships."""
+    env = _load_grid_app_env()
+    user_id = os.environ.get("STEINMETZ_USER_ID")
+    rows = (
+        _supabase_request(
+            env,
+            "GET",
+            "artifacts?kind=eq.network"
+            "&select=id,name,slug,status,metadata,user_id"
+            "&order=created_at.asc",
+        )
+        or []
+    )
+    networks: list[dict] = []
+    for r in rows:
+        owner = r.get("user_id")
+        if owner not in (None, user_id):
+            continue
+        meta = r.get("metadata") or {}
+        networks.append(
+            {
+                "id": r.get("id"),
+                "name": r.get("name"),
+                "slug": r.get("slug"),
+                "status": r.get("status"),
+                "pipeline_status": meta.get("pipeline_status"),
+                "buses": meta.get("buses"),
+                "lines": meta.get("lines"),
+                "generators": meta.get("generators"),
+                "canonical": owner is None,
+            }
+        )
+    return json.dumps({"networks": networks}, indent=2)
+
+
 def _builtin_solve_opf(
     network_artifact_id: str,
     hours: int = 1,
@@ -731,6 +791,7 @@ _BUILTIN_DISPATCH = {
     "inspect_upload": _builtin_inspect_upload,
     "write_custom_importer": _builtin_write_custom_importer,
     "fetch_network": _builtin_fetch_network,
+    "list_networks": _builtin_list_networks,
     "solve_opf": _builtin_solve_opf,
 }
 

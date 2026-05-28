@@ -51,37 +51,52 @@ export function RunsPanel() {
   }, [selected])
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="h-full overflow-y-auto" style={{ background: "var(--bg-app)" }}>
       <div className="max-w-4xl mx-auto w-full px-6 py-8 space-y-6">
         <div>
-          <div className="text-[11px] font-mark tracking-wider uppercase text-black/50">
-            Runs
-          </div>
-          <h1 className="font-serif-soft text-2xl mt-1">Dispatch runs</h1>
-          <p className="font-serif-soft text-sm text-black/60 mt-2 max-w-prose">
+          <div className="label-pane">Runs</div>
+          <h1 className="h-page-title mt-1">Dispatch runs</h1>
+          <p
+            className="mt-2 max-w-prose"
+            style={{
+              fontFamily: "var(--font-sora)",
+              fontSize: 13,
+              lineHeight: 1.55,
+              color: "var(--fg-mute-2)",
+            }}
+          >
             Solve results from canonical and uploaded networks. Click a row to see
             time-series charts (LMPs, dispatch by carrier, line flows). Tick two
             rows to compare them side-by-side.
           </p>
         </div>
 
-        {error ? (
-          <div className="text-xs text-red-600 font-mono">{error}</div>
-        ) : null}
+        {error ? <div className="error-toast inline-block">{error}</div> : null}
 
         <div className="flex items-center gap-3">
-          <div className="text-[11px] font-mark tracking-wider uppercase text-black/50">
+          <div className="label-pane">
             {loading ? "Loading…" : `${runs.length} run${runs.length === 1 ? "" : "s"}`}
           </div>
           {selected.size > 0 ? (
-            <div className="text-[11px] font-mono text-black/60">
+            <div
+              style={{
+                fontFamily: "var(--font-jetbrains)",
+                fontSize: 11,
+                color: "var(--fg-mute-2)",
+              }}
+            >
               {selected.size}/2 selected
             </div>
           ) : null}
           {compareHref ? (
             <Link
               href={compareHref}
-              className="text-[11px] font-mark tracking-wider uppercase text-black hover:underline"
+              className="font-mark hover:underline"
+              style={{
+                fontSize: 11,
+                letterSpacing: "var(--track-nav)",
+                color: "var(--navy-pop)",
+              }}
             >
               compare →
             </Link>
@@ -89,29 +104,75 @@ export function RunsPanel() {
         </div>
 
         {runs.length === 0 && !loading ? (
-          <div className="text-sm font-serif-soft text-black/50 px-2 py-6 text-center border border-dashed border-black/15">
+          <div
+            className="px-4 py-8 text-center"
+            style={{
+              fontFamily: "var(--font-sora)",
+              fontSize: 13,
+              color: "var(--fg-mute-4)",
+              background: "var(--bg-card)",
+              border: "1px dashed var(--bor-4)",
+              borderRadius: "var(--r-3)",
+            }}
+          >
             No runs yet. Solve dispatch on a network (canonical or uploaded) and a
             run artifact will land here.
           </div>
         ) : (
-          <ul className="border border-black/10 divide-y divide-black/5">
-            {runs.map((a) => (
-              <li key={a.id} className="flex items-stretch">
+          <ul
+            style={{
+              background: "var(--bg-card)",
+              border: "1px solid var(--bor-1)",
+              borderRadius: "var(--r-3)",
+              overflow: "hidden",
+            }}
+          >
+            {runs.map((a, i) => (
+              <li
+                key={a.id}
+                className="flex items-stretch"
+                style={{
+                  borderTop: i === 0 ? "none" : "1px solid var(--bg-hairline)",
+                }}
+              >
                 <label className="px-3 py-3 flex items-center cursor-pointer">
                   <input
                     type="checkbox"
                     checked={selected.has(a.id)}
                     onChange={() => toggleSelected(a.id)}
-                    className="accent-black"
+                    style={{ accentColor: "var(--ink-app)" }}
                   />
                 </label>
                 <Link
                   href={`/app/runs/${a.id}`}
-                  className="flex-1 px-2 py-3 hover:bg-black/[0.03] flex items-center gap-3"
+                  className="flex-1 px-2 py-3 flex items-center gap-3"
+                  style={{ transition: "background var(--t-hover)" }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = "var(--bg-hairline)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = "transparent")
+                  }
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-serif-soft truncate">{a.name}</div>
-                    <div className="text-[11px] font-mono text-black/40 truncate">
+                    <div
+                      className="truncate"
+                      style={{
+                        fontFamily: "var(--font-sora)",
+                        fontSize: 13,
+                        color: "var(--ink-app)",
+                      }}
+                    >
+                      {a.name}
+                    </div>
+                    <div
+                      className="truncate"
+                      style={{
+                        fontFamily: "var(--font-jetbrains)",
+                        fontSize: 11,
+                        color: "var(--fg-mute-4)",
+                      }}
+                    >
                       {runSubtitle(a)}
                     </div>
                   </div>
@@ -140,13 +201,27 @@ function runSubtitle(a: Artifact): string {
 }
 
 function RunStatus({ artifact }: { artifact: Artifact }) {
-  const tone =
-    artifact.status === "failed_validation"
-      ? "bg-red-100 text-red-700"
-      : artifact.status === "canonical"
-      ? "bg-emerald-100 text-emerald-700"
-      : "bg-black/[0.06] text-black/70"
+  let bg = "var(--bg-tint)"
+  let fg = "var(--fg-mute)"
+  if (artifact.status === "failed_validation") {
+    bg = "var(--err-bg)"
+    fg = "var(--err-fg)"
+  } else if (artifact.status === "canonical") {
+    bg = "#E6F1F1"
+    fg = "var(--peacock)"
+  }
   return (
-    <span className={`text-[10px] font-mono px-2 py-1 ${tone}`}>{artifact.status}</span>
+    <span
+      style={{
+        fontFamily: "var(--font-jetbrains)",
+        fontSize: 10,
+        padding: "2px 8px",
+        borderRadius: "var(--r-2)",
+        background: bg,
+        color: fg,
+      }}
+    >
+      {artifact.status}
+    </span>
   )
 }

@@ -77,7 +77,7 @@ export function PanelHost({ artifact }: { artifact: Artifact }) {
   if (!root) {
     return (
       <PanelChrome spec={spec} artifact={artifact}>
-        <div className="text-sm font-serif-soft text-black/50">
+        <div className="text-sm font-soft text-black/50">
           Empty panel. Set <code className="font-mono">view_spec.root</code>.
         </div>
         <SpecDetails spec={spec} />
@@ -113,7 +113,7 @@ function PanelChrome({
             </div>
           ) : null}
           {spec.description ? (
-            <div className="font-serif-soft text-sm text-black/70">
+            <div className="font-soft text-sm text-black/70">
               {spec.description}
             </div>
           ) : null}
@@ -411,7 +411,7 @@ const Heading: ComponentImpl = ({ props, ctx }) => {
   const sizeClass =
     level === 1 ? "text-2xl" : level === 2 ? "text-lg" : level === 3 ? "text-base" : "text-sm"
   const Tag = (`h${level}` as unknown) as "h1"
-  return <Tag className={`${sizeClass} font-serif-soft`}>{text}</Tag>
+  return <Tag className={`${sizeClass} font-soft`}>{text}</Tag>
 }
 
 const Text: ComponentImpl = ({ props, ctx }) => {
@@ -420,7 +420,7 @@ const Text: ComponentImpl = ({ props, ctx }) => {
   const sizeProp = asString(props.size, "sm")
   const sizeClass =
     sizeProp === "xs" ? "text-xs" : sizeProp === "lg" ? "text-base" : sizeProp === "md" ? "text-sm" : "text-sm"
-  const fontClass = asBool(props.mono) ? "font-mono" : "font-serif-soft"
+  const fontClass = asBool(props.mono) ? "font-mono" : "font-soft"
   return <p className={`${sizeClass} ${tone} ${fontClass}`}>{text}</p>
 }
 
@@ -431,7 +431,7 @@ const MarkdownComp: ComponentImpl = ({ props, ctx }) => {
   // artifact and `ArtifactView` it inside the panel.
   const source = asString(resolveValue(props.source, ctx.state))
   return (
-    <pre className="whitespace-pre-wrap font-serif-soft text-sm text-black/80">
+    <pre className="whitespace-pre-wrap font-soft text-sm text-black/80">
       {source}
     </pre>
   )
@@ -457,7 +457,7 @@ const Metric: ComponentImpl = ({ props, ctx }) => {
       <div className="text-[10px] font-mark tracking-wider uppercase text-black/50">
         {label}
       </div>
-      <div className="text-lg font-serif-soft text-black tabular-nums">
+      <div className="text-lg font-soft text-black tabular-nums">
         {displayValue}
         {unit ? <span className="text-sm text-black/50 ml-1">{unit}</span> : null}
       </div>

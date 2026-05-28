@@ -116,11 +116,11 @@ export function GeoMapRenderer({ artifact }: RendererProps) {
       {payload ? (
         <MapBody payload={payload} dispatch={dispatch} externalHourIdx={externalHourIdx} />
       ) : loadErr ? (
-        <div className="text-sm font-serif-soft text-black/50 border border-black/10 px-3 py-6 text-center">
+        <div className="text-sm font-soft text-black/50 border border-black/10 px-3 py-6 text-center">
           Could not load topology: <span className="font-mono">{loadErr}</span>
         </div>
       ) : (
-        <div className="text-sm font-serif-soft text-black/50 border border-black/10 px-3 py-6 text-center">
+        <div className="text-sm font-soft text-black/50 border border-black/10 px-3 py-6 text-center">
           Loading topology…
         </div>
       )}
@@ -214,7 +214,7 @@ function MapBody({
   if (!haveGeo) {
     return (
       <div className="space-y-2">
-        <div className="text-sm font-serif-soft text-black/60 border border-black/10 px-3 py-3">
+        <div className="text-sm font-soft text-black/60 border border-black/10 px-3 py-3">
           This network has no bus lat/lon — falling back to the force-directed
           renderer. Add <span className="font-mono">x</span>/<span className="font-mono">y</span> to{" "}
           <span className="font-mono">buses.csv</span> to enable the map.
@@ -291,7 +291,7 @@ function MapLibreView({
             type: "line",
             source: "lines",
             paint: {
-              "line-color": ["coalesce", ["get", "color"], "rgba(0,0,0,0.45)"],
+              "line-color": ["coalesce", ["get", "color"], "rgba(9,23,23,0.45)"],
               "line-width": ["coalesce", ["get", "width"], 1],
             },
             layout: {
@@ -304,7 +304,7 @@ function MapLibreView({
             source: "lines",
             filter: ["==", ["get", "dc"], true],
             paint: {
-              "line-color": ["coalesce", ["get", "color"], "rgba(0,0,0,0.7)"],
+              "line-color": ["coalesce", ["get", "color"], "rgba(9,23,23,0.7)"],
               "line-width": ["coalesce", ["get", "width"], 1.5],
               "line-dasharray": [2, 2],
             },
@@ -315,8 +315,8 @@ function MapLibreView({
             source: "buses",
             paint: {
               "circle-radius": ["coalesce", ["get", "r"], 4],
-              "circle-color": ["coalesce", ["get", "color"], "#111"],
-              "circle-stroke-color": "#fff",
+              "circle-color": ["coalesce", ["get", "color"], "#091717"],
+              "circle-stroke-color": "#FBFAF4",
               "circle-stroke-width": 1,
             },
           })
@@ -381,7 +381,7 @@ function MapLibreView({
 
   if (moduleErr) {
     return (
-      <div className="text-sm font-serif-soft text-black/60 border border-black/10 px-3 py-6 text-center">
+      <div className="text-sm font-soft text-black/60 border border-black/10 px-3 py-6 text-center">
         Map library failed to load: <span className="font-mono">{moduleErr}</span>
       </div>
     )
@@ -420,7 +420,7 @@ function FallbackGraph({
 
   if (buses.length === 0) {
     return (
-      <div className="text-sm font-serif-soft text-black/50 border border-black/10 px-3 py-6 text-center">
+      <div className="text-sm font-soft text-black/50 border border-black/10 px-3 py-6 text-center">
         No buses in topology.
       </div>
     )
@@ -456,9 +456,9 @@ function FallbackGraph({
             const p = proj.get(bus.id)
             if (!p) return null
             const lmp = busLmp(dispatch, bus.id, hourIdx)
-            const fill = lmp !== undefined ? lmpColor(lmp, lmpRange) : "#111"
+            const fill = lmp !== undefined ? lmpColor(lmp, lmpRange) : "#091717"
             return (
-              <circle key={bus.id} cx={p.x} cy={p.y} r={3.5} fill={fill} stroke="#fff" strokeWidth={0.75}>
+              <circle key={bus.id} cx={p.x} cy={p.y} r={3.5} fill={fill} stroke="#FBFAF4" strokeWidth={0.75}>
                 <title>
                   {`bus ${bus.id}${bus.carrier ? ` (${bus.carrier})` : ""}${
                     lmp !== undefined ? ` — LMP $${lmp.toFixed(2)}/MWh` : ""
@@ -506,15 +506,15 @@ function TimeSlider({
 
 function Legend({ dispatch }: { dispatch: DispatchPayload | undefined }) {
   const items: { swatch: string; label: string }[] = [
-    { swatch: "linear-gradient(90deg,#111,#aaa)", label: "Bus (no LMP data)" },
+    { swatch: "linear-gradient(90deg,#091717,#E4E3D4)", label: "Bus (no LMP data)" },
   ]
   if (dispatch?.lmps && Object.keys(dispatch.lmps).length > 0) {
-    items[0] = { swatch: "linear-gradient(90deg,#1F61A6,#F0F0E8,#C03A2B)", label: "LMP ($/MWh) low → high" }
+    items[0] = { swatch: "linear-gradient(90deg,#133B39,#E4E3D4,#944454)", label: "LMP ($/MWh) low → high" }
   }
   if (dispatch?.flows && Object.keys(dispatch.flows).length > 0) {
-    items.push({ swatch: "linear-gradient(90deg,#3CB371,#F0F0E8,#FF6347)", label: "Line flow (signed, MW)" })
+    items.push({ swatch: "linear-gradient(90deg,#20808D,#E4E3D4,#A84B2F)", label: "Line flow (signed, MW)" })
   }
-  items.push({ swatch: "repeating-linear-gradient(90deg,#000 0 4px,transparent 4px 7px)", label: "DC link (dashed)" })
+  items.push({ swatch: "repeating-linear-gradient(90deg,#091717 0 4px,transparent 4px 7px)", label: "DC link (dashed)" })
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-mono text-black/60">
       {items.map((it, i) => (
@@ -584,20 +584,20 @@ function lmpExtent(dispatch: DispatchPayload | undefined): [number, number] | nu
   return [lo, hi]
 }
 
-// Diverging blue→cream→red palette, anchored on the dispatch LMP range.
+// Diverging Inky Blue → Ecru → Boysenberry palette, anchored on the dispatch LMP range.
 function lmpColor(value: number, range: [number, number] | null): string {
-  if (!range) return "#111"
+  if (!range) return "#091717"
   const [lo, hi] = range
   const t = Math.max(0, Math.min(1, (value - lo) / (hi - lo)))
-  return divergingColor(t, [31, 97, 166], [240, 240, 232], [192, 58, 43])
+  return divergingColor(t, [19, 59, 57], [228, 227, 212], [148, 68, 84])
 }
 
-// Color signed line flow by direction — green to red — scaled by capacity.
+// Color signed line flow by direction — True Turquoise → Ecru → Terra Cotta — scaled by capacity.
 function flowColor(flow: number | undefined, capacity: number | undefined): string {
-  if (typeof flow !== "number") return "rgba(0,0,0,0.45)"
+  if (typeof flow !== "number") return "rgba(9,23,23,0.45)"
   const c = typeof capacity === "number" && capacity > 0 ? capacity : Math.max(1, Math.abs(flow))
   const t = 0.5 + 0.5 * Math.max(-1, Math.min(1, flow / c))
-  return divergingColor(t, [60, 179, 113], [240, 240, 232], [255, 99, 71])
+  return divergingColor(t, [32, 128, 141], [228, 227, 212], [168, 75, 47])
 }
 
 function divergingColor(
@@ -662,7 +662,7 @@ function buildBusesGeoJson(
         id: b.id,
         carrier: b.carrier ?? null,
         lmp: typeof lmp === "number" ? lmp : null,
-        color: lmp !== undefined ? lmpColor(lmp, range) : "#111",
+        color: lmp !== undefined ? lmpColor(lmp, range) : "#091717",
         r: 4,
       },
     })

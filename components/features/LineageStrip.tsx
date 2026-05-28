@@ -45,7 +45,7 @@ export async function LineageStrip({ artifact }: { artifact: Artifact }) {
         Lineage
       </div>
       {parent ? (
-        <div className="text-[12px] font-serif-soft text-black/70">
+        <div className="text-[12px] font-soft text-black/70">
           <span className="text-black/40">from </span>
           <Link href={`/app/artifacts/${parent.id}`} className="underline">
             {parent.name}
@@ -60,7 +60,7 @@ export async function LineageStrip({ artifact }: { artifact: Artifact }) {
         </div>
       ) : null}
       {children.length > 0 ? (
-        <div className="text-[12px] font-serif-soft text-black/70">
+        <div className="text-[12px] font-soft text-black/70">
           <span className="text-black/40">drafted features: </span>
           <ul className="mt-1 space-y-0.5">
             {children.map((c) => (

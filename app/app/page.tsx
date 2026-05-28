@@ -73,6 +73,10 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<UiMessage[]>([])
   const messagesRef = useRef<UiMessage[]>([])
   const messageIndex = useRef<Map<string, number>>(new Map())
+  // The persisted chat row (REDESIGN §4). Null until the first message creates
+  // it. workspace_id is null until the gallery/wizard (items 9-10) bind a chat
+  // to a workspace — the column is nullable by design.
+  const chatIdRef = useRef<string | null>(null)
 
   const [input, setInput] = useState("")
   const [pending, setPending] = useState(false)
@@ -331,6 +335,33 @@ export default function ChatPage() {
     messagesEnd.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
+  // Create the chat row on first message, then touch it on every later one so
+  // it floats to the top of the sidebar history. Best-effort: a persistence
+  // hiccup must not break the conversation, which lives in opencode regardless.
+  const persistChat = useCallback(async (session: string, firstMessage: string) => {
+    try {
+      if (!chatIdRef.current) {
+        const r = await fetch("/api/chats", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            workspace_id: null,
+            session_id: session,
+            first_message: firstMessage,
+          }),
+        })
+        if (r.ok) {
+          const chat = await r.json().catch(() => null)
+          if (chat?.id) chatIdRef.current = chat.id as string
+        }
+      } else {
+        await fetch(`/api/chats/${chatIdRef.current}`, { method: "PATCH" })
+      }
+    } catch {
+      // non-fatal — the chat just won't appear in history until next message
+    }
+  }, [])
+
   const onSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault()
@@ -353,13 +384,17 @@ export default function ChatPage() {
           const body = await r.json().catch(() => ({}))
           setError(body.error ?? `prompt failed: ${r.status}`)
           setPending(false)
+        } else {
+          // Persist the chat on its first message (REDESIGN §4) so it shows up
+          // in the sidebar history; bump recency on subsequent messages.
+          void persistChat(sessionId, raw)
         }
       } catch (e) {
         setError(String(e))
         setPending(false)
       }
     },
-    [input, sessionId, pending, networks, activeNetworkId],
+    [input, sessionId, pending, networks, activeNetworkId, persistChat],
   )
 
   const hasAnyRenderableContent = useMemo(

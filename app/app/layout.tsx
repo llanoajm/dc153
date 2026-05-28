@@ -5,7 +5,8 @@ import { getActiveOrgId, listMyOrgs, syncOrgContextOverlays } from "@/lib/orgs"
 import { listPinnedDashboards } from "@/lib/dashboards"
 import { Lockup } from "@/components/lockup"
 import { OrgSwitcher } from "@/components/orgs/OrgSwitcher"
-import { WorkspaceShell, type PinnedDashboard } from "@/components/shell/WorkspaceShell"
+import { AppChrome } from "@/components/shell/AppChrome"
+import type { PinnedDashboard } from "@/components/shell/types"
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -55,9 +56,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <OrgSwitcher memberships={memberships} activeOrgId={activeOrgId} />
         </div>
       </header>
-      <WorkspaceShell pinnedDashboards={pinnedDashboards} email={user.email ?? null}>
+      <AppChrome pinnedDashboards={pinnedDashboards} email={user.email ?? null}>
         {children}
-      </WorkspaceShell>
+      </AppChrome>
     </div>
   )
 }

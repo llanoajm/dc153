@@ -34,6 +34,7 @@ export async function proxy(request: NextRequest) {
     path.startsWith("/app") ||
     path.startsWith("/api/opencode") ||
     path.startsWith("/api/artifacts") ||
+    path.startsWith("/api/workspaces") ||
     path.startsWith("/api/chats") ||
     path.startsWith("/api/features") ||
     path.startsWith("/api/upload") ||

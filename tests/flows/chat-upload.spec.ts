@@ -8,8 +8,11 @@
 // this is the deliverable for human/CI review.
 
 import { test, expect } from "@playwright/test"
+import { ensureTestWorkspaceChatPath } from "./_workspace"
 
 const COMPOSER = /ask the agent|loading/i
+
+// Redesign §5: the composer lives on /app/w/[id] now (see chat.spec.ts note).
 
 test.describe("in-chat file upload (logged in)", () => {
   test("attach button uploads a file and shows a chip in the composer", async ({
@@ -29,7 +32,7 @@ test.describe("in-chat file upload (logged in)", () => {
       })
     })
 
-    await page.goto("/app")
+    await page.goto(await ensureTestWorkspaceChatPath(page))
     // Composer is ready.
     await expect(page.getByPlaceholder(COMPOSER)).toBeVisible({ timeout: 15_000 })
 
@@ -54,7 +57,7 @@ test.describe("in-chat file upload (logged in)", () => {
   test("an unsupported file type is rejected with an inline error", async ({
     page,
   }) => {
-    await page.goto("/app")
+    await page.goto(await ensureTestWorkspaceChatPath(page))
     await expect(page.getByPlaceholder(COMPOSER)).toBeVisible({ timeout: 15_000 })
 
     const input = page.locator('input[type="file"]')

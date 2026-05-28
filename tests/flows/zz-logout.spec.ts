@@ -21,7 +21,10 @@ test("Sign out lives in the bottom-left profile menu, not the header", async ({
     storageState: process.env.PLAYWRIGHT_AUTH_STATE ?? "test-results/auth-state.json",
   })
   const page = await context.newPage()
-  await page.goto("/app")
+  // Redesign §5: the profile menu lives in the workspace shell, which mounts on
+  // the workspace + secondary routes (not /app, now the gallery). /app/networks
+  // is a shell route that needs no `workspaces` row.
+  await page.goto("/app/networks")
 
   // The header carries the lockup + org switcher only — no Sign out anymore.
   const header = page.locator("header").first()

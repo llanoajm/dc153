@@ -6,3 +6,4 @@
 [2026-05-28T21:51:12+00:00] DONE: - [ ] 1. Additive schema migration: workspaces table + artifacts.workspace_id (ROADMAP §1)
 [2026-05-28T21:56:38+00:00] DONE: - [ ] 2. Backfill script: default workspace per user (ROADMAP §2)
 [2026-05-28T22:01:32+00:00] DONE: - [ ] 3. ensureWorkspace(workspaceId) + per-workspace dir (ROADMAP §3)
+[2026-05-28T22:09:31+00:00] DONE: - [ ] 4. Chat persistence + chats store (ROADMAP §4)

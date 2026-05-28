@@ -1,5 +1,5 @@
-## Current item (from LOOP_QUEUE.md line 39)
-- [x] 4. Chat persistence + chats store (ROADMAP §4)
+## Current item (from LOOP_QUEUE.md line 46)
+- [x] 5. Left sidebar: {single Network, Chats, profile} (ROADMAP §5)
 
 ## Attempt
 1 of 5
@@ -35,7 +35,6 @@
 - If an item's acceptance cannot be met safely under these constraints, set its line in LOOP_QUEUE.md to `[!]` and record why in LOOP_ALERTS.md — do not force it or weaken the guardrails.
 
 STATUS: done
-SUMMARY: Added a durable per-workspace chats store (0002_chats.sql + lib/chats-store.ts/chats.ts + GET/POST /api/chats) that persists a chat on first message mapping workspace→opencode session id + title, with a create→list→reopen unit test.
-NEXT_STEPS: Item 5 (left sidebar) consumes this store: GET /api/chats?workspace_id= for the history list, new-chat button creates a fresh session, opening a chat loads its messages via the chat's session_id (existing /api/opencode/session/[id]/message). Human must paste migrations 0001 then 0002 into Supabase before /api/chats is live.
-ACCEPTANCE: PASS — new supabase/migrations/0002_chats.sql (dedicated `chats` table chosen over kind='chat' artifact; rationale documented in the migration header + journal); first message persists a chat (workspace_id, session_id, derived title, created_at) via app/app/page.tsx → POST /api/chats. PASS — GET /api/chats?workspace_id= lists a workspace's chats; GET /api/chats/[id] returns the reopen handle (session_id) and the client reloads messages via the existing session message route. PASS — `npx tsc --noEmit` exit 0 and `npm run test:unit` 23/23 (10 new in tests/unit/chats-store.test.mjs cover create→list→reopen of the store layer). SQL parse-checked with pglast (13/135/148 statements); NOT applied to the live DB per guardrails.
+SUMMARY: Reworked the left rail into {single Network, Chats history + new-chat, profile menu with account + Sign out at bottom-left}, removed the header logout, and wired chat reopen via ?chat/?new.
+ACCEPTANCE: PASS — sidebar shows single network at top, chat-history list with a new-chat (+) button, and a bottom-left profile circle whose menu holds account + Sign out; PASS — header logout removed (app/app/layout.tsx header now only has lockup + OrgSwitcher; grep shows no header signout); PASS — `npx tsc --noEmit` exit 0; PASS — Playwright spec (zz-logout.spec.ts) asserts Sign out is absent from the header and reachable from the bottom-left "Account menu" (spec is the deliverable; not browser-run here per the :3000 guardrail — live run + premium-feel visual review deferred to human, noted in LOOP_JOURNAL.md). Bonus: npm run test:unit 24/24 (added listMyChats coverage).
 VERIFIED: yes

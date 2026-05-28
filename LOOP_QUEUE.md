@@ -75,7 +75,7 @@ planning hero (12-15) → polish (16). Process top-to-bottom.
     - `/app` lists the user's workspaces as cards from the `workspaces` table; "＋" opens the wizard (item 10); a card opens `/app/w/[id]`
     - `npx tsc --noEmit` passes
 
-- [ ] 10. Creation wizard (ROADMAP §10)
+- [x] 10. Creation wizard (ROADMAP §10)
   - context: §5; name → focus multi-select → data source (template/fetch/upload/skip) → land in workspace chat.
   - acceptance:
     - wizard creates a `workspaces` row with name + focus[] + optional primary_network_id and redirects to `/app/w/[id]`

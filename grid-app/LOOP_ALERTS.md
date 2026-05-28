@@ -4,3 +4,4 @@
 [2026-05-26T20:31:48+00:00] DONE: - [ ] 4. Smoke-validate the existing GPU consumers (ROADMAP §4)
 [2026-05-26T20:45:03+00:00] DONE: - [ ] 5. Cross-path parity probe (ROADMAP §5)
 [2026-05-28T21:51:12+00:00] DONE: - [ ] 1. Additive schema migration: workspaces table + artifacts.workspace_id (ROADMAP §1)
+[2026-05-28T21:56:38+00:00] DONE: - [ ] 2. Backfill script: default workspace per user (ROADMAP §2)

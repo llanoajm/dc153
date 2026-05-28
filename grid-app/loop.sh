@@ -14,6 +14,12 @@ ALERTS=LOOP_ALERTS.md
 ATTEMPTS_DIR=.loop-attempts
 
 MODEL="claude-opus-4-7"
+# Disable extended thinking for all `claude -p` agents. With thinking on,
+# multi-turn tool-use sessions intermittently 400 with "thinking/redacted_thinking
+# blocks in the latest assistant message cannot be modified", which the throttle
+# heuristic then misreads as a rate limit and retries forever. Thinking off makes
+# headless tool loops reliable (verified by smoke test 2026-05-28).
+export MAX_THINKING_TOKENS=0
 WORK_TIMEOUT=30m
 VERIFY_TIMEOUT=10m
 MAX_ATTEMPTS=5
@@ -29,7 +35,10 @@ BUDGET_FLAGS=()   # e.g. (--max-budget-usd 3)
 # NOT count against MAX_ATTEMPTS. Without this, a 3-minute throttle window can
 # burn through 5 attempts on 3 items and auto-block them all (see 2026-05-26
 # items 4/5/6 in the GPU-parity loop).
-RATE_LIMIT_REGEX='rate.?limit|429|too many requests|usage limit|weekly limit|5.hour limit|please (wait|try again)|try again later|quota exceeded|exceeded.*limit|overloaded|service unavailable|503|api error|connection (reset|refused|timed out)'
+# NOTE: deliberately does NOT include a bare "api error" — that matched genuine
+# "API Error: 400" bad-request failures and caused infinite throttle retries.
+# Kept signals are true transient/quota conditions worth a free retry.
+RATE_LIMIT_REGEX='rate.?limit|429|too many requests|usage limit|weekly limit|5.hour limit|please (wait|try again)|try again later|quota exceeded|exceeded.*limit|overloaded|529|service unavailable|503|connection (reset|refused|timed out)'
 MIN_REAL_RUN_SECS=60        # treat sub-60s exits with no completion field as suspect
 THROTTLE_WAIT_SECS=1800     # sleep 30 min before retrying the same attempt
 MAX_THROTTLE_WAITS=24       # 24 × 30m = 12h max throttle wait per attempt

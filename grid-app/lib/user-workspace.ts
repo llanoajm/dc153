@@ -49,6 +49,12 @@ const execFileP = promisify(execFile)
 // Per-user workspace dir. Materialized on first access so the opencode session
 // has somewhere to operate. Holds .opencode/, features/, skills/. The agent
 // works here; it does NOT modify the shared zap repo.
+//
+// REDESIGN §4.4 is generalizing this from per-user to per-workspace dirs; the
+// directory-keyed bootstrap now lives in `materializeWorkspaceDir(dir)` and is
+// reused by `lib/workspace.ts:ensureWorkspace(workspaceId)`. This function
+// keeps the per-USER hardening (Linux account / cgroup slice keyed on the
+// supabase uid) so existing callers behave exactly as before.
 export async function ensureUserWorkspace(userId: string): Promise<string> {
   const dir = path.join(ROOT, userId)
 
@@ -60,6 +66,35 @@ export async function ensureUserWorkspace(userId: string): Promise<string> {
   // longer ours, treat the workspace as already provisioned and return.
   if (await isWorkspaceHandedOff(dir)) return dir
 
+  await materializeWorkspaceDir(dir)
+
+  // HARDENING §3.1: lock the workspace to a per-user Linux account *after*
+  // all bootstrap writes complete — once the dir is chowned + 700, grid-app
+  // (running as `agent`) can no longer create files inside. Gated on
+  // STEINMETZ_ENABLE_LINUX_ACCOUNTS=1 so dev / CI keep working; production
+  // flips the flag once item 3.2 ships and per-user opencode units take
+  // over workspace writes. Idempotent + fail-soft (see lib/linux-account.ts).
+  await ensureLinuxAccount(dir, userId)
+
+  // HARDENING §3.4: materialise the per-user cgroup slice before the first
+  // session-start triggers `systemctl start steinmetz-opencode@<short>.service`.
+  // Default tier; tier changes (when `profiles.compute_tier` is set later via
+  // an admin surface) re-run `ensureUserSlice` with the resolved tier name.
+  // Gated on STEINMETZ_PER_USER_SLICES=1 (see lib/compute-tier.ts).
+  await ensureUserSlice(userId)
+
+  return dir
+}
+
+// Directory-keyed workspace bootstrap (REDESIGN §4.4). Idempotent: creates the
+// `.opencode/`, `features/`, per-user pip target, and venv, then writes the
+// stub AGENTS.md / persona / glossary / context / example-feature files and the
+// opencode config. Does NOT do per-user Linux hardening — that's keyed on the
+// supabase uid and stays in `ensureUserWorkspace`. Both the per-user and the
+// per-workspace (`lib/workspace.ts`) entry points call this so the materialized
+// layout is identical regardless of whether the dir is keyed by uid or
+// workspace id.
+export async function materializeWorkspaceDir(dir: string): Promise<void> {
   await fs.mkdir(path.join(dir, ".opencode", "agent"), { recursive: true })
   await fs.mkdir(path.join(dir, ".opencode", "skills"), { recursive: true })
   await fs.mkdir(path.join(dir, "features"), { recursive: true })
@@ -315,23 +350,6 @@ def echo(message: str) -> str:
     return message
 `,
   )
-
-  // HARDENING §3.1: lock the workspace to a per-user Linux account *after*
-  // all bootstrap writes complete — once the dir is chowned + 700, grid-app
-  // (running as `agent`) can no longer create files inside. Gated on
-  // STEINMETZ_ENABLE_LINUX_ACCOUNTS=1 so dev / CI keep working; production
-  // flips the flag once item 3.2 ships and per-user opencode units take
-  // over workspace writes. Idempotent + fail-soft (see lib/linux-account.ts).
-  await ensureLinuxAccount(dir, userId)
-
-  // HARDENING §3.4: materialise the per-user cgroup slice before the first
-  // session-start triggers `systemctl start steinmetz-opencode@<short>.service`.
-  // Default tier; tier changes (when `profiles.compute_tier` is set later via
-  // an admin surface) re-run `ensureUserSlice` with the resolved tier name.
-  // Gated on STEINMETZ_PER_USER_SLICES=1 (see lib/compute-tier.ts).
-  await ensureUserSlice(userId)
-
-  return dir
 }
 
 // HARDENING §3.1: detect that the workspace has already been chowned to a

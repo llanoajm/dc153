@@ -1,5 +1,6 @@
 import "server-only"
 import { ensureUserWorkspace, writeUserProviderConfig } from "@/lib/user-workspace"
+import { ensureWorkspace } from "@/lib/workspace"
 import { getUserProviderKeysMap } from "@/lib/provider-keys"
 import {
   opencodeFetch,
@@ -49,8 +50,33 @@ async function refreshProviderConfig(userId: string, dir: string): Promise<void>
   }
 }
 
-export async function createSession(userId: string): Promise<{ id: string; directory: string }> {
-  const dir = await ensureUserWorkspace(userId)
+// Resolve the directory the opencode session opens with as `cwd`.
+//
+// REDESIGN §4.4: when a `workspaceId` is supplied the session opens in the
+// per-workspace dir (`grid-workspaces/<workspace-id>/`) so the agent's
+// workspace-aware tools default to that workspace's primary network. When it's
+// omitted we fall back to the legacy per-user dir so existing callers behave
+// exactly as before. `userId` is still required either way — the transport
+// (per-user opencode socket routing, provider-key resolution) is keyed on it.
+async function resolveWorkspaceDir(
+  userId: string,
+  workspaceId?: string,
+): Promise<string> {
+  return workspaceId
+    ? ensureWorkspace(workspaceId)
+    : ensureUserWorkspace(userId)
+}
+
+export interface OpencodeCallOptions {
+  // When set, the session opens with cwd = the per-workspace dir.
+  workspaceId?: string
+}
+
+export async function createSession(
+  userId: string,
+  opts: OpencodeCallOptions = {},
+): Promise<{ id: string; directory: string }> {
+  const dir = await resolveWorkspaceDir(userId, opts.workspaceId)
   await refreshProviderConfig(userId, dir)
   const res = await opencodeFetch(userId, dir, "/session", {
     method: "POST",
@@ -61,8 +87,12 @@ export async function createSession(userId: string): Promise<{ id: string; direc
   return { id: data.id, directory: dir }
 }
 
-export async function getMessages(userId: string, sessionId: string) {
-  const dir = await ensureUserWorkspace(userId)
+export async function getMessages(
+  userId: string,
+  sessionId: string,
+  opts: OpencodeCallOptions = {},
+) {
+  const dir = await resolveWorkspaceDir(userId, opts.workspaceId)
   const res = await opencodeFetch(userId, dir, `/session/${sessionId}/message`)
   if (!res.ok) throw new Error(`getMessages failed: ${res.status} ${await res.text()}`)
   return res.json()
@@ -72,9 +102,9 @@ export async function sendPrompt(
   userId: string,
   sessionId: string,
   text: string,
-  opts: { agent?: string; providerID?: string; modelID?: string } = {},
+  opts: { agent?: string; providerID?: string; modelID?: string; workspaceId?: string } = {},
 ) {
-  const dir = await ensureUserWorkspace(userId)
+  const dir = await resolveWorkspaceDir(userId, opts.workspaceId)
   await refreshProviderConfig(userId, dir)
   const body = {
     agent: opts.agent ?? "grid-engineer",
@@ -92,8 +122,12 @@ export async function sendPrompt(
   return res.json()
 }
 
-export async function abortSession(userId: string, sessionId: string) {
-  const dir = await ensureUserWorkspace(userId)
+export async function abortSession(
+  userId: string,
+  sessionId: string,
+  opts: OpencodeCallOptions = {},
+) {
+  const dir = await resolveWorkspaceDir(userId, opts.workspaceId)
   const res = await opencodeFetch(userId, dir, `/session/${sessionId}/abort`, {
     method: "POST",
   })

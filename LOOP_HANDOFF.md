@@ -1,5 +1,5 @@
-## Current item (from LOOP_QUEUE.md line 72)
-- [ ] 9. Workspace gallery at /app (ROADMAP §9)
+## Current item (from LOOP_QUEUE.md line 78)
+- [x] 10. Creation wizard (ROADMAP §10)
 
 ## Attempt
 1 of 5
@@ -35,6 +35,8 @@
 - If an item's acceptance cannot be met safely under these constraints, set its line in LOOP_QUEUE.md to `[!]` and record why in LOOP_ALERTS.md — do not force it or weaken the guardrails.
 
 STATUS: done
-SUMMARY: Added the workspace gallery at /app (cards from the workspaces table + a New-workspace card) and moved the chat to /app/w/[id], with a pathname-aware chrome split and a workspaces DB/API layer.
-ACCEPTANCE: PASS — /app lists the user's workspaces as cards (lib/workspaces.listMyWorkspaceCards via GET /api/workspaces, RLS-scoped) with cover/name/grid/focus-chips/last-activity; the "+" New-workspace card opens the wizard route /app/new (placeholder until item 10); a card opens /app/w/[id] (the workspace chat). PASS — `npx tsc --noEmit` exit 0 and `npm run test:unit` 34/34. Deferred to human review (not loop-verifiable per guardrails): the inherently-visual gallery/chat look, and that migration 0001 + the item-2 backfill must be applied to the live Supabase DB before real cards appear / /app/w/[id] resolves (pre-migration it degrades to just the New-workspace card and clean 404s). Out-of-loop demo recordings (tests/demos) need re-recording for the new /app IA.
+SUMMARY: Added the creation wizard at /app/new (name → focus multi-select → data source) that creates a workspaces row and lands the user in /app/w/[id], backed by a pure unit-tested workspaces-store core.
+NEXT_STEPS: (none — item complete) Item 11 (Data Source tab at /app/w/[id]/source) is next.
+ACCEPTANCE: PASS — wizard creates a workspaces row with name + focus[] + optional primary_network_id and redirects to /app/w/[id] (POST /api/workspaces → router.push); PASS — focus is multi-select (toggle cards from FOCUS_TAGS) and the data-source step picks a canonical reference network OR defers ("Skip for now"); PASS — `npx tsc --noEmit` exit 0 and `npm run test:unit` 42/42 (8 new in tests/unit/workspaces-store.test.mjs covering the create-workspace happy path). DEFERRED (human/CI, guardrails): visual review of the wizard + a real end-to-end create requires migration 0001 (workspaces table) applied to the live DB; the data-source step shows beyond "Skip for now" only once canonical networks are seeded.
+
 VERIFIED: yes

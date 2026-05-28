@@ -5,7 +5,7 @@
 
 import { test, expect } from "@playwright/test"
 
-const PLACEHOLDER = /describe a feature|loading/i
+const PLACEHOLDER = /ask the agent|loading/i
 
 test.describe("chat input edge cases (logged in)", () => {
   test("textarea + Send button mount on /app", async ({ page }) => {
@@ -41,7 +41,8 @@ test.describe("chat input edge cases (logged in)", () => {
 
   test("Cmd+Enter binding is documented in the input footer", async ({ page }) => {
     await page.goto("/app")
-    await expect(page.getByText(/Ctrl\+Enter to send/i)).toBeVisible({ timeout: 15_000 })
+    // Footer shows the ⌘ / ⏎ keycaps next to a "to send" hint.
+    await expect(page.getByText(/to send/i).first()).toBeVisible({ timeout: 15_000 })
   })
 
   // Item 10.2: when POST /api/opencode/session 500s, the textarea was getting

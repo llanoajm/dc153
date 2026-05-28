@@ -440,3 +440,144 @@ body {
   padding: 6px 12px;
   border-radius: var(--r-3);
 }
+
+/* =========================================================================
+   Chat surface — premium refresh (REDESIGN §8)
+   A calm, ChatGPT/Gemini-grade surface built only from existing tokens.
+   ========================================================================= */
+
+/* Composer: a single focused, rounded container. The whole shell lights up
+   on focus-within so the textarea, attach, and send read as one control. */
+.composer-shell {
+  background: var(--bg-card);
+  border: 1px solid var(--bor-3);
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(9, 23, 23, 0.04);
+  transition:
+    border-color var(--t-input),
+    box-shadow var(--t-input);
+}
+.composer-shell:focus-within {
+  border-color: var(--ink-app);
+  box-shadow: var(--shadow-pop);
+}
+
+/* The textarea inside the composer shell — borderless, grows with content. */
+.composer-input {
+  font-family: var(--font-sora), system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-app);
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+}
+.composer-input::placeholder {
+  color: var(--fg-mute-4);
+}
+
+/* Round icon button (attach) and the send button live flush inside the pill. */
+.composer-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  color: var(--fg-mute-2);
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  transition:
+    background var(--t-hover),
+    color var(--t-hover);
+}
+.composer-icon-btn:hover:not(:disabled) {
+  background: var(--bg-tint);
+  color: var(--ink-app);
+}
+.composer-icon-btn:disabled {
+  opacity: 0.4;
+}
+
+.composer-send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--ink-app);
+  color: var(--bg-card);
+  border: none;
+  transition:
+    background var(--t-hover),
+    opacity var(--t-hover);
+}
+.composer-send:hover:not(:disabled) {
+  background: var(--off-black);
+}
+.composer-send:disabled {
+  background: var(--bor-4);
+  cursor: not-allowed;
+}
+
+/* Suggested-prompt chip on the empty state. */
+.suggest-chip {
+  font-family: var(--font-sora), system-ui, sans-serif;
+  font-size: 12.5px;
+  line-height: 1.4;
+  text-align: left;
+  color: var(--fg-body);
+  background: var(--bg-card);
+  border: 1px solid var(--bor-1);
+  border-radius: var(--r-4);
+  padding: 12px 14px;
+  transition:
+    border-color var(--t-hover),
+    background var(--t-hover);
+}
+.suggest-chip:hover {
+  border-color: var(--bor-4);
+  background: var(--bg-tint-warm);
+}
+
+/* Assistant "thinking" indicator — three softly pulsing dots. */
+.typing-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.typing-dots span {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--fg-mute-4);
+  animation: typing-bounce 1.2s ease-in-out infinite;
+}
+.typing-dots span:nth-child(2) {
+  animation-delay: 0.18s;
+}
+.typing-dots span:nth-child(3) {
+  animation-delay: 0.36s;
+}
+@keyframes typing-bounce {
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .typing-dots span {
+    animation: none;
+    opacity: 0.6;
+  }
+}

@@ -76,6 +76,16 @@ function splitNetworkContext(
   return { networkName: m[1], body: m[3] }
 }
 
+// Empty-state suggestions — phrased as the redesign wants the user to talk to
+// the harness (no "zap", no UUID; the workspace network is the implicit
+// subject). Clicking one drops it into the composer for editing.
+const SUGGESTED_PROMPTS: ReadonlyArray<string> = [
+  "Get me the power generation schedules for the next couple of days.",
+  "Plan some expansion in this area, optimizing for cost and emissions.",
+  "Show me where the grid is most congested and why.",
+  "Estimate the cost of adding 200 MW of solar near the busiest bus.",
+]
+
 // ---------- chat ----------
 
 export default function ChatPage() {
@@ -112,6 +122,7 @@ function ChatPageInner() {
   // once they're sent with a message. (WORKSPACE_REDESIGN §10.)
   const [attachments, setAttachments] = useState<PendingAttachment[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const messagesEnd = useRef<HTMLDivElement>(null)
 
   // Load the networks the user can see for the composer picker, and restore
@@ -466,6 +477,15 @@ function ChatPageInner() {
     messagesEnd.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
+  // Auto-grow the composer textarea with its content (capped by maxHeight CSS),
+  // so it reads as a single line at rest and expands like a modern chat input.
+  useEffect(() => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = "0px"
+    el.style.height = `${el.scrollHeight}px`
+  }, [input])
+
   // Create the chat row on first message, then touch it on every later one so
   // it floats to the top of the sidebar history. Best-effort: a persistence
   // hiccup must not break the conversation, which lives in opencode regardless.
@@ -559,282 +579,272 @@ function ChatPageInner() {
     [messages],
   )
 
+  // Empty-state suggested prompts drop their text into the composer (focused)
+  // so the user can edit before sending — they don't auto-send.
+  const applySuggestion = useCallback((text: string) => {
+    setInput(text)
+    // Defer focus to after the textarea is interactive.
+    requestAnimationFrame(() => textareaRef.current?.focus())
+  }, [])
+
+  const showEmptyState = !hasAnyRenderableContent && !pending
+  const sendDisabled =
+    !sessionId ||
+    pending ||
+    hasUploading ||
+    (!input.trim() && readyAttachments.length === 0)
+
   return (
     <div
-      className="h-full flex flex-col max-w-3xl mx-auto w-full"
+      className="h-full flex flex-col w-full"
       style={{ background: "var(--bg-app)" }}
     >
-      <div className="flex-1 overflow-y-auto px-6 py-8 space-y-5">
-        {!hasAnyRenderableContent && !pending ? (
-          <div className="mt-24 mx-auto max-w-md">
-            <p
-              className="label-eyebrow"
-              style={{ color: "var(--navy-pop)", marginBottom: 10 }}
-            >
-              Steinmetz Studio
-            </p>
-            <p
-              style={{
-                fontFamily: "var(--font-sora)",
-                fontSize: 14,
-                lineHeight: 1.55,
-                color: "var(--fg-mute)",
-              }}
-            >
-              {sessionId
-                ? "Describe what you want — an objective, a constraint, an analysis. The agent will build it in your workspace."
-                : "Preparing your workspace…"}
-            </p>
-            {error && sessionId ? (
+      {/* Thread (or the calm empty state, vertically centered). */}
+      <div className="flex-1 overflow-y-auto">
+        {showEmptyState ? (
+          <div className="h-full flex items-center justify-center px-6">
+            <div className="w-full max-w-2xl text-center">
               <p
-                className="font-mono"
-                style={{ fontSize: 11, color: "var(--err)", marginTop: 12 }}
+                className="h-page-title"
+                style={{ marginBottom: 10 }}
               >
+                {sessionId ? "What can I help you build?" : "Preparing your workspace…"}
+              </p>
+              <p
+                style={{
+                  fontFamily: "var(--font-sora)",
+                  fontSize: 14,
+                  lineHeight: 1.55,
+                  color: "var(--fg-mute)",
+                  maxWidth: 460,
+                  margin: "0 auto",
+                }}
+              >
+                {sessionId
+                  ? "Describe an objective, a constraint, or an analysis — in plain language. The agent runs it against your network and builds the result in your workspace."
+                  : "Setting things up. This only takes a moment."}
+              </p>
+              {sessionId ? (
+                <div className="mt-7 grid gap-2.5 sm:grid-cols-2 text-left">
+                  {SUGGESTED_PROMPTS.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      className="suggest-chip"
+                      onClick={() => applySuggestion(s)}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              {error && sessionId ? (
+                <p
+                  className="font-mono mt-6"
+                  style={{ fontSize: 11, color: "var(--err)" }}
+                >
+                  {error}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        ) : (
+          <div className="mx-auto w-full max-w-3xl px-6 py-8 flex flex-col gap-7">
+            {messages.map((m) => (
+              <MessageBlock key={m.info.id} message={m} />
+            ))}
+            {pending ? (
+              <div className="w-full flex flex-col gap-1.5 items-start">
+                <span className="chat-msg-role">agent</span>
+                <span className="typing-dots" aria-label="Agent is thinking">
+                  <span />
+                  <span />
+                  <span />
+                </span>
+              </div>
+            ) : null}
+            {error && hasAnyRenderableContent ? (
+              <div className="error-toast inline-block self-start">{error}</div>
+            ) : null}
+            <div ref={messagesEnd} />
+          </div>
+        )}
+      </div>
+
+      {/* Offline banner: bootstrap failed and there's no session to talk to. */}
+      {!sessionId && error ? (
+        <div className="mx-auto w-full max-w-3xl px-6 pb-3">
+          <div
+            role="alert"
+            className="px-4 py-3 flex items-start justify-between gap-3"
+            style={{
+              background: "var(--err-bg)",
+              border: "1px solid var(--err-border)",
+              borderRadius: "var(--r-4)",
+            }}
+          >
+            <div style={{ color: "var(--err-fg)" }}>
+              <p
+                className="font-mark"
+                style={{ fontSize: 11, letterSpacing: "var(--track-nav)" }}
+              >
+                Chat is offline
+              </p>
+              <p className="font-mono mt-1 break-words" style={{ fontSize: 12 }}>
                 {error}
               </p>
-            ) : null}
-          </div>
-        ) : null}
-        {messages.map((m) => (
-          <MessageBlock key={m.info.id} message={m} />
-        ))}
-        {pending ? (
-          <div className="max-w-[85%]">
-            <span
-              className="chat-msg-role"
-              style={{ marginBottom: 4, display: "block" }}
-            >
-              Agent
-            </span>
-            <span
+            </div>
+            <button
+              type="button"
+              onClick={() => bootstrapSession()}
+              disabled={bootstrapping}
+              className="shrink-0 px-3 py-1 font-mark disabled:opacity-40"
               style={{
-                fontFamily: "var(--font-sora)",
-                fontSize: 12,
-                fontStyle: "italic",
-                color: "var(--fg-mute-4)",
+                fontSize: 11,
+                letterSpacing: "var(--track-nav)",
+                color: "var(--err-fg)",
+                border: "1px solid var(--err-border)",
+                borderRadius: "var(--r-2)",
+                background: "var(--bg-card)",
               }}
             >
-              thinking…
-            </span>
+              {bootstrapping ? "Retrying…" : "Retry"}
+            </button>
           </div>
-        ) : null}
-        {error && hasAnyRenderableContent ? (
-          <div className="error-toast inline-block">{error}</div>
-        ) : null}
-        <div ref={messagesEnd} />
-      </div>
-      {!sessionId && error ? (
-        <div
-          role="alert"
-          className="px-4 py-3 flex items-start justify-between gap-3"
-          style={{
-            background: "var(--err-bg)",
-            borderTop: "1px solid var(--err-border)",
-          }}
-        >
-          <div style={{ color: "var(--err-fg)" }}>
-            <p
-              className="font-mark"
-              style={{ fontSize: 11, letterSpacing: "var(--track-nav)" }}
-            >
-              Chat is offline
-            </p>
-            <p
-              className="font-mono mt-1 break-words"
-              style={{ fontSize: 12 }}
-            >
-              {error}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => bootstrapSession()}
-            disabled={bootstrapping}
-            className="shrink-0 px-3 py-1 font-mark disabled:opacity-40"
-            style={{
-              fontSize: 11,
-              letterSpacing: "var(--track-nav)",
-              color: "var(--err-fg)",
-              border: "1px solid var(--err-border)",
-              borderRadius: "var(--r-2)",
-              background: "var(--bg-card)",
-            }}
-          >
-            {bootstrapping ? "Retrying…" : "Retry"}
-          </button>
         </div>
       ) : null}
-      <form
-        onSubmit={onSubmit}
-        className="p-4"
-        style={{
-          background: "var(--bg-card)",
-          borderTop: "1px solid var(--bor-1)",
-        }}
-      >
-        <div className="flex items-center gap-2 mb-2">
-          <label
-            htmlFor="active-network"
-            className="font-mark"
-            style={{
-              fontSize: 10,
-              letterSpacing: "var(--track-meta)",
-              textTransform: "uppercase",
-              color: "var(--fg-mute-4)",
+
+      {/* Composer — a single focused pill, centered to match the thread. */}
+      <div className="px-6 pb-5 pt-1">
+        <form onSubmit={onSubmit} className="mx-auto w-full max-w-3xl">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={ATTACH_ACCEPT}
+            multiple
+            className="hidden"
+            aria-hidden="true"
+            tabIndex={-1}
+            onChange={(e) => {
+              onPickFiles(e.target.files)
+              // Reset so re-selecting the same file fires change again.
+              e.target.value = ""
             }}
-          >
-            Network
-          </label>
-          <select
-            id="active-network"
-            value={activeNetworkId ?? ""}
-            onChange={(e) => onPickNetwork(e.target.value)}
-            className="px-2 py-1 outline-none"
-            style={{
-              fontFamily: "var(--font-jetbrains)",
-              fontSize: 11,
-              color: "var(--ink-app)",
-              background: "var(--bg-card)",
-              border: "1px solid var(--bor-3)",
-              borderRadius: "var(--r-2)",
-              maxWidth: 320,
-            }}
-          >
-            <option value="">— none (agent will ask) —</option>
-            {networks.map((n) => (
-              <option key={n.id} value={n.id}>
-                {n.name}
-                {n.status !== "canonical" && n.status !== "ready" ? ` · ${n.status}` : ""}
-              </option>
-            ))}
-          </select>
-          {networks.length === 0 ? (
-            <span
+          />
+          <div className="composer-shell px-2.5 py-2">
+            {attachments.length > 0 ? (
+              <div className="flex flex-wrap gap-2 px-1 pt-1 pb-2">
+                {attachments.map((a) => (
+                  <ComposerAttachmentChip
+                    key={a.localId}
+                    attachment={a}
+                    onRemove={() => removeAttachment(a.localId)}
+                  />
+                ))}
+              </div>
+            ) : null}
+            <div className="flex items-end gap-1.5">
+              <button
+                type="button"
+                aria-label="Attach a file"
+                title="Attach a file"
+                disabled={!sessionId || pending}
+                onClick={() => fileInputRef.current?.click()}
+                className="composer-icon-btn shrink-0"
+              >
+                +
+              </button>
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={
+                  sessionId
+                    ? "Ask the agent — describe an objective, a constraint, or an analysis"
+                    : error
+                      ? "Chat is offline — see error above"
+                      : "Loading…"
+                }
+                disabled={!sessionId || pending}
+                rows={1}
+                className="composer-input flex-1 py-1.5"
+                style={{ maxHeight: 200, overflowY: "auto" }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                    e.preventDefault()
+                    onSubmit(e)
+                  }
+                }}
+              />
+              <button
+                type="submit"
+                aria-label="Send"
+                disabled={sendDisabled}
+                className="composer-send shrink-0"
+                title="Send (⌘↵)"
+              >
+                <span aria-hidden="true" style={{ fontSize: 15, lineHeight: 1 }}>
+                  ↑
+                </span>
+              </button>
+            </div>
+          </div>
+          {/* Controls row: implicit network subject + send hint. */}
+          <div className="mt-2.5 flex items-center justify-between gap-3 px-1">
+            <div className="flex items-center gap-2 min-w-0">
+              <label
+                htmlFor="active-network"
+                className="font-mark shrink-0"
+                style={{
+                  fontSize: 10,
+                  letterSpacing: "var(--track-meta)",
+                  textTransform: "uppercase",
+                  color: "var(--fg-mute-4)",
+                }}
+              >
+                Network
+              </label>
+              <select
+                id="active-network"
+                value={activeNetworkId ?? ""}
+                onChange={(e) => onPickNetwork(e.target.value)}
+                className="px-2 py-1 outline-none min-w-0"
+                style={{
+                  fontFamily: "var(--font-jetbrains)",
+                  fontSize: 11,
+                  color: "var(--ink-app)",
+                  background: "var(--bg-card)",
+                  border: "1px solid var(--bor-3)",
+                  borderRadius: "var(--r-2)",
+                  maxWidth: 280,
+                }}
+              >
+                <option value="">— none (agent will ask) —</option>
+                {networks.map((n) => (
+                  <option key={n.id} value={n.id}>
+                    {n.name}
+                    {n.status !== "canonical" && n.status !== "ready"
+                      ? ` · ${n.status}`
+                      : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p
+              className="hidden sm:flex items-center gap-2 shrink-0"
               style={{
                 fontFamily: "var(--font-jetbrains)",
                 fontSize: 10.5,
                 color: "var(--fg-mute-4)",
               }}
             >
-              no networks yet — add one in Networks
-            </span>
-          ) : null}
-        </div>
-        {attachments.length > 0 ? (
-          <div className="flex flex-wrap gap-2 mb-2">
-            {attachments.map((a) => (
-              <ComposerAttachmentChip
-                key={a.localId}
-                attachment={a}
-                onRemove={() => removeAttachment(a.localId)}
-              />
-            ))}
+              <span className="mono-kbd">⌘</span>
+              <span className="mono-kbd">⏎</span>
+              <span>to send</span>
+            </p>
           </div>
-        ) : null}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept={ATTACH_ACCEPT}
-          multiple
-          className="hidden"
-          aria-hidden="true"
-          tabIndex={-1}
-          onChange={(e) => {
-            onPickFiles(e.target.files)
-            // Reset so re-selecting the same file fires change again.
-            e.target.value = ""
-          }}
-        />
-        <div className="flex gap-2 items-stretch">
-          <button
-            type="button"
-            aria-label="Attach a file"
-            title="Attach a file"
-            disabled={!sessionId || pending}
-            onClick={() => fileInputRef.current?.click()}
-            className="shrink-0 px-3 font-mark disabled:opacity-40"
-            style={{
-              fontSize: 16,
-              lineHeight: 1,
-              color: "var(--ink-app)",
-              background: "var(--bg-card)",
-              border: "1px solid var(--bor-3)",
-              borderRadius: "var(--r-2)",
-              transition: "border-color var(--t-input)",
-            }}
-          >
-            +
-          </button>
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={
-              sessionId
-                ? "Ask the agent — describe an objective, a constraint, or an analysis"
-                : error
-                  ? "Chat is offline — see error above"
-                  : "Loading…"
-            }
-            disabled={!sessionId || pending}
-            rows={3}
-            className="flex-1 outline-none resize-none px-3 py-2"
-            style={{
-              fontFamily: "var(--font-sora)",
-              fontSize: 13,
-              lineHeight: 1.5,
-              color: "var(--ink-app)",
-              background: "var(--bg-card)",
-              border: "1px solid var(--bor-3)",
-              borderRadius: "var(--r-3)",
-              transition: "border-color var(--t-input)",
-            }}
-            onFocus={(e) =>
-              (e.currentTarget.style.borderColor = "var(--ink-app)")
-            }
-            onBlur={(e) =>
-              (e.currentTarget.style.borderColor = "var(--bor-3)")
-            }
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                e.preventDefault()
-                onSubmit(e)
-              }
-            }}
-          />
-          <button
-            type="submit"
-            disabled={
-              !sessionId ||
-              pending ||
-              hasUploading ||
-              (!input.trim() && readyAttachments.length === 0)
-            }
-            className="font-mark px-5 disabled:opacity-40"
-            style={{
-              fontSize: 11,
-              letterSpacing: "var(--track-meta)",
-              background: "var(--ink-app)",
-              color: "var(--bg-card)",
-              borderRadius: "var(--r-2)",
-              transition: "background var(--t-hover)",
-            }}
-          >
-            Send
-          </button>
-        </div>
-        <p
-          className="mt-2 flex items-center gap-2"
-          style={{
-            fontFamily: "var(--font-jetbrains)",
-            fontSize: 10.5,
-            color: "var(--fg-mute-4)",
-          }}
-        >
-          <span className="mono-kbd">⌘</span>
-          <span className="mono-kbd">⏎</span>
-          <span>to send · agent runs on Claude Sonnet via OpenRouter</span>
-        </p>
-      </form>
+        </form>
+      </div>
     </div>
   )
 }
@@ -848,11 +858,11 @@ function MessageBlock({ message }: { message: UiMessage }) {
   const isUser = role === "user"
   return (
     <div
-      className={`w-full flex flex-col gap-1 ${isUser ? "items-end" : "items-start"}`}
+      className={`w-full flex flex-col gap-1.5 ${isUser ? "items-end" : "items-start"}`}
     >
-      <span className="chat-msg-role">{isUser ? "you" : "agent"}</span>
+      {isUser ? null : <span className="chat-msg-role">agent</span>}
       <div
-        className={`${isUser ? "max-w-[85%]" : "max-w-full w-full"} flex flex-col gap-2`}
+        className={`${isUser ? "max-w-[80%]" : "max-w-full w-full"} flex flex-col gap-2`}
       >
         {parts.map((p) => (
           <PartView key={p.id} part={p} role={role} />
@@ -894,16 +904,25 @@ function PartView({ part, role }: { part: AnyPart; role: "user" | "assistant" })
         ) : null}
         {hasBody ? (
           <div
-            className="whitespace-pre-wrap"
-            style={{
-              fontFamily: "var(--font-sora)",
-              fontSize: 12.5,
-              lineHeight: 1.5,
-              padding: "8px 12px",
-              borderRadius: "var(--r-4)",
-              background: isUser ? "var(--ink-app)" : "var(--bg-tint-warm)",
-              color: isUser ? "var(--bg-card)" : "var(--ink-app)",
-            }}
+            className="whitespace-pre-wrap break-words"
+            style={
+              isUser
+                ? {
+                    fontFamily: "var(--font-sora)",
+                    fontSize: 13.5,
+                    lineHeight: 1.55,
+                    padding: "10px 15px",
+                    borderRadius: "18px",
+                    background: "var(--ink-app)",
+                    color: "var(--bg-card)",
+                  }
+                : {
+                    fontFamily: "var(--font-sora)",
+                    fontSize: 14,
+                    lineHeight: 1.6,
+                    color: "var(--fg-body)",
+                  }
+            }
           >
             {body}
           </div>

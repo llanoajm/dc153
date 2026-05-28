@@ -256,6 +256,56 @@ def _builtin_tools() -> list[dict]:
             "_builtin": "solve_opf",
         },
         {
+            "name": "steinmetz__solve_plan",
+            "description": (
+                "Run a capacity-expansion PLAN on a network artifact and write "
+                "a `plan` artifact tied to it. This is the planning hero loop: "
+                "it lets generator capacities float and uses zap's "
+                "PlanningProblem (DispatchCostObjective [+ weighted "
+                "EmissionsObjective] + InvestmentObjective over a DispatchLayer) "
+                "to find a cheaper / lower-emissions build-out. Use this when "
+                "the user asks to optimize, expand, or plan the grid (vs. "
+                "solve_opf, which dispatches a FIXED grid). Pass "
+                "`network_artifact_id` (uuid of a `kind='network'` artifact). "
+                "Optional: `hours` (snapshots to solve; default 1), "
+                "`iterations` (gradient-descent steps; default 5 — keep small, "
+                "this is CPU-only), `emissions_weight` (λ on emissions; 0 = "
+                "pure cost, raise it to push decarbonization). Returns the new "
+                "plan artifact id; metadata carries the loss/op_cost/inv_cost "
+                "history and the final per-generator build. CPU-only — never "
+                "uses GPU/Modal."
+            ),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "network_artifact_id": {
+                        "type": "string",
+                        "description": "UUID of the `kind='network'` artifact to plan over.",
+                    },
+                    "hours": {
+                        "type": "integer",
+                        "description": "Number of snapshots to solve per iteration (default 1).",
+                    },
+                    "iterations": {
+                        "type": "integer",
+                        "description": (
+                            "Gradient-descent iterations (default 5). Keep "
+                            "small — this runs on CPU."
+                        ),
+                    },
+                    "emissions_weight": {
+                        "type": "number",
+                        "description": (
+                            "Weight λ on the emissions objective (default 0). "
+                            "Raise to trade cost for lower emissions."
+                        ),
+                    },
+                },
+                "required": ["network_artifact_id"],
+            },
+            "_builtin": "solve_plan",
+        },
+        {
             "name": "steinmetz__fetch_network",
             "description": (
                 "Download a named network or dataset from a URL into the "
@@ -672,22 +722,13 @@ def _builtin_list_networks() -> str:
     return json.dumps({"networks": networks}, indent=2)
 
 
-def _builtin_solve_opf(
-    network_artifact_id: str,
-    hours: int = 1,
-    gpu: bool = False,
-) -> str:
-    """Fetch a network artifact, dispatch on CPU or GPU, write a run row."""
+def _resolve_network_artifact(env: dict, network_artifact_id: str) -> tuple[dict, Path]:
+    """Fetch a `kind='network'` artifact row and resolve its on-disk PyPSA
+    folder. Shared by ``solve_opf`` and ``solve_plan``. Returns
+    ``(network_artifact_row, net_dir)``; raises with a clear message on any
+    missing piece."""
     if not network_artifact_id or not isinstance(network_artifact_id, str):
         raise ValueError("network_artifact_id is required")
-    try:
-        hours = int(hours)
-    except (TypeError, ValueError):
-        raise ValueError("hours must be an integer")
-    if hours < 1:
-        raise ValueError("hours must be >= 1")
-
-    env = _load_grid_app_env()
     rows = _supabase_request(
         env,
         "GET",
@@ -701,7 +742,6 @@ def _builtin_solve_opf(
             f"artifact {network_artifact_id} is kind={network_artifact.get('kind')!r}, "
             "not 'network'"
         )
-
     fs_path = network_artifact.get("fs_path")
     if not fs_path:
         raise RuntimeError(
@@ -716,6 +756,24 @@ def _builtin_solve_opf(
             f"network folder {net_dir} is missing buses.csv — re-run "
             "ingestion or pass a different artifact"
         )
+    return network_artifact, net_dir
+
+
+def _builtin_solve_opf(
+    network_artifact_id: str,
+    hours: int = 1,
+    gpu: bool = False,
+) -> str:
+    """Fetch a network artifact, dispatch on CPU or GPU, write a run row."""
+    try:
+        hours = int(hours)
+    except (TypeError, ValueError):
+        raise ValueError("hours must be an integer")
+    if hours < 1:
+        raise ValueError("hours must be >= 1")
+
+    env = _load_grid_app_env()
+    network_artifact, net_dir = _resolve_network_artifact(env, network_artifact_id)
 
     # The smoke-dispatch helper covers the CPU path end-to-end; for the GPU
     # path we load the network locally so build_run_row can re-use the same
@@ -786,6 +844,76 @@ def _builtin_solve_opf(
     )
 
 
+def _builtin_solve_plan(
+    network_artifact_id: str,
+    hours: int = 1,
+    iterations: int = 5,
+    emissions_weight: float = 0.0,
+) -> str:
+    """Run a capacity-expansion plan on a network artifact and write a
+    `kind='plan'` artifact. CPU-only — uses zap's PlanningProblem via the
+    local install, never the Modal/GPU path."""
+    try:
+        hours = int(hours)
+    except (TypeError, ValueError):
+        raise ValueError("hours must be an integer")
+    if hours < 1:
+        raise ValueError("hours must be >= 1")
+    try:
+        iterations = int(iterations)
+    except (TypeError, ValueError):
+        raise ValueError("iterations must be an integer")
+    if iterations < 1:
+        raise ValueError("iterations must be >= 1")
+    try:
+        emissions_weight = float(emissions_weight)
+    except (TypeError, ValueError):
+        raise ValueError("emissions_weight must be a number")
+
+    env = _load_grid_app_env()
+    network_artifact, net_dir = _resolve_network_artifact(env, network_artifact_id)
+
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from plan_artifact import build_plan_row, run_plan
+
+    plan = run_plan(
+        net_dir,
+        hours=hours,
+        num_iterations=iterations,
+        emissions_weight=emissions_weight,
+    )
+
+    user_id = network_artifact.get("user_id") or os.environ.get("STEINMETZ_USER_ID")
+    row = build_plan_row(
+        network_artifact={"id": network_artifact_id, "user_id": user_id},
+        network_name=network_artifact.get("name") or net_dir.name,
+        network_slug=network_artifact.get("slug"),
+        net_dir=net_dir,
+        plan=plan,
+        canonical=False,
+    )
+    if user_id:
+        row["user_id"] = user_id
+
+    inserted = _supabase_request(env, "POST", "artifacts", row)
+    if not inserted:
+        raise RuntimeError("Supabase insert returned no row")
+    new_id = inserted[0].get("id")
+    return json.dumps(
+        {
+            "plan_artifact_id": new_id,
+            "network_artifact_id": network_artifact_id,
+            "iterations": plan.get("iterations"),
+            "emissions_weight": plan.get("emissions_weight"),
+            "solver": plan.get("solver"),
+            "final_loss": plan.get("final_loss"),
+            "final_op_cost": plan.get("final_op_cost"),
+            "final_inv_cost": plan.get("final_inv_cost"),
+        },
+        indent=2,
+    )
+
+
 _BUILTIN_DISPATCH = {
     "list_pending_imports": _builtin_list_pending_imports,
     "inspect_upload": _builtin_inspect_upload,
@@ -793,6 +921,7 @@ _BUILTIN_DISPATCH = {
     "fetch_network": _builtin_fetch_network,
     "list_networks": _builtin_list_networks,
     "solve_opf": _builtin_solve_opf,
+    "solve_plan": _builtin_solve_plan,
 }
 
 

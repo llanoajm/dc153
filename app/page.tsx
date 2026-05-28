@@ -91,7 +91,7 @@ export default function HomePage() {
         </div>
         <div className={styles.footerRule} />
         <div className={styles.footerBottom}>
-          <span className={styles.footerCopy}>© 2026 Steinmetz Power Intelligence</span>
+          <span className={styles.footerCopy}>© 2026 Steinmetz Power Infrastructure</span>
           <div className={styles.footerLegal}>
             <a href="#" className={styles.footerLink}>Privacy</a>
             <a href="#" className={styles.footerLink}>Terms</a>

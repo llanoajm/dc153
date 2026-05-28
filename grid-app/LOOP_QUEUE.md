@@ -50,7 +50,7 @@ planning hero (12-15) → polish (16). Process top-to-bottom.
     - the top-right header logout is removed (grep shows no header signout)
     - `npx tsc --noEmit` passes
 
-- [ ] 6. Remove the right context rail (ROADMAP §6)
+- [x] 6. Remove the right context rail (ROADMAP §6)
   - context: §10; delete components/shell/RightRail.tsx and its usage.
   - acceptance:
     - `grep -rn RightRail components app` returns nothing (file + imports gone)

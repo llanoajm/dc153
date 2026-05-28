@@ -7,3 +7,4 @@
 [2026-05-28T21:56:38+00:00] DONE: - [ ] 2. Backfill script: default workspace per user (ROADMAP §2)
 [2026-05-28T22:01:32+00:00] DONE: - [ ] 3. ensureWorkspace(workspaceId) + per-workspace dir (ROADMAP §3)
 [2026-05-28T22:09:31+00:00] DONE: - [ ] 4. Chat persistence + chats store (ROADMAP §4)
+[2026-05-28T22:19:20+00:00] DONE: - [ ] 5. Left sidebar: {single Network, Chats, profile} (ROADMAP §5)

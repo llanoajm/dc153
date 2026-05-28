@@ -1,5 +1,5 @@
-## Current item (from LOOP_QUEUE.md line 25)
-- [x] 2. Backfill script: default workspace per user (ROADMAP §2)
+## Current item (from LOOP_QUEUE.md line 32)
+- [x] 3. ensureWorkspace(workspaceId) + per-workspace dir (ROADMAP §3)
 
 ## Attempt
 1 of 5
@@ -35,6 +35,7 @@
 - If an item's acceptance cannot be met safely under these constraints, set its line in LOOP_QUEUE.md to `[!]` and record why in LOOP_ALERTS.md — do not force it or weaken the guardrails.
 
 STATUS: done
-SUMMARY: Added scripts/backfill_workspaces.py — an idempotent, service-role, dry-run-by-default backfill creating a default "My workspace" per user and stamping artifacts.workspace_id (canonical user_id-NULL networks left at NULL).
-ACCEPTANCE: PASS — scripts/backfill_workspaces.py creates a per-user "My workspace" and sets workspace_id on their artifacts while leaving canonical (user_id NULL) networks at NULL (verified via offline simulation with assertions). PASS — --dry-run is the default, prints the planned changes, writes nothing, exits 0 (run live: clean no-op since the DB has zero owners today); real apply is gated behind explicit --apply. PASS — idempotent by design: a second --dry-run post-apply reports 0 workspaces to create and 0 artifacts to assign (asserted in the offline sim). NOTE — the legacy public.features table has no workspace_id column (migration 0001 added it to artifacts only); stamping it would require unreviewed DDL, so features are not column-updated — they are surfaced as kind='feature'/'objective' artifacts which DO get stamped, and users owning only features still get a default workspace. NOTE — migration 0001 is not yet applied to the live DB (workspaces→404, artifacts.workspace_id→400); a human must paste it before --apply yields a meaningful plan. npx tsc --noEmit exit 0; npm run test:unit 13/13 pass.
+SUMMARY: Added lib/workspace.ts with ensureWorkspace(workspaceId) (per-workspace dir + .steinmetz/workspace.json primary-network record) reusing an extracted materializeWorkspaceDir, and threaded an optional workspaceId through lib/opencode-client.ts so sessions can open with cwd = the workspace dir; legacy per-user path unchanged.
+NEXT_STEPS:
+ACCEPTANCE: PASS — lib/workspace.ts exports ensureWorkspace(workspaceId) returning grid-workspaces/<id>/ and materializes .opencode/, features/, venv via the shared materializeWorkspaceDir, recording the primary network in .steinmetz/workspace.json (read/write/setPrimaryNetwork helpers). PASS — opencode session creation/getMessages/sendPrompt/abortSession accept a workspaceId and open with cwd = that dir (resolveWorkspaceDir in lib/opencode-client.ts); no call site passes it yet so the per-user flow is byte-identical. PASS — `npx tsc --noEmit` exit 0 and the existing per-user path (ensureUserWorkspace) still compiles; `npm run test:unit` 13/13. Note: per-workspace re-keying of Linux-account/cgroup hardening (§4.4) is intentionally deferred (gates off in dev) — ensureWorkspace does dir bootstrap + meta only.
 VERIFIED: yes

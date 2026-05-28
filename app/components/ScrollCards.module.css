@@ -1,26 +1,18 @@
 .section {
   position: relative;
   background: #F4F3F3;
-  z-index: 1;
-}
-
-.slot {
-  height: 200vh;
-  position: relative;
+  z-index: 2;
 }
 
 .card {
-  position: sticky;
-  top: 0;
-  height: 100vh;
+  min-height: 80vh;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 0 clamp(32px, 7vw, 140px);
+  padding: clamp(80px, 10vh, 140px) clamp(32px, 7vw, 140px);
   --p1: 0;
   --p2: 0;
   --p3: 0;
-  background: #F4F3F3;
 }
 
 .label {
@@ -82,7 +74,6 @@
 }
 
 @media (max-width: 768px) {
-  .slot { height: 160vh; }
-  .card { padding: 0 clamp(20px, 5vw, 40px); }
+  .card { padding: clamp(60px, 8vh, 100px) clamp(20px, 5vw, 40px); min-height: 70vh; }
   .title { font-size: clamp(40px, 11vw, 64px); max-width: 12ch; }
 }

@@ -43,16 +43,15 @@ export default function ScrollCards() {
     let raf = 0
 
     const update = () => {
-      const slots = section.querySelectorAll<HTMLElement>(`.${styles.slot}`)
+      const cards = section.querySelectorAll<HTMLElement>(`.${styles.card}`)
       const vh = window.innerHeight
-      slots.forEach((slot) => {
-        const card = slot.querySelector<HTMLElement>(`.${styles.card}`)
-        if (!card) return
-        const rect = slot.getBoundingClientRect()
-        const travel = Math.max(1, rect.height - vh)
-        const p = Math.max(0, Math.min(1, -rect.top / travel))
-        const p1 = localProgress(p, 0.05, 0.45)
-        const p2 = localProgress(p, 0.25, 0.65)
+      cards.forEach((card) => {
+        const rect = card.getBoundingClientRect()
+        const total = vh + rect.height
+        const traveled = vh - rect.top
+        const p = Math.max(0, Math.min(1, traveled / total))
+        const p1 = localProgress(p, 0.15, 0.55)
+        const p2 = localProgress(p, 0.30, 0.70)
         const p3 = localProgress(p, 0.45, 0.85)
         card.style.setProperty('--p1', String(p1))
         card.style.setProperty('--p2', String(p2))
@@ -81,16 +80,14 @@ export default function ScrollCards() {
   return (
     <section ref={sectionRef} className={styles.section}>
       {CARDS.map((c, i) => (
-        <div key={i} className={styles.slot}>
-          <article className={styles.card}>
-            <span className={styles.label}>{c.label}</span>
-            <h2 className={styles.title}>
-              <span className={`${styles.line} ${styles.line1}`}>{c.line1}</span>
-              <span className={`${styles.line} ${styles.line2}`}>{c.line2}</span>
-            </h2>
-            <p className={styles.body}>{c.body}</p>
-          </article>
-        </div>
+        <article key={i} className={styles.card}>
+          <span className={styles.label}>{c.label}</span>
+          <h2 className={styles.title}>
+            <span className={`${styles.line} ${styles.line1}`}>{c.line1}</span>
+            <span className={`${styles.line} ${styles.line2}`}>{c.line2}</span>
+          </h2>
+          <p className={styles.body}>{c.body}</p>
+        </article>
       ))}
     </section>
   )

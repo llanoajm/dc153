@@ -14,3 +14,4 @@
 [2026-05-28T22:47:39+00:00] DONE: - [ ] 9. Workspace gallery at /app (ROADMAP §9)
 [2026-05-28T22:53:23+00:00] DONE: - [ ] 10. Creation wizard (ROADMAP §10)
 [2026-05-28T23:01:09+00:00] DONE: - [ ] 11. Data Source tab (singular network) (ROADMAP §11)
+[2026-05-28T23:11:29+00:00] DONE: - [ ] 12. solve_plan MCP tool wrapping PlanningProblem.solve (ROADMAP §12)

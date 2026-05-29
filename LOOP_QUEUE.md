@@ -106,7 +106,7 @@ planning hero (12-15) → polish (16). Process top-to-bottom.
     - given focus [Generation, Decarbonization] the helper returns free generator capacities + `DispatchCost + λ*Emissions` + `InvestmentObjective`
     - a python smoke (import + call against ieee-30 shapes) exits 0; `npx tsc --noEmit` passes if any TS added
 
-- [ ] 15. Intent routing in the agent (no "zap", no UUID) (ROADMAP §15)
+- [x] 15. Intent routing in the agent (no "zap", no UUID) (ROADMAP §15)
   - context: §10; update grid-engineer persona template so NL routes to dispatch (Run) vs planning (Plan) against the workspace's primary network.
   - acceptance:
     - persona template (in lib/workspace.ts / lib/user-workspace.ts) updated with routing rules + the workspace-network default (never ask for a UUID, never say "zap")

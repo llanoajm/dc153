@@ -170,7 +170,7 @@ before the planning hero (12-15) before polish (16). Process top-to-bottom.
       generator capacities + `DispatchCost + λ*Emissions` + `InvestmentObjective`
     - unit-tested against `ieee-30` shapes; typecheck/py-import passes
 
-- [ ] 15. Intent routing in the agent (no "zap", no UUID)
+- [x] 15. Intent routing in the agent (no "zap", no UUID)
   - context: §10. Update the `grid-engineer` persona template (`lib/workspace.ts`)
     so NL like "generation schedules for the next few days" → dispatch (Run) and
     "plan expansion optimizing for <metric>" → planning (Plan), always against

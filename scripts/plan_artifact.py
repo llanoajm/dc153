@@ -72,6 +72,12 @@ from zap.planning import (  # noqa: E402
 import zap.planning.trackers as trackers  # noqa: E402
 
 from run_artifact import build_run_view_spec  # noqa: E402
+from focus_problem import (  # noqa: E402
+    GENERATION,
+    assemble_focus_plan,
+    build_bounds,
+    build_objectives,
+)
 
 
 OP_COST = "op_cost"
@@ -267,6 +273,7 @@ def run_plan(
     hours: int = 1,
     num_iterations: int = 5,
     emissions_weight: float = 0.0,
+    focus: list[str] | None = None,
     step_size: float = 1e-1,
     cap_multiplier: float = DEFAULT_CAP_MULTIPLIER,
     solver: str = DEFAULT_SOLVER,
@@ -277,14 +284,38 @@ def run_plan(
     ``final_caps`` (per-generator capacity before → after), the scalar final
     op/inv costs, plus solver / shape provenance. CPU-only; ``num_iterations``
     is intended to be small (a handful) so it finishes in seconds. Modal / GPU
-    is never involved."""
+    is never involved.
+
+    ``focus`` is the workspace's intent tags (§6). When omitted it defaults to
+    generation expansion (the original ``solve_plan`` behaviour). The focus →
+    free-parameters + objective-composition mapping lives in
+    :mod:`focus_problem`; a non-zero ``emissions_weight`` forces the emissions
+    term on regardless of focus (back-compat with the explicit ``solve_plan``
+    knob), and otherwise Decarbonization in ``focus`` turns it on with the
+    helper's default λ."""
     if hours < 1:
         raise ValueError("hours must be >= 1")
     if num_iterations < 1:
         raise ValueError("num_iterations must be >= 1")
 
     pnet, snapshots, net, devices = load_network(net_dir, hours)
-    parameter_names, gen_idx = _free_generator_params(devices)
+
+    # Map the workspace focus → which capacities are free + which objective
+    # terms turn on (§6). The explicit emissions_weight knob (when > 0) wins
+    # over the focus default so callers can dial λ directly.
+    focus_tags = focus if focus is not None else [GENERATION]
+    weight_override = emissions_weight if (emissions_weight and emissions_weight > 0) else None
+    focus_plan = assemble_focus_plan(
+        devices, focus_tags, emissions_weight=weight_override
+    )
+    if not focus_plan.parameter_names:
+        # Operations-only focus has nothing to expand — fall back to generation
+        # so a plan is still produced (the renderer/contract expect a build).
+        focus_plan = assemble_focus_plan(
+            devices, [GENERATION], emissions_weight=weight_override
+        )
+    parameter_names = focus_plan.parameter_names
+    gen_idx = _free_generator_params(devices)[1]
 
     cp_solver = getattr(cp, solver, None)
     if cp_solver is None:
@@ -299,15 +330,20 @@ def run_plan(
     )
 
     initial_caps = np.asarray(devices[gen_idx].nominal_capacity, dtype=float)
-    lower_bounds = {"generator": np.zeros_like(initial_caps)}
-    upper_bounds = {"generator": initial_caps * float(cap_multiplier)}
+    lower_bounds, upper_bounds = build_bounds(
+        focus_plan, devices, np=np, cap_multiplier=float(cap_multiplier)
+    )
 
-    op_objective = DispatchCostObjective(net, devices)
-    if emissions_weight and emissions_weight > 0:
-        op_objective = op_objective + float(emissions_weight) * EmissionsObjective(
-            devices
-        )
-    inv_objective = InvestmentObjective(devices, layer)
+    op_objective, inv_objective = build_objectives(
+        focus_plan,
+        net,
+        devices,
+        layer,
+        DispatchCostObjective=DispatchCostObjective,
+        EmissionsObjective=EmissionsObjective,
+        InvestmentObjective=InvestmentObjective,
+    )
+    effective_emissions_weight = focus_plan.emissions_weight
 
     problem = PlanningProblem(
         op_objective,
@@ -330,7 +366,15 @@ def run_plan(
         verbosity=0,
     )
 
-    final_caps = np.asarray(state["generator"], dtype=float).ravel()
+    # The capacity table / trajectory report the generator build (the common
+    # planning lever). When generation is free its state is keyed "generator";
+    # otherwise fall back to whatever free parameter exists so the contract
+    # (a non-empty build table) still holds.
+    if "generator" in state:
+        final_caps = np.asarray(state["generator"], dtype=float).ravel()
+    else:
+        _first_label = next(iter(state))
+        final_caps = np.asarray(state[_first_label], dtype=float).ravel()
     gen_names = [str(g) for g in pnet.generators.index[: final_caps.size]]
     carriers = (
         pnet.generators["carrier"].astype(str).tolist()[: final_caps.size]
@@ -356,13 +400,14 @@ def run_plan(
         "history": _history_to_json(history),
         "trajectory": _capacity_trajectory(history, gen_names),
         "iterations": int(num_iterations),
-        "emissions_weight": float(emissions_weight),
+        "emissions_weight": float(effective_emissions_weight),
+        "focus": list(focus_plan.focus),
         "solver": solver,
         "hours": int(len(snapshots)),
         "capacity_table": capacity_table,
         "dispatch": _final_dispatch_spec(layer, state, pnet, snapshots),
         "cost_emissions": _emissions_point(
-            devices, layer, state, final_op_cost, emissions_weight
+            devices, layer, state, final_op_cost, effective_emissions_weight
         ),
         "final_op_cost": final_op_cost,
         "final_inv_cost": _to_float(problem.get_inv_cost()),

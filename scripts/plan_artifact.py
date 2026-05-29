@@ -244,7 +244,11 @@ def _emissions_point(
     can't be evaluated (e.g. devices carry no emission rates)."""
     try:
         outcome = layer.forward(**state)
-        emissions = EmissionsObjective(devices)(outcome, la=np)
+        # EmissionsObjective.forward zips over a per-device `parameters` list
+        # (one dict per device); passing the default None makes it iterate over
+        # None. Build the same list the layer uses for its own forward pass.
+        parameters = layer.setup_parameters(**state)
+        emissions = EmissionsObjective(devices)(outcome, parameters=parameters, la=np)
         em = _to_float(emissions)
         if em is None:
             return None

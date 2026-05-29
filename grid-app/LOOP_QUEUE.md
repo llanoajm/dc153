@@ -94,7 +94,7 @@ planning hero (12-15) → polish (16). Process top-to-bottom.
     - driving the MCP server over stdio (as the existing list_networks verification does), `solve_plan` runs a SMALL CPU plan (few iterations) on `data/networks/ieee-30` end-to-end, returns a plan artifact id, and metadata carries history (loss, op_cost, inv_cost) + final caps
     - CPU-only, bounded iterations, finishes well under the work timeout; never requires GPU/Modal
 
-- [ ] 13. kind='plan' view_spec + renderer (ROADMAP §13)
+- [x] 13. kind='plan' view_spec + renderer (ROADMAP §13)
   - context: §7; extend scripts/run_artifact.py (or new plan_artifact.py) + add components/renderers/plan.tsx.
   - acceptance:
     - a plan artifact's view_spec encodes loss curve, capacity trajectory, final-build table, resulting dispatch (reuse run renderer), and a cost-vs-emissions panel

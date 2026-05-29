@@ -54,7 +54,7 @@ export function RunsPanel() {
     <div className="h-full overflow-y-auto" style={{ background: "var(--bg-app)" }}>
       <div className="max-w-4xl mx-auto w-full px-6 py-8 space-y-6">
         <div>
-          <div className="label-pane">Runs</div>
+          <div className="label-pane">Runs &amp; Plans</div>
           <h1 className="h-page-title mt-1">Dispatch runs</h1>
           <p
             className="mt-2 max-w-prose"

@@ -9,21 +9,26 @@ export interface RailSection {
   label: string
 }
 
-// Secondary workspace sections. The redesign (WORKSPACE_REDESIGN.md §10) makes
-// the chat the centerpiece — these live below the chat history under a "More"
-// group so their routes still resolve (a constraint until item 16 demotes them
-// to a Library) without competing with Network + Chats for the top of the rail.
-const SECONDARY_SECTIONS: RailSection[] = [
+// The five legible nouns of the workspace ontology (WORKSPACE_REDESIGN.md §3,§5):
+// Data Source · Chats · Objectives · Runs & Plans · Library. Chats is its own
+// top-level history list and the single network anchors Data Source at the top
+// of the rail, so the nouns surfaced here are the three studies (Data Source,
+// Objectives, Runs & Plans). The generic panels demote into a secondary Library
+// group below — their routes still resolve, they're just no longer the spine.
+const PRIMARY_SECTIONS: RailSection[] = [
+  { key: "networks", label: "Data Source" },
+  { key: "skills", label: "Objectives" },
+  { key: "runs", label: "Runs & Plans" },
+]
+
+// Demoted generic panels — the old "artifacts of any kind" surfaces. Kept
+// reachable under "Library" so old routes still resolve (item 16 acceptance).
+const LIBRARY_SECTIONS: RailSection[] = [
   { key: "sources", label: "Sources" },
-  { key: "networks", label: "Networks" },
-  { key: "datasets", label: "Datasets" },
-  { key: "runs", label: "Runs" },
-  { key: "reports", label: "Reports" },
-  { key: "skills", label: "Skills / Features" },
   { key: "glossary", label: "Glossary" },
-  { key: "orgs", label: "Orgs" },
   { key: "dashboards", label: "Dashboards" },
   { key: "panels", label: "Panels" },
+  { key: "orgs", label: "Orgs" },
   { key: "settings", label: "Settings" },
 ]
 
@@ -50,7 +55,8 @@ const itemBase: React.CSSProperties = {
 export function LeftRail({
   collapsed,
   onToggle,
-  sections = SECONDARY_SECTIONS,
+  primarySections = PRIMARY_SECTIONS,
+  librarySections = LIBRARY_SECTIONS,
   active,
   onSelect,
   pinnedDashboards = [],
@@ -63,7 +69,8 @@ export function LeftRail({
 }: {
   collapsed: boolean
   onToggle: () => void
-  sections?: RailSection[]
+  primarySections?: RailSection[]
+  librarySections?: RailSection[]
   active?: string
   onSelect?: (key: string) => void
   pinnedDashboards?: PinnedDashboard[]
@@ -74,7 +81,7 @@ export function LeftRail({
   onNewChat?: () => void
   onOpenChat?: (id: string) => void
 }) {
-  const [internalActive, setInternalActive] = useState(sections[0]?.key ?? "")
+  const [internalActive, setInternalActive] = useState(primarySections[0]?.key ?? "")
   const current = active ?? internalActive
   const select = (key: string) => {
     setInternalActive(key)
@@ -82,7 +89,39 @@ export function LeftRail({
   }
 
   const [chats, setChats] = useState<ChatSummary[]>([])
-  const [moreOpen, setMoreOpen] = useState(false)
+  const [libraryOpen, setLibraryOpen] = useState(false)
+
+  const renderSectionButton = (s: RailSection) => {
+    const isActive = current === s.key
+    return (
+      <button
+        key={s.key}
+        onClick={() => select(s.key)}
+        className="w-full text-left px-3 py-1.5"
+        style={{
+          ...itemBase,
+          fontSize: 12.5,
+          background: isActive ? "var(--bg-tint)" : "transparent",
+          color: isActive ? "var(--ink-app)" : "var(--fg-mute)",
+          fontWeight: isActive ? 500 : 400,
+        }}
+        onMouseEnter={(e) => {
+          if (!isActive) {
+            e.currentTarget.style.background = "var(--bg-hairline)"
+            e.currentTarget.style.color = "var(--ink-app)"
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isActive) {
+            e.currentTarget.style.background = "transparent"
+            e.currentTarget.style.color = "var(--fg-mute)"
+          }
+        }}
+      >
+        {s.label}
+      </button>
+    )
+  }
 
   const loadChats = useCallback(async () => {
     try {
@@ -277,12 +316,21 @@ export function LeftRail({
           </div>
         ) : null}
 
-        {/* Secondary workspace sections — collapsed by default so the chat
-            history stays the focus; their routes still resolve. */}
+        {/* The workspace nouns (WORKSPACE_REDESIGN.md §3,§5): Data Source,
+            Objectives, Runs & Plans — shown directly under the chat history. */}
         <div className="mt-3 pt-2" style={{ borderTop: "1px solid var(--bor-1)" }}>
+          <div className="px-3 pb-1 label-pane" style={{ fontSize: 9 }}>
+            Workspace
+          </div>
+          {primarySections.map(renderSectionButton)}
+        </div>
+
+        {/* Demoted generic panels — collapsed by default under "Library" so the
+            five nouns stay the spine; their routes still resolve. */}
+        <div className="mt-2 pt-2" style={{ borderTop: "1px solid var(--bor-1)" }}>
           <button
             type="button"
-            onClick={() => setMoreOpen((o) => !o)}
+            onClick={() => setLibraryOpen((o) => !o)}
             className="w-full text-left px-3 py-1 flex items-center gap-1"
             style={{
               fontFamily: "var(--font-sora)",
@@ -291,44 +339,12 @@ export function LeftRail({
               textTransform: "uppercase",
               color: "var(--fg-mute-3)",
             }}
-            aria-expanded={moreOpen}
+            aria-expanded={libraryOpen}
           >
-            <span style={{ fontSize: 9 }}>{moreOpen ? "▾" : "▸"}</span>
-            <span>More</span>
+            <span style={{ fontSize: 9 }}>{libraryOpen ? "▾" : "▸"}</span>
+            <span>Library</span>
           </button>
-          {moreOpen
-            ? sections.map((s) => {
-                const isActive = current === s.key
-                return (
-                  <button
-                    key={s.key}
-                    onClick={() => select(s.key)}
-                    className="w-full text-left px-3 py-1.5"
-                    style={{
-                      ...itemBase,
-                      fontSize: 12.5,
-                      background: isActive ? "var(--bg-tint)" : "transparent",
-                      color: isActive ? "var(--ink-app)" : "var(--fg-mute)",
-                      fontWeight: isActive ? 500 : 400,
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.background = "var(--bg-hairline)"
-                        e.currentTarget.style.color = "var(--ink-app)"
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.background = "transparent"
-                        e.currentTarget.style.color = "var(--fg-mute)"
-                      }
-                    }}
-                  >
-                    {s.label}
-                  </button>
-                )
-              })
-            : null}
+          {libraryOpen ? librarySections.map(renderSectionButton) : null}
         </div>
       </nav>
 

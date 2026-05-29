@@ -6,8 +6,8 @@ import { saveVideoAs, slugFor, beat } from "./_helpers"
 test("app shell mounts [demo:app-shell]", async ({ page }, testInfo) => {
   await page.goto("/app")
   await expect(page.getByRole("button", { name: /sign out/i })).toBeVisible({ timeout: 15_000 })
-  await expect(page.getByRole("button", { name: /^networks$/i }).first()).toBeVisible()
-  await expect(page.getByRole("button", { name: /^runs$/i }).first()).toBeVisible()
+  await expect(page.getByRole("button", { name: /^data source$/i }).first()).toBeVisible()
+  await expect(page.getByRole("button", { name: /^runs & plans$/i }).first()).toBeVisible()
   await expect(page.getByPlaceholder(/describe a feature|loading/i).first()).toBeVisible({
     timeout: 15_000,
   })

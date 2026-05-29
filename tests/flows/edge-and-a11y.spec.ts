@@ -12,16 +12,14 @@ import { test, expect } from "@playwright/test"
 
 test.describe("real-world weirdness (logged in)", () => {
   test("back/forward across rail navigation preserves the shell", async ({ page }) => {
-    // Redesign §5: the shell (rail + More group) lives on the workspace + the
-    // legacy secondary routes, not on /app (now the gallery). Start on a
+    // Redesign §5: the shell (rail + the five nouns) lives on the workspace +
+    // the legacy secondary routes, not on /app (now the gallery). Start on a
     // secondary route that mounts the shell without needing a workspace row.
     await page.goto("/app/networks")
-    // Secondary sections (Networks/Runs) sit under the collapsed "More" group.
-    await page.getByRole("button", { name: /^more$/i }).click()
-    await page.getByRole("button", { name: /^networks$/i }).first().click()
+    // The nouns (Data Source / Runs & Plans) are top-level rail items now.
+    await page.getByRole("button", { name: /^data source$/i }).first().click()
     await page.waitForURL(/\/app\/networks$/)
-    await page.getByRole("button", { name: /^more$/i }).click()
-    await page.getByRole("button", { name: /^runs$/i }).first().click()
+    await page.getByRole("button", { name: /^runs & plans$/i }).first().click()
     await page.waitForURL(/\/app\/runs$/)
     await page.goBack()
     await page.waitForURL(/\/app\/networks$/)

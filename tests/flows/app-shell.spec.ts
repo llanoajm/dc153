@@ -5,7 +5,7 @@
 import { test, expect } from "@playwright/test"
 
 // Redesign §5: /app is now the workspace GALLERY; the chat + the workspace
-// shell (rail, More group, profile menu, Cmd+K) live under /app/w/[id] and the
+// shell (rail, Library group, profile menu, Cmd+K) live under /app/w/[id] and the
 // legacy secondary routes. The shell-chrome tests below target /app/networks —
 // a route that still mounts the shell WITHOUT needing a `workspaces` row in the
 // DB. The chat-composer assertion that needs a bound workspace moved to
@@ -32,20 +32,28 @@ test.describe("app shell (logged in)", () => {
     await expect(page.getByText(/^chats$/i).first()).toBeVisible()
   })
 
-  test("rail item Networks routes to /app/networks and back", async ({ page }) => {
+  test("rail item Data Source routes to /app/networks and back", async ({ page }) => {
     await page.goto("/app/networks")
-    // Secondary sections live under the collapsed "More" group now.
-    await page.getByRole("button", { name: /^more$/i }).click()
-    await page.getByRole("button", { name: /^networks$/i }).first().click()
+    // The five nouns (Data Source / Objectives / Runs & Plans) are top-level
+    // now; the demoted generic panels live under the collapsed "Library" group.
+    await page.getByRole("button", { name: /^data source$/i }).first().click()
     await page.waitForURL(/\/app\/networks$/)
     await expect(page.locator("main, body").first()).toBeVisible()
   })
 
-  test("rail item Runs routes to /app/runs", async ({ page }) => {
+  test("rail item Runs & Plans routes to /app/runs", async ({ page }) => {
     await page.goto("/app/networks")
-    await page.getByRole("button", { name: /^more$/i }).click()
-    await page.getByRole("button", { name: /^runs$/i }).first().click()
+    await page.getByRole("button", { name: /^runs & plans$/i }).first().click()
     await page.waitForURL(/\/app\/runs$/)
+  })
+
+  test("Library group reveals demoted panels (Sources routes to /app/sources)", async ({
+    page,
+  }) => {
+    await page.goto("/app/networks")
+    await page.getByRole("button", { name: /^library$/i }).click()
+    await page.getByRole("button", { name: /^sources$/i }).first().click()
+    await page.waitForURL(/\/app\/sources$/)
   })
 
   test("Cmd+K opens the command palette", async ({ page }) => {

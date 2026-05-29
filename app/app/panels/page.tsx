@@ -17,8 +17,8 @@ export default async function PanelsIndexPage() {
           <div className="text-[11px] font-mark tracking-wider uppercase text-black/50">
             Panels
           </div>
-          <h1 className="font-serif-soft text-2xl mt-1">Sandboxed custom panels</h1>
-          <p className="text-sm font-serif-soft text-black/60 mt-2 max-w-prose">
+          <h1 className="font-soft text-2xl mt-1">Sandboxed custom panels</h1>
+          <p className="text-sm font-soft text-black/60 mt-2 max-w-prose">
             Agent-authored mini UIs rendered inside the workspace. Open one to
             review its diff against the prior version, pin it to the left rail,
             or promote it to a callable skill.
@@ -26,7 +26,7 @@ export default async function PanelsIndexPage() {
         </div>
 
         {rows.length === 0 ? (
-          <div className="border border-dashed border-black/15 px-4 py-12 text-center text-sm font-serif-soft text-black/50">
+          <div className="border border-dashed border-black/15 px-4 py-12 text-center text-sm font-soft text-black/50">
             No panels yet. The agent can save one any time by writing an
             artifact with <span className="font-mono">kind=&quot;panel&quot;</span> and a{" "}
             <span className="font-mono">root</span> node on{" "}
@@ -60,7 +60,7 @@ function PanelRow({ panel }: { panel: Artifact }) {
           href={`/app/artifacts/${panel.id}`}
           className="block hover:bg-black/[0.03] -mx-2 px-2 py-1"
         >
-          <div className="font-serif-soft text-base text-black flex items-center gap-2">
+          <div className="font-soft text-base text-black flex items-center gap-2">
             {panel.name}
             {promoted ? (
               <span className="text-[9px] font-mark tracking-wider uppercase border border-emerald-300 text-emerald-700 bg-emerald-50 px-1.5 py-0.5">

@@ -1,33 +1,583 @@
 @import "tailwindcss";
 
+/* =========================================================================
+   Steinmetz Design System — Grid App tokens
+   Tokens are sourced verbatim from the design-system bundle's
+   colors_and_type.css; the Tailwind core-color remaps that follow keep the
+   existing utility classes (bg-white, text-black, border-black/10, etc.)
+   rendering on-brand without per-file edits.
+   ========================================================================= */
+
 :root {
-  --background: #ffffff;
-  --foreground: #000000;
-  --muted: #b0b0b0;
+  /* ── Brand axis (the 5° tilt + skewed CTAs) ─────────────────────────── */
+  --axis-angle: 5deg;
+  --skew-cta: -8deg;
+  --skew-nav-cta: -12deg;
+
+  /* ── Surfaces — warm off-whites + beiges ────────────────────────────── */
+  --bg-page: #F4F3F3;       /* marketing site background */
+  --bg-app: #fafaf7;        /* studio app background (warmer cream) */
+  --bg-card: #FFFFFF;
+  --bg-tint: #f3efe7;       /* code pill, badge, view-toggle track */
+  --bg-tint-warm: #f5f1e8;  /* agent message bubble */
+  --bg-hairline: #f1ede5;   /* faint row divider */
+
+  /* ── Brand palette (original Steinmetz source palette) ──────────────── */
+  --off-black: #091717;
+  --inky-blue: #133B39;
+  --peacock: #2E5E5A;
+  --true-turquoise: #20808D;
+  --paper-white: #FBFAF4;
+  --ecru: #E4E3D4;
+  --apricot: #FFD2A6;
+  --terracotta: #A84B2F;
+  --boysenberry: #944454;
+
+  /* ── Ink scale ──────────────────────────────────────────────────────── */
+  --ink: #091717;
+  --ink-pure: #000000;
+  --ink-app: #1a1a1a;
+  --ink-2: #2a1d10;
+  --ink-light: #5a3c20;
+  --fg-body: #333333;
+  --fg-mute: #555555;
+  --fg-mute-2: #666666;
+  --fg-mute-3: #888888;
+  --fg-mute-4: #999999;
+  --fg-mute-5: #aaaaaa;
+  --fg-disabled: #bbbbbb;
+
+  /* ── Navy / cobalt brand accent ─────────────────────────────────────── */
+  --navy: #000066;
+  --navy-strong: #0000BB;
+  --navy-pop: #0044CC;
+  --navy-3d: #000088;
+
+  /* ── Warm beige border scale ────────────────────────────────────────── */
+  --bor-1: #e9e6df;
+  --bor-2: #e0e0e0;
+  --bor-3: #d9d4ca;
+  --bor-4: #c4bea8;
+
+  /* ── Semantic feedback (restrained) ─────────────────────────────────── */
+  --ok: #1f8a2a;
+  --warn: #b56c1a;
+  --err: #b51212;
+  --err-soft: #c0392b;
+  --err-bg: #ffeaea;
+  --err-border: #f4baba;
+  --err-fg: #8a1212;
+
+  /* ── Loss-term accents (aligned to brand palette) ───────────────────── */
+  --loss-cost: #091717;
+  --loss-emissions: #2E5E5A;
+  --loss-inv: #A84B2F;
+  --loss-peakline: #944454;
+
+  /* ── Radii ──────────────────────────────────────────────────────────── */
+  --r-0: 0px;
+  --r-1: 3px;
+  --r-2: 4px;
+  --r-3: 6px;
+  --r-4: 8px;
+
+  /* ── 4-base spacing scale ───────────────────────────────────────────── */
+  --s-1: 2px;
+  --s-2: 4px;
+  --s-3: 6px;
+  --s-4: 8px;
+  --s-5: 10px;
+  --s-6: 12px;
+  --s-7: 14px;
+  --s-8: 16px;
+  --s-9: 20px;
+  --s-10: 24px;
+  --s-11: 32px;
+  --s-12: 40px;
+  --s-13: 56px;
+
+  /* ── Elevation ──────────────────────────────────────────────────────── */
+  --shadow-pop: 0 6px 20px rgba(0, 0, 0, 0.08);
+
+  /* ── Letter-spacing tracking ────────────────────────────────────────── */
+  --track-display: -0.02em;
+  --track-tight: -0.01em;
+  --track-tight-body: 0.01em;
+  --track-normal: 0.02em;
+  --track-meta: 0.04em;
+  --track-label: 0.08em;
+  --track-pane: 0.1em;
+  --track-nav: 0.16em;
+  --track-hero-label: 0.18em;
+
+  /* ── Transitions ────────────────────────────────────────────────────── */
+  --t-hover: 0.2s;
+  --t-press: 0.1s;
+  --t-input: 0.15s;
+
+  /* ── Surfaces / text aliases for legacy `var(--background)` usages ──── */
+  --background: var(--bg-app);
+  --foreground: var(--ink-app);
+  --muted: color-mix(in srgb, var(--ink) 55%, var(--paper-white));
 }
 
 @theme inline {
+  /* Map the project's semantic surface tokens onto brand colors. */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --font-sans: var(--font-sora);
-  --font-serif: var(--font-garamond);
+  --font-serif: var(--font-grotesk);
+  --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* ── Tailwind core token overrides ──
+     Existing components are written in `bg-white`, `text-black`,
+     `border-black/10`, `bg-red-50`, `text-emerald-700`, `bg-amber-50`, etc.
+     Remapping the base scale here rebrands every one of those classes at
+     once. */
+  --color-white: var(--bg-card);
+  --color-black: var(--ink-app);
+
+  /* Neutral scale → warm-beige hairline + ink-app gradient. */
+  --color-zinc-50: #FBFAF4;
+  --color-zinc-100: #f3efe7;
+  --color-zinc-200: var(--bor-1);
+  --color-zinc-300: var(--bor-3);
+  --color-zinc-400: var(--bor-4);
+  --color-zinc-500: #7E7E72;
+  --color-zinc-600: var(--fg-mute);
+  --color-zinc-700: #3A3A36;
+  --color-zinc-800: #1F1F1D;
+  --color-zinc-900: #0F1413;
+  --color-gray-50: var(--color-zinc-50);
+  --color-gray-100: var(--color-zinc-100);
+  --color-gray-200: var(--color-zinc-200);
+  --color-gray-300: var(--color-zinc-300);
+  --color-gray-400: var(--color-zinc-400);
+  --color-gray-500: var(--color-zinc-500);
+  --color-gray-600: var(--color-zinc-600);
+  --color-gray-700: var(--color-zinc-700);
+  --color-gray-800: var(--color-zinc-800);
+  --color-gray-900: var(--color-zinc-900);
+  --color-slate-50: var(--color-zinc-50);
+  --color-slate-100: var(--color-zinc-100);
+  --color-slate-200: var(--color-zinc-200);
+  --color-slate-300: var(--color-zinc-300);
+  --color-slate-400: var(--color-zinc-400);
+  --color-slate-500: var(--color-zinc-500);
+  --color-slate-600: var(--color-zinc-600);
+  --color-slate-700: var(--color-zinc-700);
+  --color-slate-800: var(--color-zinc-800);
+  --color-slate-900: var(--color-zinc-900);
+  --color-neutral-50: var(--color-zinc-50);
+  --color-neutral-100: var(--color-zinc-100);
+  --color-neutral-200: var(--color-zinc-200);
+  --color-neutral-300: var(--color-zinc-300);
+  --color-neutral-400: var(--color-zinc-400);
+  --color-neutral-500: var(--color-zinc-500);
+  --color-neutral-600: var(--color-zinc-600);
+  --color-neutral-700: var(--color-zinc-700);
+  --color-neutral-800: var(--color-zinc-800);
+  --color-neutral-900: var(--color-zinc-900);
+  --color-stone-50: var(--color-zinc-50);
+  --color-stone-100: var(--color-zinc-100);
+  --color-stone-200: var(--color-zinc-200);
+  --color-stone-300: var(--color-zinc-300);
+  --color-stone-400: var(--color-zinc-400);
+  --color-stone-500: var(--color-zinc-500);
+  --color-stone-600: var(--color-zinc-600);
+  --color-stone-700: var(--color-zinc-700);
+  --color-stone-800: var(--color-zinc-800);
+  --color-stone-900: var(--color-zinc-900);
+
+  /* Errors / destructive → Boysenberry + Terra Cotta */
+  --color-red-50: #FBEEEA;
+  --color-red-100: #F4D9D2;
+  --color-red-200: #E9B6A8;
+  --color-red-300: #DD937F;
+  --color-red-400: #C4715A;
+  --color-red-500: var(--terracotta);
+  --color-red-600: #92402A;
+  --color-red-700: var(--boysenberry);
+  --color-red-800: #6E3340;
+  --color-red-900: #4B2230;
+  --color-rose-50: var(--color-red-50);
+  --color-rose-100: var(--color-red-100);
+  --color-rose-200: var(--color-red-200);
+  --color-rose-300: var(--color-red-300);
+  --color-rose-400: var(--color-red-400);
+  --color-rose-500: var(--color-red-500);
+  --color-rose-600: var(--color-red-600);
+  --color-rose-700: var(--color-red-700);
+  --color-rose-800: var(--color-red-800);
+  --color-rose-900: var(--color-red-900);
+
+  /* Success / positive → Peacock + True Turquoise */
+  --color-emerald-50: #E6F1F1;
+  --color-emerald-100: #C9E1E1;
+  --color-emerald-200: #9DC8C7;
+  --color-emerald-300: #6FB0AE;
+  --color-emerald-400: #3F9794;
+  --color-emerald-500: var(--true-turquoise);
+  --color-emerald-600: #1F6E78;
+  --color-emerald-700: var(--peacock);
+  --color-emerald-800: #224C4A;
+  --color-emerald-900: var(--inky-blue);
+  --color-green-50: var(--color-emerald-50);
+  --color-green-100: var(--color-emerald-100);
+  --color-green-200: var(--color-emerald-200);
+  --color-green-300: var(--color-emerald-300);
+  --color-green-400: var(--color-emerald-400);
+  --color-green-500: var(--color-emerald-500);
+  --color-green-600: var(--color-emerald-600);
+  --color-green-700: var(--color-emerald-700);
+  --color-green-800: var(--color-emerald-800);
+  --color-green-900: var(--color-emerald-900);
+  --color-teal-50: var(--color-emerald-50);
+  --color-teal-100: var(--color-emerald-100);
+  --color-teal-200: var(--color-emerald-200);
+  --color-teal-300: var(--color-emerald-300);
+  --color-teal-400: var(--color-emerald-400);
+  --color-teal-500: var(--color-emerald-500);
+  --color-teal-600: var(--color-emerald-600);
+  --color-teal-700: var(--color-emerald-700);
+  --color-teal-800: var(--color-emerald-800);
+  --color-teal-900: var(--color-emerald-900);
+  --color-cyan-500: var(--color-emerald-500);
+  --color-cyan-600: var(--color-emerald-600);
+  --color-cyan-700: var(--color-emerald-700);
+  --color-sky-500: var(--color-emerald-500);
+  --color-sky-600: var(--color-emerald-600);
+  --color-sky-700: var(--color-emerald-700);
+
+  /* Warnings / accent → Apricot + Terra Cotta */
+  --color-amber-50: #FFF4E5;
+  --color-amber-100: #FFE6C8;
+  --color-amber-200: var(--apricot);
+  --color-amber-300: #F9B978;
+  --color-amber-400: #E89A52;
+  --color-amber-500: #D27A3A;
+  --color-amber-600: #B85F2D;
+  --color-amber-700: var(--terracotta);
+  --color-amber-800: #7E3622;
+  --color-amber-900: #5A2718;
+  --color-yellow-50: var(--color-amber-50);
+  --color-yellow-100: var(--color-amber-100);
+  --color-yellow-200: var(--color-amber-200);
+  --color-yellow-300: var(--color-amber-300);
+  --color-yellow-400: var(--color-amber-400);
+  --color-yellow-500: var(--color-amber-500);
+  --color-yellow-600: var(--color-amber-600);
+  --color-yellow-700: var(--color-amber-700);
+  --color-yellow-800: var(--color-amber-800);
+  --color-yellow-900: var(--color-amber-900);
+  --color-orange-50: var(--color-amber-50);
+  --color-orange-100: var(--color-amber-100);
+  --color-orange-200: var(--color-amber-200);
+  --color-orange-300: var(--color-amber-300);
+  --color-orange-400: var(--color-amber-400);
+  --color-orange-500: var(--color-amber-500);
+  --color-orange-600: var(--color-amber-600);
+  --color-orange-700: var(--color-amber-700);
+  --color-orange-800: var(--color-amber-800);
+  --color-orange-900: var(--color-amber-900);
+
+  /* Branded blues map to the navy accent family — distinct from teal. */
+  --color-blue-50: #E5EAF6;
+  --color-blue-100: #C8D2EB;
+  --color-blue-200: #9DB0DD;
+  --color-blue-300: #6F89CE;
+  --color-blue-400: #3F62BE;
+  --color-blue-500: var(--navy-pop);
+  --color-blue-600: var(--navy-strong);
+  --color-blue-700: var(--navy-3d);
+  --color-blue-800: #00004F;
+  --color-blue-900: var(--navy);
+  --color-indigo-500: var(--navy-pop);
+  --color-indigo-600: var(--navy-strong);
+  --color-indigo-700: var(--navy-3d);
+  --color-violet-500: var(--boysenberry);
+  --color-violet-600: var(--color-red-700);
+  --color-purple-500: var(--boysenberry);
+  --color-purple-600: var(--color-red-800);
+  --color-pink-500: var(--boysenberry);
+  --color-pink-600: var(--color-red-800);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--bg-app);
+  color: var(--ink-app);
   font-family: var(--font-sora), system-ui, sans-serif;
+  font-size: 13px;
 }
+
+/* =========================================================================
+   Semantic type recipes — apply via class or copy into component styles.
+   ========================================================================= */
 
 .font-mark {
   font-family: var(--font-sora), system-ui, sans-serif;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: var(--track-normal);
   text-transform: uppercase;
 }
 
-.font-serif-soft {
-  font-family: var(--font-garamond), Georgia, serif;
+.font-soft {
+  font-family: var(--font-grotesk), "Helvetica Neue", Arial, sans-serif;
+  font-weight: 300;
   color: var(--muted);
+}
+
+/* Sign-out microlabel in the app header. CSS-only hover so the button can
+   live in the (server-component) app layout without JS event handlers. */
+.nav-signout {
+  font-family: var(--font-sora), system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--track-nav);
+  color: var(--fg-mute-2);
+  transition: color var(--t-hover);
+}
+.nav-signout:hover {
+  color: var(--ink-app);
+}
+
+.font-data {
+  font-family: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.label-pane {
+  font-family: var(--font-sora), system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--track-pane);
+  color: var(--fg-mute-3);
+}
+
+.label-eyebrow {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: var(--track-hero-label);
+  text-transform: uppercase;
+  color: var(--navy-pop);
+}
+
+.h-app-title {
+  font-family: var(--font-sora), system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: var(--track-tight);
+  color: var(--ink-app);
+}
+
+.h-page-title {
+  font-family: var(--font-sora), system-ui, sans-serif;
+  font-size: clamp(22px, 2.4vw, 28px);
+  font-weight: 300;
+  font-style: italic;
+  line-height: 1.15;
+  letter-spacing: var(--track-tight);
+  color: var(--ink);
+}
+
+.mono-tag {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--fg-mute-3);
+}
+
+.mono-data {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-app);
+}
+
+.mono-kbd {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 11px;
+  background: var(--bg-tint);
+  border: 1px solid var(--bor-3);
+  padding: 0 5px;
+  border-radius: var(--r-1);
+}
+
+.chat-msg-role {
+  font-family: var(--font-sora), system-ui, sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--track-pane);
+  color: var(--fg-mute-4);
+}
+
+.chat-msg-text {
+  font-family: var(--font-sora), system-ui, sans-serif;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+/* Generic case-tag pill — used for org names, case slugs, network ids. */
+.case-tag {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 11px;
+  background: var(--bg-tint);
+  color: var(--ink-app);
+  padding: 2px 8px;
+  border-radius: var(--r-2);
+}
+
+/* Inline error toast (matches the studio-error recipe) */
+.error-toast {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--err-fg);
+  background: var(--err-bg);
+  border: 1px solid var(--err-border);
+  padding: 6px 12px;
+  border-radius: var(--r-3);
+}
+
+/* =========================================================================
+   Chat surface — premium refresh (REDESIGN §8)
+   A calm, ChatGPT/Gemini-grade surface built only from existing tokens.
+   ========================================================================= */
+
+/* Composer: a single focused, rounded container. The whole shell lights up
+   on focus-within so the textarea, attach, and send read as one control. */
+.composer-shell {
+  background: var(--bg-card);
+  border: 1px solid var(--bor-3);
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(9, 23, 23, 0.04);
+  transition:
+    border-color var(--t-input),
+    box-shadow var(--t-input);
+}
+.composer-shell:focus-within {
+  border-color: var(--ink-app);
+  box-shadow: var(--shadow-pop);
+}
+
+/* The textarea inside the composer shell — borderless, grows with content. */
+.composer-input {
+  font-family: var(--font-sora), system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-app);
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+}
+.composer-input::placeholder {
+  color: var(--fg-mute-4);
+}
+
+/* Round icon button (attach) and the send button live flush inside the pill. */
+.composer-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  color: var(--fg-mute-2);
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  transition:
+    background var(--t-hover),
+    color var(--t-hover);
+}
+.composer-icon-btn:hover:not(:disabled) {
+  background: var(--bg-tint);
+  color: var(--ink-app);
+}
+.composer-icon-btn:disabled {
+  opacity: 0.4;
+}
+
+.composer-send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--ink-app);
+  color: var(--bg-card);
+  border: none;
+  transition:
+    background var(--t-hover),
+    opacity var(--t-hover);
+}
+.composer-send:hover:not(:disabled) {
+  background: var(--off-black);
+}
+.composer-send:disabled {
+  background: var(--bor-4);
+  cursor: not-allowed;
+}
+
+/* Suggested-prompt chip on the empty state. */
+.suggest-chip {
+  font-family: var(--font-sora), system-ui, sans-serif;
+  font-size: 12.5px;
+  line-height: 1.4;
+  text-align: left;
+  color: var(--fg-body);
+  background: var(--bg-card);
+  border: 1px solid var(--bor-1);
+  border-radius: var(--r-4);
+  padding: 12px 14px;
+  transition:
+    border-color var(--t-hover),
+    background var(--t-hover);
+}
+.suggest-chip:hover {
+  border-color: var(--bor-4);
+  background: var(--bg-tint-warm);
+}
+
+/* Assistant "thinking" indicator — three softly pulsing dots. */
+.typing-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.typing-dots span {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--fg-mute-4);
+  animation: typing-bounce 1.2s ease-in-out infinite;
+}
+.typing-dots span:nth-child(2) {
+  animation-delay: 0.18s;
+}
+.typing-dots span:nth-child(3) {
+  animation-delay: 0.36s;
+}
+@keyframes typing-bounce {
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .typing-dots span {
+    animation: none;
+    opacity: 0.6;
+  }
 }

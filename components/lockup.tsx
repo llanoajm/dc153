@@ -16,9 +16,20 @@ export function Lockup({ size = "lg" }: LockupProps) {
         height={markPx}
         priority
         className="block"
-        style={{ height: markPx, width: "auto" }}
+        style={{
+          height: markPx,
+          width: "auto",
+          transform: "rotate(var(--axis-angle, 5deg))",
+        }}
       />
-      <span className="font-mark" style={{ fontSize: wordPx, lineHeight: 1 }}>
+      <span
+        className="font-mark"
+        style={{
+          fontSize: wordPx,
+          lineHeight: 1,
+          letterSpacing: "var(--track-normal)",
+        }}
+      >
         Steinmetz
       </span>
     </div>

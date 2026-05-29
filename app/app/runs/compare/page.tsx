@@ -19,7 +19,7 @@ export default async function CompareRunsPage({
           <div className="text-[11px] font-mark tracking-wider uppercase text-black/50">
             Compare runs
           </div>
-          <p className="font-serif-soft text-sm text-black/70">
+          <p className="font-soft text-sm text-black/70">
             Provide <code className="font-mono">?a=&lt;run-id&gt;&amp;b=&lt;run-id&gt;</code>, or pick
             two runs from the runs panel.
           </p>
@@ -44,7 +44,7 @@ export default async function CompareRunsPage({
             <div className="text-[11px] font-mark tracking-wider uppercase text-black/50">
               Compare runs
             </div>
-            <h1 className="font-serif-soft text-2xl mt-1">Side-by-side</h1>
+            <h1 className="font-soft text-2xl mt-1">Side-by-side</h1>
           </div>
           <Link
             href="/app/runs"
@@ -70,7 +70,7 @@ function CompareSide({ label, artifact }: { label: string; artifact: Artifact | 
         <div className="text-[11px] font-mark tracking-wider uppercase text-black/50">
           Side {label}
         </div>
-        <div className="text-sm font-serif-soft text-black/60">
+        <div className="text-sm font-soft text-black/60">
           Run not found or you don&apos;t have access.
         </div>
       </div>
@@ -82,7 +82,7 @@ function CompareSide({ label, artifact }: { label: string; artifact: Artifact | 
         <div className="text-[11px] font-mark tracking-wider uppercase text-black/50">
           Side {label}
         </div>
-        <div className="text-sm font-serif-soft text-black/60">
+        <div className="text-sm font-soft text-black/60">
           Artifact <code className="font-mono">{artifact.id}</code> has kind{" "}
           <code className="font-mono">{artifact.kind}</code>, not a run.
         </div>
@@ -96,7 +96,7 @@ function CompareSide({ label, artifact }: { label: string; artifact: Artifact | 
           <div className="text-[11px] font-mark tracking-wider uppercase text-black/50">
             Side {label}
           </div>
-          <div className="font-serif-soft text-lg leading-tight">{artifact.name}</div>
+          <div className="font-soft text-lg leading-tight">{artifact.name}</div>
           {artifact.slug ? (
             <div className="font-mono text-[11px] text-black/40">{artifact.slug}</div>
           ) : null}

@@ -44,7 +44,7 @@ export function ChartRenderer({ artifact }: RendererProps) {
       {spec ? (
         <VegaLiteChart spec={spec} />
       ) : (
-        <div className="text-sm font-serif-soft text-black/50 border border-dashed border-black/15 px-4 py-6">
+        <div className="text-sm font-soft text-black/50 border border-dashed border-black/15 px-4 py-6">
           No chart spec on this artifact. Set <code className="font-mono">view_spec</code> to a
           Vega-Lite spec (or wrap it as <code className="font-mono">view_spec.spec</code>).
         </div>

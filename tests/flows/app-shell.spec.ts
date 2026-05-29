@@ -4,36 +4,60 @@
 
 import { test, expect } from "@playwright/test"
 
+// Redesign §5: /app is now the workspace GALLERY; the chat + the workspace
+// shell (rail, Library group, profile menu, Cmd+K) live under /app/w/[id] and the
+// legacy secondary routes. The shell-chrome tests below target /app/networks —
+// a route that still mounts the shell WITHOUT needing a `workspaces` row in the
+// DB. The chat-composer assertion that needs a bound workspace moved to
+// chat.spec.ts (see its note re: a seeded /app/w/[id]).
 test.describe("app shell (logged in)", () => {
-  test("/app renders the workspace shell with rail + chat tab", async ({ page }) => {
+  test("/app renders the workspace gallery with a New-workspace card", async ({ page }) => {
     await page.goto("/app")
-    await expect(page.getByRole("button", { name: /sign out/i })).toBeVisible()
-    // Rail entries (LeftRail) — match a couple of stable labels.
-    await expect(page.getByRole("button", { name: /networks/i }).first()).toBeVisible()
-    await expect(page.getByRole("button", { name: /runs/i }).first()).toBeVisible()
-    // Chat textarea is the default tab content. Placeholder is
-    // "Describe a feature… ('add a nitrogen-emissions objective', etc.)"
-    // once the session has been minted, or "Loading…" before that.
-    await expect(page.getByPlaceholder(/describe a feature|loading/i).first()).toBeVisible({
+    await expect(page.getByRole("heading", { name: /^workspaces$/i })).toBeVisible({
       timeout: 15_000,
     })
+    await expect(page.getByRole("button", { name: /new workspace/i }).first()).toBeVisible()
   })
 
-  test("rail item Networks routes to /app/networks and back", async ({ page }) => {
-    await page.goto("/app")
-    await page.getByRole("button", { name: /^networks$/i }).first().click()
+  test("workspace shell (on a secondary route) shows the rail + profile menu", async ({
+    page,
+  }) => {
+    await page.goto("/app/networks")
+    // The rail leads with the single Network + a Chats history; account/Sign
+    // out live behind the bottom-left profile menu.
+    await expect(page.getByRole("button", { name: /account menu/i })).toBeVisible({
+      timeout: 15_000,
+    })
+    await expect(page.getByText(/^network$/i).first()).toBeVisible()
+    await expect(page.getByText(/^chats$/i).first()).toBeVisible()
+  })
+
+  test("rail item Data Source routes to /app/networks and back", async ({ page }) => {
+    await page.goto("/app/networks")
+    // The five nouns (Data Source / Objectives / Runs & Plans) are top-level
+    // now; the demoted generic panels live under the collapsed "Library" group.
+    await page.getByRole("button", { name: /^data source$/i }).first().click()
     await page.waitForURL(/\/app\/networks$/)
     await expect(page.locator("main, body").first()).toBeVisible()
   })
 
-  test("rail item Runs routes to /app/runs", async ({ page }) => {
-    await page.goto("/app")
-    await page.getByRole("button", { name: /^runs$/i }).first().click()
+  test("rail item Runs & Plans routes to /app/runs", async ({ page }) => {
+    await page.goto("/app/networks")
+    await page.getByRole("button", { name: /^runs & plans$/i }).first().click()
     await page.waitForURL(/\/app\/runs$/)
   })
 
+  test("Library group reveals demoted panels (Sources routes to /app/sources)", async ({
+    page,
+  }) => {
+    await page.goto("/app/networks")
+    await page.getByRole("button", { name: /^library$/i }).click()
+    await page.getByRole("button", { name: /^sources$/i }).first().click()
+    await page.waitForURL(/\/app\/sources$/)
+  })
+
   test("Cmd+K opens the command palette", async ({ page }) => {
-    await page.goto("/app")
+    await page.goto("/app/networks")
     // Focus the body so the global keydown listener actually fires; some
     // browsers swallow Meta+K when no element has focus yet.
     await page.locator("body").click()

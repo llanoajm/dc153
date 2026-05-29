@@ -8,14 +8,14 @@ export function MarkdownRenderer({ artifact }: RendererProps) {
   const text = pickText(artifact.view_spec, artifact.metadata)
   if (!text) {
     return (
-      <div className="text-sm font-serif-soft text-black/50">
+      <div className="text-sm font-soft text-black/50">
         No markdown body. Set <code className="font-mono">view_spec.text</code> or{" "}
         <code className="font-mono">metadata.body</code>.
       </div>
     )
   }
   return (
-    <div className="font-serif-soft text-[15px] leading-relaxed text-black whitespace-pre-wrap">
+    <div className="font-soft text-[15px] leading-relaxed text-black whitespace-pre-wrap">
       {text}
     </div>
   )

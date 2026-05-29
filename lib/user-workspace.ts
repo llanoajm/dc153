@@ -49,6 +49,12 @@ const execFileP = promisify(execFile)
 // Per-user workspace dir. Materialized on first access so the opencode session
 // has somewhere to operate. Holds .opencode/, features/, skills/. The agent
 // works here; it does NOT modify the shared zap repo.
+//
+// REDESIGN §4.4 is generalizing this from per-user to per-workspace dirs; the
+// directory-keyed bootstrap now lives in `materializeWorkspaceDir(dir)` and is
+// reused by `lib/workspace.ts:ensureWorkspace(workspaceId)`. This function
+// keeps the per-USER hardening (Linux account / cgroup slice keyed on the
+// supabase uid) so existing callers behave exactly as before.
 export async function ensureUserWorkspace(userId: string): Promise<string> {
   const dir = path.join(ROOT, userId)
 
@@ -60,6 +66,35 @@ export async function ensureUserWorkspace(userId: string): Promise<string> {
   // longer ours, treat the workspace as already provisioned and return.
   if (await isWorkspaceHandedOff(dir)) return dir
 
+  await materializeWorkspaceDir(dir)
+
+  // HARDENING §3.1: lock the workspace to a per-user Linux account *after*
+  // all bootstrap writes complete — once the dir is chowned + 700, grid-app
+  // (running as `agent`) can no longer create files inside. Gated on
+  // STEINMETZ_ENABLE_LINUX_ACCOUNTS=1 so dev / CI keep working; production
+  // flips the flag once item 3.2 ships and per-user opencode units take
+  // over workspace writes. Idempotent + fail-soft (see lib/linux-account.ts).
+  await ensureLinuxAccount(dir, userId)
+
+  // HARDENING §3.4: materialise the per-user cgroup slice before the first
+  // session-start triggers `systemctl start steinmetz-opencode@<short>.service`.
+  // Default tier; tier changes (when `profiles.compute_tier` is set later via
+  // an admin surface) re-run `ensureUserSlice` with the resolved tier name.
+  // Gated on STEINMETZ_PER_USER_SLICES=1 (see lib/compute-tier.ts).
+  await ensureUserSlice(userId)
+
+  return dir
+}
+
+// Directory-keyed workspace bootstrap (REDESIGN §4.4). Idempotent: creates the
+// `.opencode/`, `features/`, per-user pip target, and venv, then writes the
+// stub AGENTS.md / persona / glossary / context / example-feature files and the
+// opencode config. Does NOT do per-user Linux hardening — that's keyed on the
+// supabase uid and stays in `ensureUserWorkspace`. Both the per-user and the
+// per-workspace (`lib/workspace.ts`) entry points call this so the materialized
+// layout is identical regardless of whether the dir is keyed by uid or
+// workspace id.
+export async function materializeWorkspaceDir(dir: string): Promise<void> {
   await fs.mkdir(path.join(dir, ".opencode", "agent"), { recursive: true })
   await fs.mkdir(path.join(dir, ".opencode", "skills"), { recursive: true })
   await fs.mkdir(path.join(dir, "features"), { recursive: true })
@@ -231,26 +266,80 @@ permission:
   bash: allow
 ---
 
-You are a power-systems engineer working in the user's personal Steinmetz workspace.
+You are a power-systems engineer working in the user's Steinmetz workspace.
 
 Read \`AGENTS.md\` at the workspace root before starting work. Critical rules:
 
-- **Never modify the zap library.** zap lives at /home/agent/zap and is read-only
-  shared infrastructure. Your job is to write new Python in this workspace's
-  \`features/\` directory that *imports* from zap and extends it by subclassing
-  or composition.
+- **Never name the optimization library to the user.** The differentiable
+  power-systems engine you call through is an internal implementation detail.
+  Never say "zap" to the user, never tell them to pass an artifact UUID, and
+  never expose tool argument names like \`network_artifact_id\` in chat. Speak
+  in the user's terms: networks, dispatch schedules, expansion plans, cost,
+  emissions. (You still \`import\` from the library in feature code — that's
+  internal; this rule is about what the user sees.)
+- **Never modify the optimization library.** It lives at /home/agent/zap and is
+  read-only shared infrastructure. Your job is to write new Python in this
+  workspace's \`features/\` directory that *imports* from it and extends it by
+  subclassing or composition.
 - **One feature = one \`features/<slug>.py\` + one \`.opencode/skills/<slug>/SKILL.md\`.**
   Don't sprawl a feature across multiple files unless it's genuinely needed.
 - **Always use \`.venv/bin/python\`** (the per-user venv at the root of this
-  workspace) for any Python invocation. zap is exposed read-only via a .pth
-  file; do not try to write into \`/home/agent/zap\`.
+  workspace) for any Python invocation. The library is exposed read-only via a
+  .pth file; do not try to write into \`/home/agent/zap\`.
 - **Verify before declaring done.** At minimum, import the module you just
   wrote and confirm it loads without exception. If the feature is differentiable,
   do a tiny finite-difference check.
 - **Persist as a skill.** SKILL.md is the source of truth for what features
   this user has built. Without it, the feature disappears from the UI.
 
-Terse, technical, no filler. When uncertain about which zap base class to
+## The workspace network is the implicit subject (never ask for a UUID)
+
+This workspace is anchored to a single primary network — that is the answer to
+"which network?". You do NOT need to ask the user which grid they mean, and you
+must NEVER ask them for an artifact id.
+
+- A message may carry an \`[active-network] "<name>" (network_artifact_id: <id>)\`
+  context line at the top. That \`<id>\` is the workspace's primary network — pass
+  it as the \`network_artifact_id\` to \`steinmetz__solve_opf\` /
+  \`steinmetz__solve_plan\` without restating it (or the id) to the user.
+- If a later message lacks that line, the active network has not changed — reuse
+  the id from earlier in this chat. Only if you genuinely have no id yet (a brand
+  new workspace with no network) call \`steinmetz__list_networks\` to resolve one,
+  and if it's still ambiguous, ask the user in plain language ("which grid?"),
+  never for a UUID.
+- Only call \`steinmetz__list_networks\` when the user explicitly names a
+  *different* grid than the workspace's (e.g. "compare against the German grid").
+
+## Intent routing: dispatch (Run) vs planning (Plan)
+
+Map the user's natural language to one of two actions against the workspace
+network. Decide from intent, not keywords:
+
+- **Dispatch → \`steinmetz__solve_opf\` (produces a Run).** The grid is FIXED;
+  the user wants to know how it operates. Phrasings: "what are the generation
+  schedules for the next few days", "estimate this", "run the dispatch", "what
+  do prices / LMPs look like", "how does the current grid behave". These solve
+  the existing capacities and return a power schedule + nodal prices.
+- **Planning → \`steinmetz__solve_plan\` (produces a Plan).** Capacities are
+  FREE to change; the user wants to know what the grid should *become*.
+  Phrasings: "plan some expansion optimizing for <metric>", "what's the cheapest
+  build-out", "expand generation / transmission / storage", "cut emissions",
+  "optimize the build". These run the gradient-based capacity-expansion solve and
+  return recommended capacities + a trajectory + achieved metrics.
+- **Decarbonization intent** ("cut emissions", "lower carbon", "greener") is a
+  *planning* goal — use \`solve_plan\` and raise \`emissions_weight\` (λ) to
+  trade cost for lower emissions. The workspace's focus tags (passed into the
+  chat) tell you the default direction: a workspace focused on
+  Generation/Transmission/Storage expansion or Decarbonization should default to
+  Plan for open-ended "improve the grid" asks; an Operations-only workspace
+  defaults to Run.
+- When the ask is ambiguous between the two, prefer the cheaper Run and say what
+  a Plan would add — don't kick off a long planning solve unasked.
+
+Keep planning solves small on CPU: a few \`iterations\` (default 5) is plenty for
+an interactive answer; say so rather than launching a long run silently.
+
+Terse, technical, no filler. When uncertain about which library base class to
 extend, say so and ask — don't sprinkle the change across guesses.
 `,
   )
@@ -309,23 +398,6 @@ def echo(message: str) -> str:
     return message
 `,
   )
-
-  // HARDENING §3.1: lock the workspace to a per-user Linux account *after*
-  // all bootstrap writes complete — once the dir is chowned + 700, grid-app
-  // (running as `agent`) can no longer create files inside. Gated on
-  // STEINMETZ_ENABLE_LINUX_ACCOUNTS=1 so dev / CI keep working; production
-  // flips the flag once item 3.2 ships and per-user opencode units take
-  // over workspace writes. Idempotent + fail-soft (see lib/linux-account.ts).
-  await ensureLinuxAccount(dir, userId)
-
-  // HARDENING §3.4: materialise the per-user cgroup slice before the first
-  // session-start triggers `systemctl start steinmetz-opencode@<short>.service`.
-  // Default tier; tier changes (when `profiles.compute_tier` is set later via
-  // an admin surface) re-run `ensureUserSlice` with the resolved tier name.
-  // Gated on STEINMETZ_PER_USER_SLICES=1 (see lib/compute-tier.ts).
-  await ensureUserSlice(userId)
-
-  return dir
 }
 
 // HARDENING §3.1: detect that the workspace has already been chowned to a

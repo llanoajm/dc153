@@ -6,7 +6,7 @@ export function LogRenderer({ artifact }: RendererProps) {
   const lines = Array.isArray(spec.lines) ? spec.lines : spec.text ? spec.text.split("\n") : []
   if (lines.length === 0) {
     return (
-      <div className="text-sm font-serif-soft text-black/50">
+      <div className="text-sm font-soft text-black/50">
         Empty log. Set <code className="font-mono">view_spec.lines</code> or{" "}
         <code className="font-mono">view_spec.text</code>.
       </div>

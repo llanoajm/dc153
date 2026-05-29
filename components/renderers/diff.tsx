@@ -9,7 +9,7 @@ export function DiffRenderer({ artifact }: RendererProps) {
   const after = spec.after ?? ""
   if (!before && !after) {
     return (
-      <div className="text-sm font-serif-soft text-black/50">
+      <div className="text-sm font-soft text-black/50">
         Empty diff. Set <code className="font-mono">view_spec.before</code> and{" "}
         <code className="font-mono">view_spec.after</code>.
       </div>

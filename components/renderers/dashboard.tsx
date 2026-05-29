@@ -40,7 +40,7 @@ export function DashboardRenderer({ artifact }: RendererProps) {
 
   if (panels.length === 0) {
     return (
-      <div className="text-sm font-serif-soft text-black/50">
+      <div className="text-sm font-soft text-black/50">
         Empty dashboard. Set <code className="font-mono">view_spec.panels</code>.
       </div>
     )
@@ -59,7 +59,7 @@ export function DashboardRenderer({ artifact }: RendererProps) {
             </div>
           ) : null}
           {spec.description ? (
-            <div className="font-serif-soft text-sm text-black/70">{spec.description}</div>
+            <div className="font-soft text-sm text-black/70">{spec.description}</div>
           ) : null}
         </div>
       ) : null}

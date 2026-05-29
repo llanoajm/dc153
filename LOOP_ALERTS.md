@@ -22,3 +22,4 @@
 [2026-05-29T00:53:41+00:00] DONE: - [ ] 13. kind='plan' view_spec + renderer (ROADMAP §13)
 [2026-05-29T01:02:24+00:00] DONE: - [ ] 14. Focus → planning-problem assembly helper (ROADMAP §14)
 [2026-05-29T01:12:34+00:00] DONE: - [ ] 15. Intent routing in the agent (no "zap", no UUID) (ROADMAP §15)
+[2026-05-29T01:19:35+00:00] DONE: - [ ] 16. Ontology polish: features→Objectives, Runs&Plans tab, demote panels (ROADMAP §16)

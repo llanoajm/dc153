@@ -100,7 +100,7 @@ planning hero (12-15) → polish (16). Process top-to-bottom.
     - a plan artifact's view_spec encodes loss curve, capacity trajectory, final-build table, resulting dispatch (reuse run renderer), and a cost-vs-emissions panel
     - components/renderers/plan.tsx renders them; `npx tsc --noEmit` passes
 
-- [ ] 14. Focus → planning-problem assembly helper (ROADMAP §14)
+- [x] 14. Focus → planning-problem assembly helper (ROADMAP §14)
   - context: §6; helper mapping focus tags → parameter_names + objective composition.
   - acceptance:
     - given focus [Generation, Decarbonization] the helper returns free generator capacities + `DispatchCost + λ*Emissions` + `InvestmentObjective`

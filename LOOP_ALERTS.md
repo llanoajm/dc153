@@ -19,3 +19,4 @@
 [2026-05-28T23:17:16+00:00] THROTTLE: sleep 1800s (1/24) [fast-blank(3s)]
 [2026-05-28T23:47:18+00:00] THROTTLE: sleep 1800s (2/24) [fast-blank(2s)]
 [2026-05-29T00:17:20+00:00] THROTTLE: sleep 1800s (3/24) [fast-blank(2s)]
+[2026-05-29T00:53:41+00:00] DONE: - [ ] 13. kind='plan' view_spec + renderer (ROADMAP §13)

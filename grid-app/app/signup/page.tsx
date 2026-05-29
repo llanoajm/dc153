@@ -10,11 +10,11 @@ export default function SignUpPage() {
           <h1 className="font-mark tracking-wider text-sm uppercase text-black/70">
             Closed beta
           </h1>
-          <p className="font-serif-soft text-[15px] leading-relaxed text-black/85">
+          <p className="font-soft text-[15px] leading-relaxed text-black/85">
             Steinmetz isn&apos;t open for self-signup yet. If you&apos;ve been
             invited, the credentials were sent to you directly.
           </p>
-          <p className="font-serif-soft text-[14px] text-black/60">
+          <p className="font-soft text-[14px] text-black/60">
             Need access? Email{" "}
             <a
               href="mailto:llanocook@gmail.com?subject=Steinmetz%20access"
@@ -32,7 +32,7 @@ export default function SignUpPage() {
           Sign in
         </Link>
       </div>
-      <footer className="fixed bottom-6 inset-x-0 text-center font-serif-soft text-[13px]">
+      <footer className="fixed bottom-6 inset-x-0 text-center font-soft text-[13px]">
         Steinmetz Power Infrastructure &copy; 2026
       </footer>
     </main>

@@ -65,8 +65,8 @@ export default async function GlossaryPage() {
           <div className="text-[11px] font-mark tracking-wider uppercase text-black/50">
             Glossary &amp; Context
           </div>
-          <h1 className="font-serif-soft text-2xl mt-1">What the agent sees</h1>
-          <p className="font-serif-soft text-sm text-black/60 mt-2 max-w-prose">
+          <h1 className="font-soft text-2xl mt-1">What the agent sees</h1>
+          <p className="font-soft text-sm text-black/60 mt-2 max-w-prose">
             These files are auto-loaded as system context every opencode
             session (configured via{" "}
             <code className="font-mono text-[11px]">.opencode/opencode.jsonc</code>
@@ -153,7 +153,7 @@ function DocPane({
             }}
           />
         ) : (
-          <div className="text-sm font-serif-soft text-black/50">
+          <div className="text-sm font-soft text-black/50">
             Empty. Upload a PDF in Sources to populate this file.
           </div>
         )}

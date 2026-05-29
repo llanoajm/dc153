@@ -28,12 +28,19 @@ export function CommandPalette() {
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/20 flex items-start justify-center pt-24"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-24"
+      style={{ background: "rgba(0,0,0,0.20)" }}
       onClick={() => setOpen(false)}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-[520px] max-w-[90vw] bg-white border border-black/20 shadow-xl"
+        className="w-[520px] max-w-[90vw] overflow-hidden"
+        style={{
+          background: "var(--bg-card)",
+          border: "1px solid var(--bor-3)",
+          borderRadius: "var(--r-4)",
+          boxShadow: "var(--shadow-pop)",
+        }}
         role="dialog"
         aria-label="Command palette"
       >
@@ -42,16 +49,38 @@ export function CommandPalette() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search chats, artifacts, skills, commands…"
-          className="w-full px-4 py-3 text-sm outline-none border-b border-black/10 font-sans"
+          className="w-full px-4 py-3 outline-none"
+          style={{
+            fontFamily: "var(--font-sora)",
+            fontSize: 13,
+            color: "var(--ink-app)",
+            background: "transparent",
+            borderBottom: "1px solid var(--bor-1)",
+          }}
         />
-        <div className="px-4 py-6 text-xs font-serif-soft text-center">
+        <div
+          className="px-4 py-6 text-center"
+          style={{
+            fontFamily: "var(--font-sora)",
+            fontSize: 12,
+            color: "var(--fg-mute-4)",
+          }}
+        >
           {query
             ? "No matches."
             : "Type to search. The palette is empty for now — entries populate as you add chats, artifacts, and skills."}
         </div>
-        <div className="border-t border-black/10 px-3 py-2 flex items-center justify-between text-[10px] font-mark text-black/40">
-          <span>Cmd / Ctrl + K</span>
-          <span>Esc to close</span>
+        <div
+          className="px-3 py-2 flex items-center justify-between"
+          style={{
+            borderTop: "1px solid var(--bor-1)",
+            fontFamily: "var(--font-jetbrains)",
+            fontSize: 10,
+            color: "var(--fg-mute-4)",
+          }}
+        >
+          <span>type to filter · enter to run</span>
+          <span>esc to close</span>
         </div>
       </div>
     </div>

@@ -12,10 +12,14 @@ import { test, expect } from "@playwright/test"
 
 test.describe("real-world weirdness (logged in)", () => {
   test("back/forward across rail navigation preserves the shell", async ({ page }) => {
-    await page.goto("/app")
-    await page.getByRole("button", { name: /^networks$/i }).first().click()
+    // Redesign §5: the shell (rail + the five nouns) lives on the workspace +
+    // the legacy secondary routes, not on /app (now the gallery). Start on a
+    // secondary route that mounts the shell without needing a workspace row.
+    await page.goto("/app/networks")
+    // The nouns (Data Source / Runs & Plans) are top-level rail items now.
+    await page.getByRole("button", { name: /^data source$/i }).first().click()
     await page.waitForURL(/\/app\/networks$/)
-    await page.getByRole("button", { name: /^runs$/i }).first().click()
+    await page.getByRole("button", { name: /^runs & plans$/i }).first().click()
     await page.waitForURL(/\/app\/runs$/)
     await page.goBack()
     await page.waitForURL(/\/app\/networks$/)
@@ -24,10 +28,13 @@ test.describe("real-world weirdness (logged in)", () => {
     await expect(page.getByText(/workspace/i).first()).toBeVisible()
   })
 
-  test("refreshing /app re-mounts cleanly", async ({ page }) => {
-    await page.goto("/app")
+  test("refreshing a shell route re-mounts cleanly", async ({ page }) => {
+    await page.goto("/app/networks")
     await page.reload()
-    await expect(page.getByRole("button", { name: /sign out/i })).toBeVisible({ timeout: 15_000 })
+    // The profile circle (which holds Sign out) is the stable authed marker now.
+    await expect(page.getByRole("button", { name: /account menu/i })).toBeVisible({
+      timeout: 15_000,
+    })
   })
 })
 

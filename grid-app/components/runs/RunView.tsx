@@ -117,7 +117,7 @@ function ChartBlock({
       {spec ? (
         <VegaLiteChart spec={spec} />
       ) : (
-        <div className="text-sm font-serif-soft text-black/50">{empty}</div>
+        <div className="text-sm font-soft text-black/50">{empty}</div>
       )}
     </div>
   )
@@ -239,7 +239,7 @@ function withTimeRule(
   const xType = (encoding.x as Record<string, unknown>).type
   const ruleLayer = {
     data: { values: [{ t: ts }] },
-    mark: { type: "rule", color: "#111", strokeDash: [4, 3], opacity: 0.55 },
+    mark: { type: "rule", color: "#091717", strokeDash: [4, 3], opacity: 0.55 },
     encoding: { x: { field: "t", type: xType } },
   }
   const { mark, encoding: enc, ...rest } = spec

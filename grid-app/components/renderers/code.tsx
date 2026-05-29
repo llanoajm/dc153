@@ -9,7 +9,7 @@ export function CodeRenderer({ artifact }: RendererProps) {
   const source = spec.source ?? readMetadataSource(artifact.metadata) ?? ""
   if (!source) {
     return (
-      <div className="text-sm font-serif-soft text-black/50">
+      <div className="text-sm font-soft text-black/50">
         No source. Set <code className="font-mono">view_spec.source</code>.
       </div>
     )

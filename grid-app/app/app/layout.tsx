@@ -5,7 +5,8 @@ import { getActiveOrgId, listMyOrgs, syncOrgContextOverlays } from "@/lib/orgs"
 import { listPinnedDashboards } from "@/lib/dashboards"
 import { Lockup } from "@/components/lockup"
 import { OrgSwitcher } from "@/components/orgs/OrgSwitcher"
-import { WorkspaceShell, type PinnedDashboard } from "@/components/shell/WorkspaceShell"
+import { AppChrome } from "@/components/shell/AppChrome"
+import type { PinnedDashboard } from "@/components/shell/types"
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -39,22 +40,25 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }))
 
   return (
-    <div className="flex-1 flex flex-col bg-white text-black min-h-0">
-      <header className="border-b border-black/10 px-6 py-3 flex items-center justify-between shrink-0">
+    <div
+      className="flex-1 flex flex-col text-black min-h-0"
+      style={{ background: "var(--bg-app)" }}
+    >
+      <header
+        className="px-6 py-3 flex items-center justify-between shrink-0"
+        style={{
+          background: "var(--bg-card)",
+          borderBottom: "1px solid var(--bor-1)",
+        }}
+      >
         <Lockup size="sm" />
         <div className="flex items-center gap-6">
           <OrgSwitcher memberships={memberships} activeOrgId={activeOrgId} />
-          <form action="/auth/signout" method="POST">
-            <button
-              type="submit"
-              className="text-xs font-mark tracking-wider text-black/60 hover:text-black"
-            >
-              Sign out
-            </button>
-          </form>
         </div>
       </header>
-      <WorkspaceShell pinnedDashboards={pinnedDashboards}>{children}</WorkspaceShell>
+      <AppChrome pinnedDashboards={pinnedDashboards} email={user.email ?? null}>
+        {children}
+      </AppChrome>
     </div>
   )
 }

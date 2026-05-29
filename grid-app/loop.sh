@@ -14,6 +14,12 @@ ALERTS=LOOP_ALERTS.md
 ATTEMPTS_DIR=.loop-attempts
 
 MODEL="claude-opus-4-7"
+# Disable extended thinking for all `claude -p` agents. With thinking on,
+# multi-turn tool-use sessions intermittently 400 with "thinking/redacted_thinking
+# blocks in the latest assistant message cannot be modified", which the throttle
+# heuristic then misreads as a rate limit and retries forever. Thinking off makes
+# headless tool loops reliable (verified by smoke test 2026-05-28).
+export MAX_THINKING_TOKENS=0
 WORK_TIMEOUT=30m
 VERIFY_TIMEOUT=10m
 MAX_ATTEMPTS=5
@@ -29,7 +35,10 @@ BUDGET_FLAGS=()   # e.g. (--max-budget-usd 3)
 # NOT count against MAX_ATTEMPTS. Without this, a 3-minute throttle window can
 # burn through 5 attempts on 3 items and auto-block them all (see 2026-05-26
 # items 4/5/6 in the GPU-parity loop).
-RATE_LIMIT_REGEX='rate.?limit|429|too many requests|usage limit|weekly limit|5.hour limit|please (wait|try again)|try again later|quota exceeded|exceeded.*limit|overloaded|service unavailable|503|api error|connection (reset|refused|timed out)'
+# NOTE: deliberately does NOT include a bare "api error" — that matched genuine
+# "API Error: 400" bad-request failures and caused infinite throttle retries.
+# Kept signals are true transient/quota conditions worth a free retry.
+RATE_LIMIT_REGEX='rate.?limit|429|too many requests|usage limit|weekly limit|5.hour limit|please (wait|try again)|try again later|quota exceeded|exceeded.*limit|overloaded|529|service unavailable|503|connection (reset|refused|timed out)'
 MIN_REAL_RUN_SECS=60        # treat sub-60s exits with no completion field as suspect
 THROTTLE_WAIT_SECS=1800     # sleep 30 min before retrying the same attempt
 MAX_THROTTLE_WAITS=24       # 24 × 30m = 12h max throttle wait per attempt
@@ -188,28 +197,17 @@ $item_text
 $attempt of $MAX_ATTEMPTS
 
 ## Context to load before working
-- GPU_UNBLOCK_ROADMAP.md          (full roadmap for this loop; the queue item points to a §section here)
-- GPU_PARITY_ROADMAP.md           (precedent roadmap; §Phase B.4 / §Phase C.5 / §Phase C.6 are the original specs for items 1-3)
-- AGENTS.md                       (project rules: harness-first principle, no-zap-edits in end-user mode, no-emoji, no-deps, conventional commits)
-- CLAUDE.md                       (one-line include of AGENTS.md)
-- STATE.md                        (current build cursor — what's freshly shipped, what's wired)
-- infra/modal/solver_app.py       (deployed Modal app; \`_run_solve\` returns the payload items 1-2 must adapt)
-- infra/modal/PARITY_REPORT.md    (item 9's parity numbers — historical 4.22% LMP diff on ieee-30 is the baseline for items 2 and 4)
-- lib/modal-solver.ts             (TS client; \`SolveResult\` interface mirrors the payload shape on the frontend)
-- scripts/smoke_dispatch.py       (CPU baseline \`run_dispatch\` returns \`(outcome, pnet, snapshots, used_solver, elapsed)\` — item 2 extends this; item 3 callers depend on it)
-- scripts/run_artifact.py         (\`build_run_view_spec\` is the downstream consumer; item 1's adapter output must satisfy this contract)
-- scripts/_gpu_parity_report.py   (item 9; \`gpu_solve()\` is the reference HTTP-call code for item 2)
-- scripts/user-mcp-server.py      (item 7; \`_solve_via_modal()\` is the agent-path GPU caller — item 4 smokes it, item 5 cross-checks it against \`--gpu\` CLI)
-- scripts/seed_networks.py        (item 3 target — adds \`--gpu\` flag, forwards through run_dispatch)
-- scripts/ingest_pypsa_folder.py  (item 3 target — same pattern)
-- data/networks/ieee-30/          (the canonical test network referenced by every acceptance bullet)
+- WORKSPACE_REDESIGN.md  (the design: ontology, schema §4, IA §5, focus→problem §6, hero planning loop §7, chat-centric UX §10, and the §11 build guardrails — READ THIS FIRST)
+- REDESIGN_ROADMAP.md    (the ordered backlog this queue derives from; per-item context + acceptance, and a GUARDRAILS block — obey it)
+- AGENTS.md              (project brief; CRITICAL: Next.js 16 breaking changes, and PROD is served from THIS VM via "next start" on :3000 — do not disturb it or run any next build/dev)
+- STATE.md               (current build cursor / app state)
 - $QUEUE            (the queue you're working from)
 - recent tail of $JOURNAL
 
 ## Protocol
 1. Read the context above plus any acceptance criteria nested under the
    current item in $QUEUE.
-2. Implement the item against those acceptance criteria. Run \`python scripts/smoke_dispatch.py data/networks/ieee-30 --hours 1 && npm run build\`
+2. Implement the item against those acceptance criteria. Run \`npx tsc --noEmit && npm run test:unit\`
    (and any other checks the criteria name) before concluding.
 3. Commit your code changes with a descriptive conventional-commit message.
 4. Overwrite $HANDOFF to end with EXACTLY these fields, one per line:
@@ -220,16 +218,13 @@ $attempt of $MAX_ATTEMPTS
    Do NOT commit $HANDOFF — the loop owns the bookkeeping commit.
 
 ## Constraints
-- Do NOT modify /home/agent/zap source. In end-user mode the agent is forbidden from editing zap (AGENTS.md). All work in this loop is in /home/agent/grid-app/scripts/ — zap is consumed as a library.
-- Do NOT delete or alter the CPU path's return shape. \`run_dispatch\` must still return \`(outcome, pnet, snapshots, used_solver, elapsed)\` for CPU callers. GPU adapts to CPU, never the other way around (GPU_PARITY_ROADMAP.md §Design).
-- Do NOT introduce a CPU-vs-GPU auto-tiering heuristic. \`--gpu\` is a manual choice everywhere. Auto-routing is explicitly out of scope (see GPU_PARITY_ROADMAP §Design).
-- Do NOT use opencode.ai hosted services (Big Pickle, OpenCode Zen, OpenCode Go free models). Direct providers only.
-- Do NOT commit secrets. \`.env.local\` holds ZAP_SOLVER_API_KEY, Supabase service-role keys, and OpenRouter keys — never stage them.
-- Do NOT add npm or pip dependencies a few lines of code could replace.
-- No emojis in code or user-facing strings.
-- Modal redeploys take 3-5 min after image changes — none of items 1-5 should need a redeploy (Modal endpoint is unchanged from item 3 of the prior loop). If you find yourself running \`modal deploy\`, stop and re-read the acceptance criteria.
-- The previous loop archived its state under \`.loop-archive/gpu-parity-2026-05/\`. Read it if you need history on items 4-6's earlier failed attempts (the original §Phase B.4 / C.5 / C.6 — now renumbered 1-3 in this loop). Do not modify .loop-archive.
-- If \`ZAP_SOLVER_MODAL_URL\` or \`ZAP_SOLVER_API_KEY\` is missing from \`.env.local\`, items 2, 4, and 5 cannot complete. Report this as the genuine blocker rather than rubber-stamping ACCEPTANCE.
+- PRODUCTION IS LIVE on :3000 via \`next start\` from THIS checkout. NEVER run \`next build\`, \`npm run build\`, \`npm run start\`, or \`npm run dev\`, and never stop/restart anything on :3000 — a build rewrites .next and corrupts the running server. Verify ONLY with \`npx tsc --noEmit && npm run test:unit\`. Do NOT run Playwright/a browser against :3000 or the shared .next; defer visual checks to human review and note them in $JOURNAL.
+- Do NOT auto-apply DDL to the live Supabase DB. Schema items produce reviewed .sql migrations + a backfill script under supabase/ for a human to apply. Never run psql/supabase ALTER/CREATE/DROP against the production database.
+- END-USER MODE: NEVER edit /home/agent/zap (read-only library). Objectives/features are user-space Python that import from zap; never modify or commit to the zap repo.
+- Build ADDITIVELY. Do NOT delete or revert the pre-existing refactor carried in this branch. Do NOT run \`git reset --hard\`, \`git clean\`, \`git checkout -- .\`, or force-push yourself — the loop harness owns rollback.
+- Per-user/per-workspace isolation: end-user creations live per-workspace (filesystem + Supabase), never in shared zap/opencode git history.
+- No new heavy dependencies for what a few lines solve. Match existing patterns (Tailwind utility-first; server components do IO; client components are thin and "use client"). No emojis in UI or code.
+- If an item's acceptance cannot be met safely under these constraints, set its line in $QUEUE to \`[!]\` and record why in $ALERTS — do not force it or weaken the guardrails.
 EOF
 
   echo ">>> [$total] WORK: $item_text (attempt $attempt)"
@@ -272,7 +267,7 @@ EOF
   echo ">>> VERIFY: $item_text (commit $post_work_sha)"
   run_claude_attempt "$VERIFY_TIMEOUT" "$VERIFY_LOG" \
     "The previous agent claims the current item in $HANDOFF is done at commit $post_work_sha.
-Verify by running its acceptance criteria, \`python scripts/smoke_dispatch.py data/networks/ieee-30 --hours 1 && npm run build\`, and any smoke
+Verify by running its acceptance criteria, \`npx tsc --noEmit && npm run test:unit\`, and any smoke
 tests the criteria name. If anything is broken, attempt ONE small fix and re-check.
 If still broken, run: git reset --hard ${pre_sha}
 Append exactly one line to $HANDOFF: 'VERIFIED: yes' or 'VERIFIED: no' or 'VERIFIED: reverted'.

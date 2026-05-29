@@ -12,15 +12,15 @@ export default async function DashboardsIndexPage() {
           <div className="text-[11px] font-mark tracking-wider uppercase text-black/50">
             Dashboards
           </div>
-          <h1 className="font-serif-soft text-2xl mt-1">Agent-authored layouts</h1>
-          <p className="text-sm font-serif-soft text-black/60 mt-2 max-w-prose">
+          <h1 className="font-soft text-2xl mt-1">Agent-authored layouts</h1>
+          <p className="text-sm font-soft text-black/60 mt-2 max-w-prose">
             Saved compositions of charts, tables, networks, and maps. Pin one
             and it shows up in the left rail for one-click recall.
           </p>
         </div>
 
         {rows.length === 0 ? (
-          <div className="border border-dashed border-black/15 px-4 py-12 text-center text-sm font-serif-soft text-black/50">
+          <div className="border border-dashed border-black/15 px-4 py-12 text-center text-sm font-soft text-black/50">
             No dashboards yet. The agent can save one any time by writing an
             artifact with <span className="font-mono">kind=&quot;view&quot;</span> and a panels
             list on <span className="font-mono">view_spec</span>.
@@ -51,7 +51,7 @@ function DashboardRow({ dashboard }: { dashboard: Artifact }) {
           href={`/app/artifacts/${dashboard.id}`}
           className="block hover:bg-black/[0.03] -mx-2 px-2 py-1"
         >
-          <div className="font-serif-soft text-base text-black">{dashboard.name}</div>
+          <div className="font-soft text-base text-black">{dashboard.name}</div>
           <div className="text-[11px] font-mono text-black/50 mt-0.5">
             {dashboard.kind} · {panelCount} panel{panelCount === 1 ? "" : "s"} · {dashboard.status}
           </div>

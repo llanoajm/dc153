@@ -10,6 +10,7 @@ import { DashboardRenderer } from "./dashboard"
 import { NetworkGraphRenderer } from "./network-graph"
 import { GeoMapRenderer } from "./geo-map"
 import { RunRenderer } from "./run"
+import { PlanRenderer } from "./plan"
 import { PanelRenderer } from "./panel"
 import { rendererFor } from "./types"
 
@@ -39,6 +40,8 @@ export function ArtifactRenderer({ artifact }: { artifact: Artifact }) {
       return <GeoMapRenderer artifact={artifact} />
     case "run":
       return <RunRenderer artifact={artifact} />
+    case "plan":
+      return <PlanRenderer artifact={artifact} />
     case "panel":
       return <PanelRenderer artifact={artifact} />
     case "file":

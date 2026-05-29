@@ -528,3 +528,104 @@ alter table public.tool_runs enable row level security;
 drop policy if exists "tool_runs select own" on public.tool_runs;
 create policy "tool_runs select own" on public.tool_runs
   for select using (auth.uid() = user_id);
+
+-- ============================================================================
+-- workspaces  (WORKSPACE_REDESIGN.md §4.1; migration supabase/migrations/0001_workspaces.sql)
+--
+-- A Workspace = a Grid (data source) + an Intent (focus) + its Objectives,
+-- Runs, Plans, and chat. Personal (user_id set) or org-owned (org_id set),
+-- exactly one. `artifacts.workspace_id` (below) groups artifacts under a
+-- workspace; it is nullable so canonical/template networks stay shared with
+-- workspace_id NULL. RLS mirrors artifacts (own personal, or member org) and
+-- governs visibility — workspace_id is a grouping key, not a visibility axis.
+-- ============================================================================
+create table if not exists public.workspaces (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,   -- personal owner
+  org_id  uuid references public.orgs(id) on delete cascade,  -- or org-owned
+  name text not null,
+  focus text[] not null default '{}',          -- intent tags (see §6)
+  primary_network_id uuid references public.artifacts(id) on delete set null,
+  cover_image_url text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  check ((user_id is null) <> (org_id is null)) -- exactly one owner kind
+);
+
+create index if not exists workspaces_user_created_idx on public.workspaces (user_id, created_at desc);
+create index if not exists workspaces_org_created_idx  on public.workspaces (org_id, created_at desc);
+
+alter table public.workspaces enable row level security;
+
+drop policy if exists "workspaces select scope" on public.workspaces;
+create policy "workspaces select scope" on public.workspaces for select using (
+  auth.uid() = user_id or (org_id is not null and public.is_org_member(org_id)));
+
+drop policy if exists "workspaces insert scope" on public.workspaces;
+create policy "workspaces insert scope" on public.workspaces for insert with check (
+  (org_id is null and auth.uid() = user_id)
+  or (org_id is not null and public.is_org_member(org_id)));
+
+drop policy if exists "workspaces update scope" on public.workspaces;
+create policy "workspaces update scope" on public.workspaces for update using (
+  auth.uid() = user_id or (org_id is not null and public.has_org_role(org_id, array['owner','admin'])));
+
+drop policy if exists "workspaces delete scope" on public.workspaces;
+create policy "workspaces delete scope" on public.workspaces for delete using (
+  auth.uid() = user_id or (org_id is not null and public.has_org_role(org_id, array['owner','admin'])));
+
+-- Scope artifacts to a workspace (WORKSPACE_REDESIGN.md §4.2). Nullable: a NULL
+-- workspace_id means the row is not grouped under any workspace (canonical /
+-- template networks stay shared). RLS is unchanged.
+alter table public.artifacts add column if not exists workspace_id uuid
+  references public.workspaces(id) on delete cascade;
+
+create index if not exists artifacts_workspace_created_idx
+  on public.artifacts (workspace_id, created_at desc);
+
+-- ============================================================================
+-- chats  (REDESIGN_ROADMAP §4 / WORKSPACE_REDESIGN.md §10)
+--
+-- Durable handle mapping a workspace to an opencode session id + a human
+-- title, ordered by recency for the sidebar history list. opencode sessions
+-- are otherwise ephemeral with no durable list; this table is that list.
+-- Messages live in opencode and are reloaded by session id on reopen.
+-- RLS mirrors workspaces/artifacts (own personal, or member org).
+-- ============================================================================
+create table if not exists public.chats (
+  id uuid primary key default gen_random_uuid(),
+  workspace_id uuid references public.workspaces(id) on delete cascade,
+  user_id uuid references auth.users(id) on delete cascade,   -- personal owner
+  org_id  uuid references public.orgs(id) on delete cascade,  -- or org-owned
+  session_id text not null,                    -- opencode session id
+  title text not null default 'New chat',
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  last_message_at timestamptz default now(),
+  check ((user_id is null) <> (org_id is null)) -- exactly one owner kind
+);
+
+create index if not exists chats_workspace_recent_idx
+  on public.chats (workspace_id, last_message_at desc);
+create index if not exists chats_user_recent_idx
+  on public.chats (user_id, last_message_at desc);
+create index if not exists chats_session_idx on public.chats (session_id);
+
+alter table public.chats enable row level security;
+
+drop policy if exists "chats select scope" on public.chats;
+create policy "chats select scope" on public.chats for select using (
+  auth.uid() = user_id or (org_id is not null and public.is_org_member(org_id)));
+
+drop policy if exists "chats insert scope" on public.chats;
+create policy "chats insert scope" on public.chats for insert with check (
+  (org_id is null and auth.uid() = user_id)
+  or (org_id is not null and public.is_org_member(org_id)));
+
+drop policy if exists "chats update scope" on public.chats;
+create policy "chats update scope" on public.chats for update using (
+  auth.uid() = user_id or (org_id is not null and public.has_org_role(org_id, array['owner','admin'])));
+
+drop policy if exists "chats delete scope" on public.chats;
+create policy "chats delete scope" on public.chats for delete using (
+  auth.uid() = user_id or (org_id is not null and public.has_org_role(org_id, array['owner','admin'])));

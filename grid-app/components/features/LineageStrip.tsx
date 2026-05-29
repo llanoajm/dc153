@@ -61,7 +61,7 @@ export async function LineageStrip({ artifact }: { artifact: Artifact }) {
       ) : null}
       {children.length > 0 ? (
         <div className="text-[12px] font-soft text-black/70">
-          <span className="text-black/40">drafted features: </span>
+          <span className="text-black/40">drafted objectives: </span>
           <ul className="mt-1 space-y-0.5">
             {children.map((c) => (
               <li key={c.id} className="font-mono text-[11px]">

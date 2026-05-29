@@ -15,3 +15,7 @@
 [2026-05-28T22:53:23+00:00] DONE: - [ ] 10. Creation wizard (ROADMAP §10)
 [2026-05-28T23:01:09+00:00] DONE: - [ ] 11. Data Source tab (singular network) (ROADMAP §11)
 [2026-05-28T23:11:29+00:00] DONE: - [ ] 12. solve_plan MCP tool wrapping PlanningProblem.solve (ROADMAP §12)
+[2026-05-28T23:17:08+00:00] PARTIAL: - [ ] 13. kind='plan' view_spec + renderer (ROADMAP §13) (attempt 1)
+[2026-05-28T23:17:16+00:00] THROTTLE: sleep 1800s (1/24) [fast-blank(3s)]
+[2026-05-28T23:47:18+00:00] THROTTLE: sleep 1800s (2/24) [fast-blank(2s)]
+[2026-05-29T00:17:20+00:00] THROTTLE: sleep 1800s (3/24) [fast-blank(2s)]

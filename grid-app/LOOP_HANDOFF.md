@@ -1,5 +1,5 @@
-## Current item (from LOOP_QUEUE.md line 109)
-- [x] 15. Intent routing in the agent (no "zap", no UUID) (ROADMAP §15)
+## Current item (from LOOP_QUEUE.md line 116)
+- [x] 16. Ontology polish: features→Objectives, Runs&Plans tab, demote panels (ROADMAP §16)
 
 ## Attempt
 1 of 5
@@ -35,7 +35,7 @@
 - If an item's acceptance cannot be met safely under these constraints, set its line in LOOP_QUEUE.md to `[!]` and record why in LOOP_ALERTS.md — do not force it or weaken the guardrails.
 
 STATUS: done
-SUMMARY: Reworked the grid-engineer persona (lib/user-workspace.ts, reused by lib/workspace.ts) with NL→tool routing (dispatch/Run via solve_opf vs planning/Plan via solve_plan), the [active-network] workspace-network default (never ask for a UUID), and a never-say-"zap" rule; documented both routing transcripts in REDESIGN_NOTES.md.
-NEXT_STEPS: (none — item complete) Item 16 is next: ontology polish (features→Objectives UI rename, Runs & Plans tab, demote generic panels to a Library; old routes still resolve). Follow-up noted in item-14/15: thread the workspace's stored workspaces.focus into the solve_plan call so the agent passes focus explicitly (today the persona derives emissions_weight from Decarbonization intent, same routing outcome).
-ACCEPTANCE: PASS — persona template updated with routing rules + workspace-network default (never asks for a UUID, never says "zap"); the [active-network] context-line format matches ChatView.tsx exactly. PASS — REDESIGN_NOTES.md documents the two phrasings routing to solve_opf (Run) vs solve_plan (Plan), used because full in-loop live-agent execution is infeasible under the guardrails (no disturbing prod opencode/:3000). PASS — `npx tsc --noEmit` exit 0; `npm run test:unit` 46/46. Visual/live-agent review deferred to human per guardrails.
+SUMMARY: Reframed the left-rail nav to the five workspace nouns (Data Source / Chats / Objectives / Runs & Plans / Library), renaming features→Objectives and Runs→Runs & Plans in the UI while every old route still resolves.
+ACCEPTANCE: PASS — nav reflects the five nouns (Data Source / Chats / Objectives / Runs & Plans / Library) with the three studies top-level and the demoted generic panels under a collapsed "Library" disclosure; PASS — old routes still resolve (RAIL_ROUTES unchanged: /app/networks, /app/features, /app/runs, /app/sources, /app/glossary, /app/dashboards, /app/panels, /app/orgs, /app/settings all reachable); PASS — `npx tsc --noEmit` exit 0 and `npm run test:unit` 46/46; DEFERRED — the Playwright nav check (acceptance names it) was NOT run per the :3000/browser guardrail — `tests/flows/app-shell.spec.ts` was updated to the new top-level-noun + Library-group structure and is the spec for the human to run, alongside a visual review of the rail.
+
 VERIFIED: yes

@@ -113,7 +113,7 @@ planning hero (12-15) → polish (16). Process top-to-bottom.
     - a documented transcript in REDESIGN_NOTES.md shows the two phrasings routing to solve_opf vs solve_plan (if full in-loop agent execution isn't feasible, note that and leave the template change as the deliverable)
     - `npx tsc --noEmit` passes
 
-- [ ] 16. Ontology polish: features→Objectives, Runs&Plans tab, demote panels (ROADMAP §16)
+- [x] 16. Ontology polish: features→Objectives, Runs&Plans tab, demote panels (ROADMAP §16)
   - context: §3,§5; rename features→Objectives in UI; add Runs & Plans tab; move generic panels into a secondary Library.
   - acceptance:
     - nav reflects the 5 nouns (Data Source, Chats, Objectives, Runs & Plans, Library); old routes still resolve

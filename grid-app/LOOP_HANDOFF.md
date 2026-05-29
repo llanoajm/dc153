@@ -1,8 +1,8 @@
-## Current item (from LOOP_QUEUE.md line 97)
-- [x] 13. kind='plan' view_spec + renderer (ROADMAP §13)
+## Current item (from LOOP_QUEUE.md line 109)
+- [ ] 15. Intent routing in the agent (no "zap", no UUID) (ROADMAP §15)
 
 ## Attempt
-2 of 5
+1 of 5
 
 ## Context to load before working
 - WORKSPACE_REDESIGN.md  (the design: ontology, schema §4, IA §5, focus→problem §6, hero planning loop §7, chat-centric UX §10, and the §11 build guardrails — READ THIS FIRST)
@@ -34,8 +34,12 @@
 - No new heavy dependencies for what a few lines solve. Match existing patterns (Tailwind utility-first; server components do IO; client components are thin and "use client"). No emojis in UI or code.
 - If an item's acceptance cannot be met safely under these constraints, set its line in LOOP_QUEUE.md to `[!]` and record why in LOOP_ALERTS.md — do not force it or weaken the guardrails.
 
+---
+
+## Result of the just-completed item (14. Focus → planning-problem assembly helper)
+
 STATUS: done
-SUMMARY: kind='plan' view_spec (scripts/plan_artifact.py) + components/renderers/plan.tsx render all five §7 panels, with the cost-vs-emissions panel fixed to actually populate (it always crashed silently before).
-NEXT_STEPS: (none — item complete; next is item 14, focus→planning-problem assembly helper)
-ACCEPTANCE: PASS — view_spec encodes loss/op_cost/inv_cost curves, capacity trajectory, final-build table, resulting dispatch (reuses RunView), and the cost-vs-emissions panel; verified end-to-end on data/networks/ieee-30 (all five populated, cost_emissions={op_cost,emissions,emissions_weight}). PASS — components/renderers/plan.tsx renders them (registered in index.tsx + types.ts; dispatch reuses RunView, curves use VegaLiteChart). PASS — `npx tsc --noEmit` exit 0; `npm run test:unit` 46/46. DEFERRED TO HUMAN — the roadmap's "Playwright snapshot of a seeded plan artifact" is visual; not run in-loop (guardrails forbid a browser against prod :3000), see LOOP_JOURNAL.md item-13 entry for the review checklist.
+SUMMARY: Added scripts/focus_problem.py mapping workspace focus tags → free DispatchLayer.parameter_names + objective composition (DispatchCost [+ λ·Emissions] + Investment) per §6, wired it into plan_artifact.run_plan via a new focus arg, and added a python smoke that passes against ieee-30 shapes.
+NEXT_STEPS: n/a (done). For item 15: thread the workspace's stored workspaces.focus into the solve_plan call (focus_problem.assemble_focus_plan is the library to use); solve_plan's MCP signature still takes emissions_weight, not focus.
+ACCEPTANCE: PASS — given focus [Generation, Decarbonization] the helper returns free generator nominal_capacity + λ·Emissions (default λ=0.5) + InvestmentObjective (asserted in scripts/_smoke_focus_problem.py). PASS — `python3 scripts/_smoke_focus_problem.py` exits 0 (shape contract); `/home/agent/zap/.venv/bin/python scripts/_smoke_focus_problem.py` exits 0 (import + call against real ieee-30 device shapes). PASS — `npx tsc --noEmit` exit 0 (no TS added this item). PASS — `npm run test:unit` 46/46. Regression: existing `_smoke_solve_plan.py --skip-e2e` still exits 0 through the refactored run_plan.
 VERIFIED: yes

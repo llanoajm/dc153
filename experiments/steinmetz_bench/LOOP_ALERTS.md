@@ -28,3 +28,4 @@
 [2026-05-29T19:43:41+00:00] REVERTED: - [ ] 4.2 Master report generator (ROADMAP Phase 4) — run_all.py assembling all results. (attempt 2)
 [2026-05-29T20:13:48+00:00] PARTIAL: - [ ] 4.2 Master report generator (ROADMAP Phase 4) — run_all.py assembling all results. (attempt 3)
 [2026-05-29T20:36:19+00:00] DONE: - [ ] 4.2 Master report generator (ROADMAP Phase 4) — run_all.py assembling all results.
+[2026-05-29T21:02:26+00:00] DONE: - [ ] 5.1 Finished whitepaper (ROADMAP Phase 5) — grounded rewrite of the spec from real loop results.

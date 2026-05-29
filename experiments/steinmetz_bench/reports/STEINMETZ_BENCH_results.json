@@ -265,36 +265,36 @@
       "timing_table": [
         {
           "baseline_objective": 23982.349062245783,
-          "baseline_s": 0.04727373889181763,
+          "baseline_s": 0.04757470602635294,
           "hours": 24,
           "n_devices": 3,
           "n_nodes": 6,
           "objective_gap": 1.2540392486953916e-11,
-          "speedup_baseline_per_zap": 0.8533613800270504,
+          "speedup_baseline_per_zap": 1.0678973903247182,
           "zap_objective": 23982.34906254653,
-          "zap_s": 0.055397092015482485
+          "zap_s": 0.04454988508950919
         },
         {
           "baseline_objective": 24404.684316503306,
-          "baseline_s": 0.06874807900749147,
+          "baseline_s": 0.07405868801288307,
           "hours": 24,
           "n_devices": 3,
           "n_nodes": 12,
           "objective_gap": 3.6109880384393634e-09,
-          "speedup_baseline_per_zap": 1.094129848400352,
+          "speedup_baseline_per_zap": 1.1385147837132048,
           "zap_objective": 24404.68440462833,
-          "zap_s": 0.06283356505446136
+          "zap_s": 0.06504850799683481
         },
         {
           "baseline_objective": 24591.715464306275,
-          "baseline_s": 0.14253189705777913,
+          "baseline_s": 0.14659557200502604,
           "hours": 24,
           "n_devices": 3,
           "n_nodes": 24,
           "objective_gap": 6.920802147702985e-09,
-          "speedup_baseline_per_zap": 1.4851116444385057,
+          "speedup_baseline_per_zap": 1.4725047290427975,
           "zap_objective": 24591.715634500673,
-          "zap_s": 0.09597386000677943
+          "zap_s": 0.09955524699762464
         }
       ]
     },
@@ -348,7 +348,7 @@
         "line_cap": 96.35616031659254
       },
       "planner_objective": 28164.1640625,
-      "planner_solve_seconds": 57.602640112047084,
+      "planner_solve_seconds": 57.30781016102992,
       "savings_vs_no_expansion": 16696.5859375
     },
     "units": "$"
@@ -523,7 +523,7 @@
   "2.5-gpu-modal": {
     "assumptions": {
       "cpu_solver": "CLARABEL",
-      "dispatch_timestamp": "20260529T135404Z",
+      "dispatch_timestamp": "20260529T230558Z",
       "gpu_admm_args": {
         "atol": 1e-08,
         "dtype": "float64",
@@ -542,10 +542,10 @@
     "experiment_id": "2.5-gpu-modal",
     "fidelity_band": {
       "max_abs_gap": 0.22723551653325558,
-      "mean_abs_gap": 0.12175392418248521,
+      "mean_abs_gap": 0.0836005165122818,
       "metric": "objective",
-      "n": 2,
-      "p90_abs_gap": 0.20613919806310152,
+      "n": 3,
+      "p90_abs_gap": 0.18504287959294743,
       "reference": "modal-gpu-admm",
       "units": "$"
     },
@@ -553,9 +553,9 @@
     "sensitivities": {
       "gpu_table": [
         {
-          "cpu_elapsed_s": 0.058573000016622245,
+          "cpu_elapsed_s": 0.05562413891311735,
           "cpu_objective": 21087.164095860095,
-          "gpu_elapsed_s": 4.651675462722778,
+          "gpu_elapsed_s": 5.0745158195495605,
           "gpu_objective": 21087.147823528263,
           "gpu_tier": "H100",
           "hours": 8,
@@ -565,9 +565,9 @@
           "objective_gap": 7.71669995915168e-07
         },
         {
-          "cpu_elapsed_s": 0.056522289058193564,
+          "cpu_elapsed_s": 0.05226296198088676,
           "cpu_objective": 137507.18188059138,
-          "gpu_elapsed_s": 6.749706268310547,
+          "gpu_elapsed_s": 7.780694961547852,
           "gpu_objective": 137507.4091161079,
           "gpu_tier": "H100",
           "hours": 8,
@@ -575,6 +575,18 @@
           "n_buses": 14,
           "network": "larger",
           "objective_gap": 1.652535623416256e-06
+        },
+        {
+          "cpu_elapsed_s": 0.5376729619456455,
+          "cpu_objective": 24600660806.513657,
+          "gpu_elapsed_s": 7.834962844848633,
+          "gpu_objective": 24600660806.506363,
+          "gpu_tier": "H100",
+          "hours": 24,
+          "machine": "cuda",
+          "n_buses": 200,
+          "network": "wecc-scale",
+          "objective_gap": 2.9648395338810596e-13
         }
       ],
       "max_objective_gap": 1.652535623416256e-06

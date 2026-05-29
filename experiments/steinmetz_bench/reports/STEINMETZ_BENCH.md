@@ -12,7 +12,7 @@
 | `2.2-planning` | synthetic-2bus-multiscenario | 28164.2 $ | n/a | joint-expansion-lp/planning-objective: max 34.1547 $ (n=1) |
 | `2.3-accuracy` | synthetic-multi-reference | 8.87369 $/MWh | [7.0032, 10.9372] (90%) | pypsa-dc/lmp: max 2.47919e-06 $/MWh (n=18) |
 | `2.4-sensitivity` | garver+toy7 | 4.656e-06 relative | n/a | exact-dual/cost-gradient: max 0.000557221 $/unit-capacity (n=12) |
-| `2.5-gpu-modal` | synthetic-pypsa-gpu | 1.65254e-06 relative | n/a | modal-gpu-admm/objective: max 0.227236 $ (n=2) |
+| `2.5-gpu-modal` | synthetic-pypsa-gpu | 1.65254e-06 relative | n/a | modal-gpu-admm/objective: max 0.227236 $ (n=3) |
 
 ## §7 dollar backtests
 

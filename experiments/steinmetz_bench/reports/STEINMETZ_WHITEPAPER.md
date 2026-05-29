@@ -92,7 +92,7 @@ _Every figure below is rendered directly from a `BenchResult` in `STEINMETZ_BENC
 | `2.2-planning` | synthetic-2bus-multiscenario | 28164.2 $ | n/a (deterministic) | joint-expansion-lp/planning-objective: max 34.1547 $ (n=1) | synthetic fixture |
 | `2.3-accuracy` | synthetic-multi-reference | 8.87369 $/MWh | [7.0032, 10.9372] @ 90% | pypsa-dc/lmp: max 2.47919e-06 $/MWh (n=18) | synthetic fixture |
 | `2.4-sensitivity` | garver+toy7 | 4.656e-06 relative | n/a (deterministic) | exact-dual/cost-gradient: max 0.000557221 $/unit-capacity (n=12) | synthetic fixture |
-| `2.5-gpu-modal` | synthetic-pypsa-gpu | 1.65254e-06 relative | n/a (deterministic) | modal-gpu-admm/objective: max 0.227236 $ (n=2) | synthetic fixture |
+| `2.5-gpu-modal` | synthetic-pypsa-gpu | 1.65254e-06 relative | n/a (deterministic) | modal-gpu-admm/objective: max 0.227236 $ (n=3) | synthetic fixture |
 
 Reading guide:
 - `2.1-speed-cpu` — Dispatch speed vs. a cvxpy LP baseline.

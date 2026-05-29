@@ -40,3 +40,14 @@
 .close:hover {
   opacity: 1;
 }
+
+@media (max-width: 768px) {
+  .banner {
+    padding: 9px 40px;
+    text-align: center;
+  }
+
+  .text {
+    font-size: 12px;
+  }
+}

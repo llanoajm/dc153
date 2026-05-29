@@ -1,0 +1,254 @@
+--axis-angle: 5deg;
+
+/* ── Wrapper (handles sticky + stacking) ── */
+
+.wrapper {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+/* ── Navbar ── */
+
+.nav {
+  --axis-angle: 5deg;
+  display: flex;
+  align-items: center;
+  padding: 20px clamp(24px, 4vw, 56px);
+  background: rgba(244, 243, 243, 0);
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  transition: background 0.25s ease, backdrop-filter 0.25s ease, -webkit-backdrop-filter 0.25s ease, border-bottom-color 0.25s ease;
+  border-bottom: 1px solid transparent;
+}
+
+:global(body[data-scrolled="true"]) .nav {
+  background: rgba(244, 243, 243, 0.72);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  border-bottom-color: rgba(9, 23, 23, 0.06);
+}
+
+.navLogo {
+  display: flex;
+  align-items: center;
+  gap: clamp(7px, 0.77vw, 8px);
+}
+
+.navMark {
+  height: clamp(28px, 3.2vw, 34px);
+  width: auto;
+  display: block;
+  transform: rotate(5deg);
+  filter: url(#blackToOffblack);
+}
+
+.navWord {
+  font-size: clamp(18px, 2.1vw, 22px);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  color: #091717;
+}
+
+.navLinks {
+  display: flex;
+  gap: clamp(20px, 2.8vw, 44px);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.navActions {
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 1.2vw, 18px);
+  margin-left: auto;
+}
+
+.navLink {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #091717;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.navLink:hover {
+  color: #091717;
+}
+
+.navCta {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #091717;
+  text-decoration: none;
+  border: 1.5px solid #091717;
+  padding: 12px 28px;
+  transition: background 0.2s, color 0.2s;
+  transform: skewX(-12deg);
+}
+
+.navCtaText {
+  display: block;
+  transform: skewX(5deg);
+}
+
+.navCta:hover {
+  background: #091717;
+  color: #fff;
+}
+
+.navCtaLight {
+  border-color: transparent;
+  color: #595959;
+}
+
+.navCtaLight:hover {
+  background: transparent;
+  border-color: transparent;
+  color: #595959;
+}
+
+/* ── Burger button ── */
+
+.burger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.burgerBar {
+  display: block;
+  width: 22px;
+  height: 1.5px;
+  background: #091717;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+  transform-origin: center;
+}
+
+.bar1Open {
+  transform: translateY(6.5px) rotate(45deg);
+}
+
+.bar2Open {
+  opacity: 0;
+  transform: scaleX(0);
+}
+
+.bar3Open {
+  transform: translateY(-6.5px) rotate(-45deg);
+}
+
+/* ── Mobile drawer ── */
+
+.drawer {
+  overflow: hidden;
+  max-height: 0;
+  background: rgba(244, 243, 243, 0.97);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  border-bottom: 1px solid transparent;
+  transition: max-height 0.32s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s ease;
+}
+
+.drawerOpen {
+  max-height: 420px;
+  border-bottom-color: rgba(9, 23, 23, 0.08);
+}
+
+.drawerInner {
+  display: flex;
+  flex-direction: column;
+  padding: 8px clamp(24px, 4vw, 56px) 28px;
+  gap: 2px;
+}
+
+.drawerLink {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #091717;
+  text-decoration: none;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(9, 23, 23, 0.07);
+  transition: color 0.2s;
+}
+
+.drawerLink:last-of-type {
+  border-bottom: none;
+}
+
+.drawerLink:hover {
+  color: #595959;
+}
+
+.drawerActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 20px;
+}
+
+.drawerCta {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #091717;
+  text-decoration: none;
+  border: 1.5px solid #091717;
+  padding: 11px 24px;
+  transition: background 0.2s, color 0.2s;
+  transform: skewX(-12deg);
+}
+
+.drawerCtaText {
+  display: block;
+  transform: skewX(5deg);
+}
+
+.drawerCta:hover {
+  background: #091717;
+  color: #fff;
+}
+
+.drawerCtaLight {
+  border-color: transparent;
+  color: #595959;
+}
+
+.drawerCtaLight:hover {
+  background: transparent;
+  color: #595959;
+}
+
+/* ── Responsive: show burger, hide nav links + actions ── */
+
+@media (max-width: 960px) {
+  .navLinks,
+  .navActions {
+    display: none;
+  }
+
+  .burger {
+    display: flex;
+  }
+}

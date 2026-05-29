@@ -2,6 +2,7 @@
 import HeroAnimationLoader from './components/HeroAnimationLoader'
 import NavScrollClass from './components/NavScrollClass'
 import AnnouncementBanner from './components/AnnouncementBanner'
+import NavBar from './components/NavBar'
 import styles from './page.module.css'
 
 export default function HomePage() {
@@ -29,21 +30,7 @@ export default function HomePage() {
           />
         </filter>
       </svg>
-      <nav className={styles.nav}>
-        <div className={styles.navLogo}>
-          <img className={styles.navMark} src="/spi-mark-filled.png" alt="Steinmetz" />
-          <span className={styles.navWord}>Steinmetz</span>
-        </div>
-        <div className={styles.navLinks}>
-          <a href="#" className={styles.navLink}>Research</a>
-          <a href="#" className={styles.navLink}>Models</a>
-          <a href="#" className={styles.navLink}>How It Works</a>
-        </div>
-        <div className={styles.navActions}>
-          <a href="/login" className={`${styles.navCta} ${styles.navCtaLight}`}><span className={styles.navCtaText}>Log in</span></a>
-          <a href="/login" className={styles.navCta}><span className={styles.navCtaText}>Book a demo</span></a>
-        </div>
-      </nav>
+      <NavBar />
 
       <section className={styles.hero}>
         <div className={styles.axisY} />

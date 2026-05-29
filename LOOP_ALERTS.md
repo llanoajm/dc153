@@ -21,3 +21,4 @@
 [2026-05-29T00:17:20+00:00] THROTTLE: sleep 1800s (3/24) [fast-blank(2s)]
 [2026-05-29T00:53:41+00:00] DONE: - [ ] 13. kind='plan' view_spec + renderer (ROADMAP §13)
 [2026-05-29T01:02:24+00:00] DONE: - [ ] 14. Focus → planning-problem assembly helper (ROADMAP §14)
+[2026-05-29T01:12:34+00:00] DONE: - [ ] 15. Intent routing in the agent (no "zap", no UUID) (ROADMAP §15)

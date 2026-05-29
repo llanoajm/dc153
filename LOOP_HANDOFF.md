@@ -1,8 +1,8 @@
 ## Current item (from LOOP_QUEUE.md line 97)
-- [ ] 13. kind='plan' view_spec + renderer (ROADMAP §13)
+- [x] 13. kind='plan' view_spec + renderer (ROADMAP §13)
 
 ## Attempt
-1 of 5
+2 of 5
 
 ## Context to load before working
 - WORKSPACE_REDESIGN.md  (the design: ontology, schema §4, IA §5, focus→problem §6, hero planning loop §7, chat-centric UX §10, and the §11 build guardrails — READ THIS FIRST)
@@ -33,3 +33,9 @@
 - Per-user/per-workspace isolation: end-user creations live per-workspace (filesystem + Supabase), never in shared zap/opencode git history.
 - No new heavy dependencies for what a few lines solve. Match existing patterns (Tailwind utility-first; server components do IO; client components are thin and "use client"). No emojis in UI or code.
 - If an item's acceptance cannot be met safely under these constraints, set its line in LOOP_QUEUE.md to `[!]` and record why in LOOP_ALERTS.md — do not force it or weaken the guardrails.
+
+STATUS: done
+SUMMARY: kind='plan' view_spec (scripts/plan_artifact.py) + components/renderers/plan.tsx render all five §7 panels, with the cost-vs-emissions panel fixed to actually populate (it always crashed silently before).
+NEXT_STEPS: (none — item complete; next is item 14, focus→planning-problem assembly helper)
+ACCEPTANCE: PASS — view_spec encodes loss/op_cost/inv_cost curves, capacity trajectory, final-build table, resulting dispatch (reuses RunView), and the cost-vs-emissions panel; verified end-to-end on data/networks/ieee-30 (all five populated, cost_emissions={op_cost,emissions,emissions_weight}). PASS — components/renderers/plan.tsx renders them (registered in index.tsx + types.ts; dispatch reuses RunView, curves use VegaLiteChart). PASS — `npx tsc --noEmit` exit 0; `npm run test:unit` 46/46. DEFERRED TO HUMAN — the roadmap's "Playwright snapshot of a seeded plan artifact" is visual; not run in-loop (guardrails forbid a browser against prod :3000), see LOOP_JOURNAL.md item-13 entry for the review checklist.
+VERIFIED: yes

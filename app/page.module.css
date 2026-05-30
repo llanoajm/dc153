@@ -212,6 +212,21 @@
   z-index: 1;
 }
 
+/* Depth render of the cube, positioned over the SVG cube's bounding box
+   (viewBox 460x393, cube extents x[12,447] y[13.1,381.1]) so it overlays
+   the line-art exactly. Iris-revealed in JS during the cube hold. */
+.depthImg {
+  position: absolute;
+  left: 2.61%;
+  top: 3.33%;
+  width: 94.57%;
+  height: 93.64%;
+  object-fit: fill;
+  pointer-events: none;
+  z-index: 3;
+  clip-path: circle(0% at 50% 50%);
+}
+
 /* ── Footer ── */
 
 .footer {

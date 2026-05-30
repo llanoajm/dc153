@@ -51,6 +51,14 @@ const T_SPIN = 4.0
 const T_SVG_PHASE = T_MORPH + T_HOLD
 const T_3D_PHASE = T_MORPH + T_SPIN + 0.4
 
+// Depth-image reveal, timed from the start of the cube hold (i.e. local - T_MORPH).
+// Sequence over the 3.0s hold: settle → iris in → hold → iris out → bare cube again,
+// so it reads cube SVG → depth image → cube SVG before the morph to solar.
+const IMG_IN_START = 0.4
+const IMG_IN_END = 1.0
+const IMG_OUT_START = 2.0
+const IMG_OUT_END = 2.6
+
 function phaseDur(s: number) {
   return s === 0 ? T_SVG_PHASE : T_3D_PHASE
 }
@@ -177,6 +185,7 @@ function CameraRig() {
 export default function HeroAnimation() {
   const pathRefs = useRef<(SVGPathElement | null)[]>([])
   const canvasRef = useRef<HTMLDivElement>(null)
+  const imgRef = useRef<HTMLImageElement>(null)
   const rafRef = useRef<number>(0)
   const morphsRef = useRef<Interp[][]>([])
 
@@ -202,6 +211,7 @@ export default function HeroAnimation() {
       const t = ((now - t0) / 1000) % TOTAL
       const paths = pathRefs.current
       const cvs = canvasRef.current
+      const img = imgRef.current
       if (!cvs || paths.some(p => !p)) {
         rafRef.current = requestAnimationFrame(tick)
         return
@@ -296,6 +306,24 @@ export default function HeroAnimation() {
         }
       }
 
+      // Depth-image iris reveal — only during the cube hold, between the morphs.
+      // Mirrors the 3D iris language; fades the line-art out under the revealed image.
+      let imgIris = 0
+      if (shapeIdx === 0 && local >= T_MORPH) {
+        const h = local - T_MORPH
+        if (h >= IMG_IN_START && h < IMG_IN_END) {
+          imgIris = ease((h - IMG_IN_START) / (IMG_IN_END - IMG_IN_START))
+        } else if (h >= IMG_IN_END && h < IMG_OUT_START) {
+          imgIris = 1
+        } else if (h >= IMG_OUT_START && h < IMG_OUT_END) {
+          imgIris = 1 - ease((h - IMG_OUT_START) / (IMG_OUT_END - IMG_OUT_START))
+        }
+      }
+      if (img) img.style.clipPath = `circle(${imgIris * 100}% at 50% 50%)`
+      if (imgIris > 0) {
+        for (let i = 0; i < N_PATHS; i++) paths[i]!.style.opacity = String(1 - imgIris)
+      }
+
       rafRef.current = requestAnimationFrame(tick)
     }
     rafRef.current = requestAnimationFrame(tick)
@@ -321,6 +349,15 @@ export default function HeroAnimation() {
           </Suspense>
         </Canvas>
       </div>
+
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        ref={imgRef}
+        className={styles.depthImg}
+        src="/logo-depth-trim.png"
+        alt=""
+        aria-hidden="true"
+      />
 
       <svg className={styles.cubeSvg} viewBox="0 0 460 393" fill="none">
         <defs>

@@ -326,9 +326,9 @@
     flex-direction: column;
     height: auto;
     min-height: calc(100svh - var(--nav-h));
-    padding: clamp(32px, 7vw, 56px) clamp(20px, 5vw, 40px);
+    padding: clamp(56px, 12vw, 88px) clamp(20px, 5vw, 40px) clamp(24px, 6vw, 44px);
     align-items: flex-start;
-    justify-content: center;
+    justify-content: flex-start;
   }
 
   .heroContent {

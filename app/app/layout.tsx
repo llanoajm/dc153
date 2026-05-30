@@ -6,6 +6,7 @@ import { listPinnedDashboards } from "@/lib/dashboards"
 import { Lockup } from "@/components/lockup"
 import { OrgSwitcher } from "@/components/orgs/OrgSwitcher"
 import { AppChrome } from "@/components/shell/AppChrome"
+import { HeaderProfileMenu } from "@/components/shell/HeaderProfileMenu"
 import type { PinnedDashboard } from "@/components/shell/types"
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -47,13 +48,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <header
         className="px-6 py-3 flex items-center justify-between shrink-0"
         style={{
-          background: "var(--bg-card)",
+          background: "var(--bg-app)",
           borderBottom: "1px solid var(--bor-1)",
         }}
       >
         <Lockup size="sm" />
         <div className="flex items-center gap-6">
           <OrgSwitcher memberships={memberships} activeOrgId={activeOrgId} />
+          <HeaderProfileMenu email={user.email ?? null} />
         </div>
       </header>
       <AppChrome pinnedDashboards={pinnedDashboards} email={user.email ?? null}>

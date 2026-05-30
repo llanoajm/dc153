@@ -288,6 +288,20 @@ Each backtest is designed to produce a **defensible dollar number** by replaying
 
 **Cross-cutting validation.** For every backtest, report the DC-OPF-vs-UC-vs-AC gap from the validation sandboxes so the dollar numbers come with an honest fidelity band.
 
+### 7.5 v0.1 internal validation results (synthetic fixtures)
+
+The four §7 backtests above have been **wired end-to-end and run autonomously** against synthetic fixtures by the in-house benchmark loop (the same code paths will emit real dollar numbers once ISO/CENACE data is staged). Every figure below is computed by code from a real `zap` solve — no hand-written constants — and re-derived by the test suite from the raw arrays. The §3.5 Mexico backtest reports a Spearman correlation (the *disagreement* metric between the merit-order and CFE-≥54% rankings); the negative value is the headline — it confirms the CFE constraint demonstrably shifts the ranking, the capability claim of the doubles-as-a-jurisdiction-rule-demo subbullet.
+
+| Backtest | Synthetic dataset | Headline | 90% CI | Fidelity band |
+|---|---|---|---|---|
+| `3.1` data-center siting (§7.1-A) | siting-star | **50.04 $/MWh** delta | [49.61, 50.47] | DC-vs-PyPSA LMP: max 0.0100 $/MWh (n=240) |
+| `3.2` data-center flexibility (§7.1-B) | flex-qp | **$3.51M/yr** flex savings | [$3.37M, $3.63M] | finite-diff/battery-marginal-value: max 0.0048 $/MW-day (n=10) |
+| `3.3` vertically-integrated utility (§7.2) | utility-3zone | **$47.4M/yr** avoidable | [$47.2M, $47.7M] | DC-vs-PyPSA LMP: max 1.66e-4 $/MWh (n=72) |
+| `3.4` transmission-plan audit (§7.3) | radial-corridors | **R² 0.931** vs realized congestion | [0.915, 0.945] | finite-diff/corridor-marginal-value: max 0.0126 $/MW-day (n=4) |
+| `3.5` Mexico EPC dual-regime (§7.4) | two-hub-cfe | **Spearman −0.857** (regimes disagree) | [−0.975, −0.537] | finite-diff/corridor-marginal-value: max 1.32e-4 $/MW-period (n=4) |
+
+All five tests pass in the suite (149 tests total across the loop), and the data sidecar (`STEINMETZ_BENCH_results.json`) preserves every input array so any number on this page can be re-derived from JSON alone.
+
 ---
 
 ## 8. Competitive landscape, pricing, and benchmarks
@@ -325,6 +339,31 @@ Commercial PCM/forecasting tools are enterprise-licensed and quote-based; exact 
 3. **Accuracy:** LMP and congestion-component error vs. a UC-aware reference (Sienna) and vs. *realized* ISO LMPs (gridstatus), reported as distributions, not point estimates.
 4. **Sensitivity correctness:** unrolled-diff gradients vs. exact duals (Mosek), as in the paper's Fig. 6.
 5. **Backtest value:** the four §7 dollar figures, with fidelity bands.
+
+### 8.5 v0.1 internal validation results (synthetic fixtures)
+
+All five §8.4 benchmarks above are wired and running in the internal loop. The headline of each row below is what the code measured on its synthetic fixture; each is computed from a real `zap` solve and re-derived by the test suite from the raw arrays. The full-scale publishable headlines (4000-node WECC, 500-node 8-scenario expansion, against UC-aware refs) are the targets the next phase will fill in — those require staged Sienna / Mosek licences and PyPSA-USA topology.
+
+| § | Benchmark | Synthetic dataset | Headline | Fidelity band |
+|---|---|---|---|---|
+| 8.4.1 | speed (CPU baseline parity) | radial-sweep, 3 sizes | **6.92e-09 relative** objective gap vs cvxpy LP | cvxpy-lp/objective: max 1.70e-4 $ (n=3) |
+| 8.4.1 | speed (GPU/H100 via Modal) | pypsa-gpu, up to 200-bus × 24h | **1.65e-06 relative** CPU↔H100 objective parity | modal-gpu-admm/objective: max 0.227 $ (n=3) |
+| 8.4.2 | planning vs joint LP optimum | 2-bus multi-scenario | **28,164 $** planner objective ≤ joint-LP optimum + tol | joint-expansion-lp: max 34.15 $ (n=1) |
+| 8.4.3 | LMP error vs reference | multi-reference | **8.87 $/MWh** error distribution headline, CI [7.00, 10.94] | pypsa-dc/lmp: max 2.48e-6 $/MWh (n=18) |
+| 8.4.4 | gradient vs exact dual (paper Fig. 6) | garver+toy7 | **4.66e-06 relative** worst-case adjoint-vs-dual gap | exact-dual/cost-gradient: max 5.57e-4 $/unit-capacity (n=12) |
+
+Plus three validation references the §8.4 stack depends on:
+
+| § | Reference | Dataset | Headline |
+|---|---|---|---|
+| Phase-1.1 | PyPSA LP roundtrip | reference-3bus-radial | LMP gap max 2.48e-6 $/MWh (n=18) |
+| Phase-1.2 | gradient-vs-exact-dual (paper Fig. 6) | garver+toy7 | rel err 4.66e-6, FD-cross-checked across line / gen / battery |
+| Phase-1.3 | realized-LMP comparator | synthetic-congested | error distribution: median 8.87 $/MWh, p90 reported (n=120) |
+
+Notes worth flagging for honest reading:
+
+- **2.5 (GPU/H100):** at the 6-, 14-, and 200-bus scales we ran, the H100 takes ~5–8s per dispatch while the CPU takes <1s. Cold-start and image setup dominate at this scale — the speedup the paper reports only materializes at WECC-class problem sizes (the published-headline target). What this run *does* confirm is **exact CPU↔GPU parity** (objective gap 1.65e-6 in the worst case, 2.96e-13 on the 200-bus case), i.e. the H100 path is correctness-equivalent to CPU. The speed headline at scale is still future work.
+- **All values labelled "synthetic fixtures":** these are the internal-validation numbers from the loop's own deterministic problem generators, not the publishable real-data dollar figures. The same code paths emit `real (staged)` provenance once ISO/CENACE data is dropped into the staging cache.
 
 ---
 

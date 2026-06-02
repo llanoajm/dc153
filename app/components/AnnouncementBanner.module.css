@@ -1,53 +1,78 @@
+/* Rounded white announcement card (stadium shape), matching the site's card-gap
+   margins. Centred black text, minimal close (×) at the right. */
 .banner {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  padding: 9px 48px;
-  background: #F4F3F3;
+  margin: 0 var(--card-gap);
+  padding: 16px 56px;
+  background: #ffffff;
   color: #000;
-  border: 1px solid #000;
+  border-radius: clamp(18px, 1.8vw, 28px);
+  box-shadow: 0 1px 2px rgba(9, 23, 23, 0.06);
 }
 
 .text {
-  font-size: 13px;
-  font-weight: 300;
-  letter-spacing: 0.03em;
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: clamp(13px, 1vw, 15px);
+  font-weight: 400;
+  letter-spacing: 0;
+  color: #000;
+  text-align: center;
+}
+
+.link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: opacity 0.2s;
+}
+
+.link:hover {
+  opacity: 0.65;
 }
 
 .close {
   position: absolute;
-  right: 16px;
+  right: 22px;
   top: 50%;
   transform: translateY(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   padding: 0;
-  border: 1px solid #000;
+  border: none;
+  border-radius: 50%;
   background: transparent;
   color: #000;
-  font-size: 16px;
-  line-height: 1;
   cursor: pointer;
-  opacity: 0.85;
-  transition: opacity 0.2s;
+  opacity: 0.8;
+  transition: opacity 0.2s, background 0.2s;
 }
 
 .close:hover {
   opacity: 1;
+  background: rgba(0, 0, 0, 0.05);
 }
 
 @media (max-width: 768px) {
   .banner {
-    padding: 9px 40px;
-    text-align: center;
+    padding: 13px 46px;
   }
 
-  .text {
-    font-size: 12px;
+  .close {
+    right: 12px;
+  }
+}
+
+/* Drop "Proactive" on narrow viewports (full line wraps below ~480px) so it reads
+   "Introducing Backtesting Agents." */
+@media (max-width: 480px) {
+  .proactiveWord {
+    display: none;
   }
 }

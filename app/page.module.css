@@ -2,22 +2,32 @@
   --axis-angle: 5deg;
   --accent: #0044CC;
   --nav-h: 76px;
+  --card-gap: clamp(14px, 1.8vw, 32px);
   min-height: 100vh;
   background: #F4F3F3;
   color: #000;
   position: relative;
   overflow-x: clip;
+  /* A little off-white breathing room above the announcement banner. Lives as
+     padding (not the banner's margin, which would collapse out to the white
+     html background) so it shows the page's off-white. */
+  padding-top: clamp(10px, 1.2vw, 20px);
 }
 
-/* ── Hero ── */
+/* ── Hero (card) ── */
 
 .hero {
   position: sticky;
   top: var(--nav-h);
   display: flex;
   align-items: center;
-  height: calc(100vh - var(--nav-h));
+  height: calc(100vh - var(--nav-h) - var(--card-gap));
+  margin: 0 var(--card-gap) var(--card-gap);
   padding: 0 clamp(40px, 6vw, 100px) 0 clamp(30px, 4vw, 60px);
+  background: #0B1212;
+  border-radius: clamp(18px, 1.8vw, 28px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 1px 2px rgba(9, 23, 23, 0.08), 0 12px 32px rgba(9, 23, 23, 0.12);
   overflow: hidden;
   z-index: 1;
 }
@@ -30,8 +40,8 @@
   overflow: hidden;
   pointer-events: none;
   z-index: 0;
-  background: #F4F3F3;
-  opacity: 0.07;
+  background: transparent;
+  opacity: 1;
   -webkit-mask-image: radial-gradient(circle at 73% 52%, black 0%, transparent 300px);
   mask-image: radial-gradient(circle at 73% 52%, black 0%, transparent 300px);
 }
@@ -47,7 +57,7 @@
   width: 1px;
   height: 250vh;
   top: -125vh;
-  background: #000066;
+  background: rgba(255, 255, 255, 0.10);
   transform: rotate(var(--axis-angle));
   transform-origin: center center;
 }
@@ -57,7 +67,7 @@
   height: 1px;
   width: 250vw;
   left: -125vw;
-  background: #000066;
+  background: rgba(255, 255, 255, 0.10);
 }
 
 /* ── Axes ── */
@@ -66,7 +76,7 @@
   position: absolute;
   width: 1.5px;
   height: 250%;
-  background: rgba(0, 0, 0, 0.07);
+  background: rgba(255, 255, 255, 0.12);
   right: 27%;
   top: -75%;
   transform: rotate(var(--axis-angle));
@@ -77,7 +87,7 @@
   position: absolute;
   height: 1.5px;
   width: 250%;
-  background: rgba(0, 0, 0, 0.07);
+  background: rgba(255, 255, 255, 0.12);
   left: -25%;
   top: 52%;
   pointer-events: none;
@@ -91,7 +101,8 @@
   z-index: 2;
   padding-bottom: 40px;
   margin-top: clamp(-90px, -8.5vw, -55px);
-  font-family: var(--font-sora), sans-serif;
+  margin-left: clamp(24px, 5vw, 90px);
+  font-family: var(--font-sans);
 }
 
 .heroLabel {
@@ -113,9 +124,9 @@
   font-weight: 300;
   font-style: italic;
   line-height: 1.05;
-  margin: 0 0 16px 0;
+  margin: 0 0 clamp(20px, 2vw, 28px) 0;
   letter-spacing: -0.01em;
-  color: #091717;
+  color: #F4F3F3;
 }
 
 .step1 { padding-left: clamp(22px, 2.2vw, 34px); }
@@ -126,38 +137,77 @@
 .step6 { margin-left: clamp(-2px, -0.1vw, 0px); }
 
 .heroSub {
-  font-family: var(--font-grotesk), 'Helvetica Neue', Arial, sans-serif;
+  font-family: var(--font-sans);
   font-size: clamp(15px, 1.3vw, 21px);
   font-weight: 300;
   line-height: 1.5;
-  color: #333;
+  color: rgba(244, 243, 243, 0.72);
   margin: 0 0 12px 0;
   font-style: normal;
   text-transform: none;
   letter-spacing: 0;
+  text-wrap: balance;
+  /* Recreate the incline: first line indented more, wrapped lines less,
+     continuing the diagonal left edge from the title down to the CTA. */
+  padding-left: clamp(3px, 0.3vw, 6px);
+  text-indent: clamp(4px, 0.4vw, 6px);
 }
 
-.heroCta {
-  display: inline-block;
-  font-family: var(--font-grotesk), 'Helvetica Neue', Arial, sans-serif;
-  font-size: 17px;
+/* Email-capture field + button, sharing the site's skew. The container is
+   skewed -8deg; inner text is counter-skewed +8deg so it reads upright while
+   the field, divider, and button stay as a slanted parallelogram. */
+.heroForm {
+  display: inline-flex;
+  align-items: stretch;
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(10px) saturate(130%);
+  -webkit-backdrop-filter: blur(10px) saturate(130%);
+  border: 1.5px solid rgba(244, 243, 243, 0.55);
+  border-radius: 999px;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  max-width: 100%;
+}
+
+.heroFormInput {
+  border: none;
+  background: transparent;
+  outline: none;
+  padding: 13px 20px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 300;
+  letter-spacing: 0.01em;
+  color: #F4F3F3;
+  width: clamp(180px, 20vw, 280px);
+  max-width: 100%;
+  padding-left: 26px;
+}
+
+.heroFormInput::placeholder {
+  color: rgba(244, 243, 243, 0.5);
+  opacity: 1;
+}
+
+.heroFormBtn {
+  flex-shrink: 0;
+  border: none;
+  background: #F4F3F3;
+  color: #091717;
+  padding: 0 30px;
+  font-family: inherit;
+  font-size: 16px;
   font-weight: 300;
   letter-spacing: 0.02em;
-  text-transform: none;
-  color: #fff;
-  background: #B81D24;
-  padding: 12px 28px;
-  text-decoration: none;
-  transition: opacity 0.2s;
-  transform: skewX(-8deg);
+  cursor: pointer;
+  transition: background 0.2s;
 }
 
-.heroCtaText {
+.heroFormBtnText {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
-  font-style: normal;
-  transform: skewX(8deg);
+  gap: 8px;
+  white-space: nowrap;
 }
 
 .heroCtaArrow {
@@ -165,25 +215,25 @@
   transition: transform 0.2s ease;
 }
 
-.heroCta:hover {
-  opacity: 0.85;
+.heroFormBtn:hover {
+  background: #ff8c80;
 }
 
-.heroCta:hover .heroCtaArrow {
+.heroFormBtn:hover .heroCtaArrow {
   transform: translateX(3px);
 }
 
 /* ── Hero cube (right) ── */
 
 .heroCube {
-  flex: 1;
+  position: absolute;
+  left: 73%;
+  top: 52%;
+  transform: translate(-50%, -50%);
   display: flex;
-  justify-content: center;
-  padding-left: clamp(90px, 9vw, 136px);
   align-items: center;
-  position: relative;
+  justify-content: center;
   z-index: 2;
-  margin-top: clamp(-60px, -5vw, -30px);
 }
 
 .cubeWrap {
@@ -193,6 +243,8 @@
   transform: rotate(5deg);
 }
 
+/* Three.js canvas layer holding the spinning GLB (solar), iris-revealed during
+   the 3D phase. */
 .canvasLayer {
   position: absolute;
   inset: 0;
@@ -203,18 +255,8 @@
   pointer-events: none;
 }
 
-.cubeSvg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 1;
-}
-
-/* Depth render of the cube, positioned over the SVG cube's bounding box
-   (viewBox 460x393, cube extents x[12,447] y[13.1,381.1]) so it overlays
-   the line-art exactly. Iris-revealed in JS during the cube hold. */
+/* Depth render (logo-depth) over the cube line-art's bounding box, iris-revealed
+   during the cube hold. */
 .depthImg {
   position: absolute;
   left: 2.61%;
@@ -225,6 +267,15 @@
   pointer-events: none;
   z-index: 3;
   clip-path: circle(0% at 50% 50%);
+}
+
+.cubeSvg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* ── Footer ── */
@@ -266,7 +317,7 @@
 }
 
 .footerWord {
-  font-family: var(--font-sora), sans-serif;
+  font-family: var(--font-sans);
   font-size: clamp(18px, 2.1vw, 22px);
   font-weight: 600;
   text-transform: uppercase;
@@ -340,17 +391,52 @@
   .hero {
     flex-direction: column;
     height: auto;
-    min-height: calc(100svh - var(--nav-h));
+    min-height: calc(100svh - var(--nav-h) - var(--card-gap));
     padding: clamp(56px, 12vw, 88px) clamp(20px, 5vw, 40px) clamp(24px, 6vw, 44px);
     align-items: flex-start;
     justify-content: flex-start;
+  }
+
+  /* Drop the little background grid on mobile (keep the axes). */
+  .gridLines {
+    display: none;
   }
 
   .heroContent {
     flex: none;
     width: 100%;
     margin-top: 0;
+    margin-left: 0;
     padding-bottom: 28px;
+  }
+
+  /* Straight, classical lines: drop the staggered "incline" indents and skew */
+  .heroLabel {
+    padding-left: 0;
+  }
+
+  .step1,
+  .step2,
+  .step3 {
+    padding-left: 0;
+  }
+
+  .step6 {
+    margin-left: 0;
+  }
+
+  .heroSub {
+    padding-left: 0;
+    text-indent: 0;
+  }
+
+  .heroForm {
+    transform: none;
+  }
+
+  .heroFormInput,
+  .heroFormBtnText {
+    transform: none;
   }
 
   .heroCube {

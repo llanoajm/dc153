@@ -14,7 +14,7 @@
   --axis-angle: 5deg;
   display: flex;
   align-items: center;
-  padding: 20px clamp(24px, 4vw, 56px);
+  padding: 20px clamp(40px, 9vw, 160px);
   background: rgba(244, 243, 243, 0);
   backdrop-filter: blur(0px);
   -webkit-backdrop-filter: blur(0px);
@@ -69,10 +69,11 @@
 }
 
 .navLink {
+  font-family: var(--font-sans);
   font-size: 12px;
   font-weight: 500;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  text-transform: none;
   color: #091717;
   text-decoration: none;
   transition: color 0.2s;
@@ -83,37 +84,40 @@
 }
 
 .navCta {
+  font-family: var(--font-sans);
   font-size: 12px;
   font-weight: 500;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: #091717;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: #fff;
+  background: #091717;
   text-decoration: none;
   border: 1.5px solid #091717;
-  padding: 12px 28px;
-  transition: background 0.2s, color 0.2s;
-  transform: skewX(-12deg);
+  border-radius: 999px;
+  padding: 11px 26px;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
 
 .navCtaText {
   display: block;
-  transform: skewX(5deg);
 }
 
 .navCta:hover {
-  background: #091717;
+  background: #1d3434;
+  border-color: #1d3434;
   color: #fff;
 }
 
 .navCtaLight {
-  border-color: transparent;
-  color: #595959;
+  background: transparent;
+  color: #091717;
+  border-color: #091717;
 }
 
 .navCtaLight:hover {
-  background: transparent;
-  border-color: transparent;
-  color: #595959;
+  background: #091717;
+  border-color: #091717;
+  color: #fff;
 }
 
 /* ── Burger button ── */
@@ -181,10 +185,11 @@
 }
 
 .drawerLink {
+  font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 500;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  text-transform: none;
   color: #091717;
   text-decoration: none;
   padding: 14px 0;
@@ -208,36 +213,40 @@
 }
 
 .drawerCta {
+  font-family: var(--font-sans);
   font-size: 12px;
   font-weight: 500;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: #091717;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: #fff;
+  background: #091717;
   text-decoration: none;
   border: 1.5px solid #091717;
+  border-radius: 999px;
   padding: 11px 24px;
-  transition: background 0.2s, color 0.2s;
-  transform: skewX(-12deg);
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
 
 .drawerCtaText {
   display: block;
-  transform: skewX(5deg);
 }
 
 .drawerCta:hover {
-  background: #091717;
+  background: #1d3434;
+  border-color: #1d3434;
   color: #fff;
 }
 
 .drawerCtaLight {
-  border-color: transparent;
-  color: #595959;
+  background: transparent;
+  color: #091717;
+  border-color: #091717;
 }
 
 .drawerCtaLight:hover {
-  background: transparent;
-  color: #595959;
+  background: #091717;
+  border-color: #091717;
+  color: #fff;
 }
 
 /* ── Responsive: show burger, hide nav links + actions ── */

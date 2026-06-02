@@ -1,7 +1,12 @@
 *, *::before, *::after { box-sizing: border-box; }
 
+:root {
+  /* SF Pro on Apple devices, Inter (its near-identical twin) everywhere else */
+  --font-sans: -apple-system, BlinkMacSystemFont, var(--font-inter), 'Segoe UI', system-ui, 'Helvetica Neue', Arial, sans-serif;
+}
+
 body {
   margin: 0;
   padding: 0;
-  font-family: var(--font-sora), system-ui, sans-serif;
+  font-family: var(--font-sans);
 }

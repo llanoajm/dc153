@@ -78,7 +78,7 @@ type Interp = (t: number) => string
 
 const animState = { activeModelIdx: -1, spinProgress: 0 }
 
-const ACCENT = '#ff8c80'
+const ACCENT = '#D1EAF0'
 
 const dotShader = {
   uniforms: { uColor: { value: new THREE.Color(ACCENT) } },
@@ -354,7 +354,7 @@ export default function HeroAnimation() {
       <img
         ref={imgRef}
         className={styles.depthImg}
-        src="/logo-depth-offwhite.png"
+        src="/logo-depth-cutout.png"
         alt=""
         aria-hidden="true"
       />
@@ -362,7 +362,7 @@ export default function HeroAnimation() {
       <svg className={styles.cubeSvg} viewBox="0 0 460 393" fill="none">
         <defs>
           <pattern id="cubeDotFill" x="0" y="0" width="5" height="5" patternUnits="userSpaceOnUse">
-            <circle cx="2.5" cy="2.5" r="1.2" fill="#ff8c80" fillOpacity="0.9" />
+            <circle cx="2.5" cy="2.5" r="1.2" fill="#D1EAF0" fillOpacity="0.9" />
           </pattern>
         </defs>
         {CUBE.map((d, i) => (
@@ -370,7 +370,7 @@ export default function HeroAnimation() {
             key={i}
             ref={setPathRef(i)}
             d={d}
-            stroke="#ff8c80"
+            stroke="#D1EAF0"
             strokeWidth="2"
             strokeLinejoin="round"
             strokeLinecap="round"

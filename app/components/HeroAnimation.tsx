@@ -40,16 +40,20 @@ const ALL_SHAPES = [CUBE, SOLAR]
 const N_PATHS = 4
 const N_SHAPES = ALL_SHAPES.length
 
+// Solar GLB intentionally not rendered — the animation holds the SVG silhouette
+// (mask) instead of the real 3D panel.
 const MODEL_URLS = [
   null,
-  '/models/solar.glb',
+  null,
 ]
 
 const T_MORPH = 1.5
 const T_HOLD = 3.0
-const T_SPIN = 4.0
+// The solar phase only holds the SVG mask now (no 3D spin), so keep it a brief
+// beat and transition back, rather than lingering for the old spin duration.
+const T_MASK_HOLD = 1.0
 const T_SVG_PHASE = T_MORPH + T_HOLD
-const T_3D_PHASE = T_MORPH + T_SPIN + 0.4
+const T_3D_PHASE = T_MORPH + T_MASK_HOLD
 
 // Depth-image reveal, timed from the start of the cube hold (i.e. local - T_MORPH).
 // Sequence over the 3.0s hold: settle → iris in → hold → iris out → bare cube again,
@@ -78,7 +82,7 @@ type Interp = (t: number) => string
 
 const animState = { activeModelIdx: -1, spinProgress: 0 }
 
-const ACCENT = '#D1EAF0'
+const ACCENT = '#444444'
 
 const dotShader = {
   uniforms: { uColor: { value: new THREE.Color(ACCENT) } },
@@ -160,7 +164,7 @@ function GLBModel({ url, idx }: { url: string; idx: number }) {
     const active = animState.activeModelIdx === idx
     outerRef.current.visible = active
     if (active) {
-      outerRef.current.rotation.y = animState.spinProgress * Math.PI * 4
+      outerRef.current.rotation.y = 0
     }
   })
 
@@ -258,14 +262,17 @@ export default function HeroAnimation() {
           animState.activeModelIdx = -1
           animState.spinProgress = 0
         } else {
-          // 3D spin
+          // Hold the morphed SVG silhouette (the mask) — the real 3D panel is
+          // never revealed.
           for (let i = 0; i < N_PATHS; i++) {
-            paths[i]!.style.opacity = '0'
-            paths[i]!.setAttribute('fill-opacity', '0')
+            const el = paths[i]!
+            el.setAttribute('d', morphsRef.current[prevIdx][i](1))
+            el.style.opacity = '1'
+            el.setAttribute('fill-opacity', '1')
           }
-          cvs.style.clipPath = 'circle(100% at 50% 50%)'
-          animState.activeModelIdx = shapeIdx
-          animState.spinProgress = Math.min(1, (local - T_MORPH) / T_SPIN)
+          cvs.style.clipPath = 'circle(0% at 50% 50%)'
+          animState.activeModelIdx = -1
+          animState.spinProgress = 0
         }
       } else {
         // 3D → Cube phase
@@ -354,7 +361,7 @@ export default function HeroAnimation() {
       <img
         ref={imgRef}
         className={styles.depthImg}
-        src="/logo-depth-cutout.png"
+        src="/cube-depth-cutout.png"
         alt=""
         aria-hidden="true"
       />
@@ -362,7 +369,7 @@ export default function HeroAnimation() {
       <svg className={styles.cubeSvg} viewBox="0 0 460 393" fill="none">
         <defs>
           <pattern id="cubeDotFill" x="0" y="0" width="5" height="5" patternUnits="userSpaceOnUse">
-            <circle cx="2.5" cy="2.5" r="1.2" fill="#D1EAF0" fillOpacity="0.9" />
+            <circle cx="2.5" cy="2.5" r="1.2" fill="#091717" fillOpacity="0.9" />
           </pattern>
         </defs>
         {CUBE.map((d, i) => (
@@ -370,7 +377,7 @@ export default function HeroAnimation() {
             key={i}
             ref={setPathRef(i)}
             d={d}
-            stroke="#D1EAF0"
+            stroke="#091717"
             strokeWidth="2"
             strokeLinejoin="round"
             strokeLinecap="round"

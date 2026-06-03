@@ -65,9 +65,6 @@ export default function NavBar() {
             <a href="/login" className={`${styles.drawerCta} ${styles.drawerCtaLight}`} onClick={close}>
               <span className={styles.drawerCtaText}>Log in</span>
             </a>
-            <a href="/login" className={styles.drawerCta} onClick={close}>
-              <span className={styles.drawerCtaText}>Book a demo</span>
-            </a>
           </div>
         </div>
       </div>

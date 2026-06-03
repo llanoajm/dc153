@@ -31,9 +31,9 @@ export default function HomePage() {
         </filter>
       </svg>
       <AnnouncementBanner />
-      <NavBar />
 
       <section className={styles.hero}>
+        <NavBar />
         <div className={styles.gridLines}>
           <div className={styles.gridOrigin}>
             {(() => {
@@ -57,15 +57,18 @@ export default function HomePage() {
         <div className={styles.axisX} />
 
         <div className={styles.heroContent}>
-          <span className={styles.heroLabel}></span>
-          <h1 className={styles.heroTitle}><span className={styles.step1}>Frontier</span><br /><span className={styles.step2}>Intelligence</span><br /><span className={styles.step3}>For the Grid</span></h1>
-          <p className={styles.heroSub}>Planning, de-risking, and accelerating the most critical electrical infrastructure operations</p>
-          <form className={`${styles.heroForm} ${styles.step6}`} action="https://app.steinmetz.ai" method="get">
-            <EmailInput />
-            <button type="submit" className={styles.heroFormBtn}>
-              <span className={styles.heroFormBtnText}>Get a demo<svg className={styles.heroCtaArrow} width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
-            </button>
-          </form>
+          <div className={styles.heroAbove}>
+            <h1 className={styles.heroTitle}><span className={styles.step1}>Frontier{' '}</span><br className={styles.titleBreak} /><span className={styles.step2}>Intelligence</span><br /><span className={styles.step3}>For the Grid</span></h1>
+          </div>
+          <div className={styles.heroBelow}>
+            <p className={styles.heroSub}>Plan, de-risk, and accelerate your most critical electrical infrastructure operations</p>
+            <form className={`${styles.heroForm} ${styles.step6}`} action="https://app.steinmetz.ai" method="get">
+              <EmailInput />
+              <button type="submit" className={styles.heroFormBtn}>
+                <span className={styles.heroFormBtnText}>Get a demo<svg className={styles.heroCtaArrow} width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
+              </button>
+            </form>
+          </div>
         </div>
 
         <div className={styles.heroCube}>

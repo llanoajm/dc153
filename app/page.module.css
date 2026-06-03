@@ -17,16 +17,18 @@
 /* ── Hero (card) ── */
 
 .hero {
+  --axis-y: 60%;
   position: sticky;
-  top: var(--nav-h);
+  top: var(--card-gap);
   display: flex;
   align-items: center;
   height: calc(100vh - var(--nav-h) - var(--card-gap));
-  margin: 0 var(--card-gap) var(--card-gap);
-  padding: 0 clamp(40px, 6vw, 100px) 0 clamp(30px, 4vw, 60px);
-  background: #0B1212;
+  margin: var(--card-gap) var(--card-gap) var(--card-gap);
+  /* Top padding clears the nav bar that now sits inside the card. */
+  padding: var(--nav-h) clamp(40px, 6vw, 100px) 0 clamp(30px, 4vw, 60px);
+  background: #FFFFFF;
   border-radius: clamp(18px, 1.8vw, 28px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(9, 23, 23, 0.08);
   box-shadow: 0 1px 2px rgba(9, 23, 23, 0.08), 0 12px 32px rgba(9, 23, 23, 0.12);
   overflow: hidden;
   z-index: 1;
@@ -42,14 +44,14 @@
   z-index: 0;
   background: transparent;
   opacity: 1;
-  -webkit-mask-image: radial-gradient(circle at 73% 52%, black 0%, transparent 300px);
-  mask-image: radial-gradient(circle at 73% 52%, black 0%, transparent 300px);
+  -webkit-mask-image: radial-gradient(circle at 73% var(--axis-y), black 0%, transparent 300px);
+  mask-image: radial-gradient(circle at 73% var(--axis-y), black 0%, transparent 300px);
 }
 
 .gridOrigin {
   position: absolute;
   right: 27%;
-  top: 52%;
+  top: var(--axis-y);
 }
 
 .gridLineV {
@@ -57,7 +59,7 @@
   width: 1px;
   height: 250vh;
   top: -125vh;
-  background: rgba(255, 255, 255, 0.10);
+  background: rgba(120, 120, 120, 0.12);
   transform: rotate(var(--axis-angle));
   transform-origin: center center;
 }
@@ -67,7 +69,7 @@
   height: 1px;
   width: 250vw;
   left: -125vw;
-  background: rgba(255, 255, 255, 0.10);
+  background: rgba(120, 120, 120, 0.12);
 }
 
 /* ── Axes ── */
@@ -76,7 +78,7 @@
   position: absolute;
   width: 1.5px;
   height: 250%;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(9, 23, 23, 0.07);
   right: 27%;
   top: -75%;
   transform: rotate(var(--axis-angle));
@@ -87,22 +89,39 @@
   position: absolute;
   height: 1.5px;
   width: 250%;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(9, 23, 23, 0.07);
   left: -25%;
-  top: 52%;
+  top: var(--axis-y);
   pointer-events: none;
 }
 
 /* ── Hero content (left) ── */
 
+/* Left column spans the full card height so its two groups can pin to the
+   x-axis: the title sits just above --axis-y, the subtitle + form just below. */
 .heroContent {
-  flex: 0 0 45%;
-  position: relative;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(clamp(30px, 4vw, 60px) + clamp(24px, 5vw, 90px));
+  width: 45%;
+  max-width: 640px;
   z-index: 2;
-  padding-bottom: 40px;
-  margin-top: clamp(-90px, -8.5vw, -55px);
-  margin-left: clamp(24px, 5vw, 90px);
   font-family: var(--font-sans);
+}
+
+.heroAbove {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% - var(--axis-y) - 14px);
+}
+
+.heroBelow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(var(--axis-y) + 10px);
 }
 
 .heroLabel {
@@ -122,78 +141,81 @@
 .heroTitle {
   font-size: clamp(44px, 5.5vw, 84px);
   font-weight: 300;
-  font-style: italic;
   line-height: 1.05;
   margin: 0 0 clamp(20px, 2vw, 28px) 0;
   letter-spacing: -0.01em;
-  color: #F4F3F3;
+  color: #091717;
+  /* Slant the title to match the tilt of the axes/grid. */
+  transform: skewX(calc(-1 * var(--axis-angle)));
 }
 
-.step1 { padding-left: clamp(22px, 2.2vw, 34px); }
-.step2 { padding-left: clamp(14px, 1.4vw, 22px); }
-.step3 { padding-left: clamp(6px, 0.6vw, 10px); }
-.step4 { padding-left: clamp(7px, 0.7vw, 12px); }
-.step5 { padding-left: clamp(3px, 0.3vw, 6px); }
-.step6 { margin-left: clamp(-2px, -0.1vw, 0px); }
+.step1 { padding-left: 0; }
+.step2 { padding-left: 0; }
+.step3 { padding-left: 0; }
+.step4 { padding-left: 0; }
+.step5 { padding-left: 0; }
+.step6 { margin-left: 0; }
 
 .heroSub {
   font-family: var(--font-sans);
   font-size: clamp(15px, 1.3vw, 21px);
-  font-weight: 300;
+  font-weight: 400;
   line-height: 1.5;
-  color: rgba(244, 243, 243, 0.72);
+  color: #000;
   margin: 0 0 12px 0;
   font-style: normal;
   text-transform: none;
   letter-spacing: 0;
-  text-wrap: balance;
-  /* Recreate the incline: first line indented more, wrapped lines less,
-     continuing the diagonal left edge from the title down to the CTA. */
-  padding-left: clamp(3px, 0.3vw, 6px);
-  text-indent: clamp(4px, 0.4vw, 6px);
+  padding-left: 0;
+  text-indent: 0;
+  /* Match the width of the "Get a demo" pill (input + 175px button/padding) and
+     fill it (no balanced wrapping that would leave the text narrower). */
+  width: 100%;
+  max-width: calc(clamp(180px, 20vw, 280px) + 175px);
 }
 
-/* Email-capture field + button, sharing the site's skew. The container is
-   skewed -8deg; inner text is counter-skewed +8deg so it reads upright while
-   the field, divider, and button stay as a slanted parallelogram. */
+/* Email-capture field + button. The border is split: the field (left) keeps a
+   soft gray edge, while the "Get a demo" button (right) carries a solid black
+   edge that matches its fill. */
 .heroForm {
   display: inline-flex;
   align-items: stretch;
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(10px) saturate(130%);
-  -webkit-backdrop-filter: blur(10px) saturate(130%);
-  border: 1.5px solid rgba(244, 243, 243, 0.55);
   border-radius: 999px;
-  overflow: hidden;
   font-family: var(--font-sans);
   max-width: 100%;
 }
 
 .heroFormInput {
-  border: none;
-  background: transparent;
+  border: 1.5px solid rgba(9, 23, 23, 0.22);
+  border-right: none;
+  border-radius: 999px 0 0 999px;
+  background: rgba(9, 23, 23, 0.03);
+  backdrop-filter: blur(10px) saturate(130%);
+  -webkit-backdrop-filter: blur(10px) saturate(130%);
   outline: none;
   padding: 13px 20px;
   font-family: inherit;
   font-size: 16px;
   font-weight: 300;
   letter-spacing: 0.01em;
-  color: #F4F3F3;
+  color: #091717;
   width: clamp(180px, 20vw, 280px);
   max-width: 100%;
   padding-left: 26px;
 }
 
 .heroFormInput::placeholder {
-  color: rgba(244, 243, 243, 0.5);
+  color: rgba(9, 23, 23, 0.45);
   opacity: 1;
 }
 
 .heroFormBtn {
   flex-shrink: 0;
-  border: none;
-  background: #F4F3F3;
-  color: #091717;
+  border: 1.5px solid #091717;
+  border-left: none;
+  border-radius: 0 999px 999px 0;
+  background: #091717;
+  color: #F4F3F3;
   padding: 0 30px;
   font-family: inherit;
   font-size: 16px;
@@ -216,7 +238,7 @@
 }
 
 .heroFormBtn:hover {
-  background: #D1EAF0;
+  background: #1d3434;
 }
 
 .heroFormBtn:hover .heroCtaArrow {
@@ -228,7 +250,7 @@
 .heroCube {
   position: absolute;
   left: 73%;
-  top: 52%;
+  top: var(--axis-y);
   transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
@@ -255,7 +277,7 @@
   pointer-events: none;
 }
 
-/* Depth render (logo-depth) over the cube line-art's bounding box, iris-revealed
+/* Depth render (cube-depth) over the cube line-art's bounding box, iris-revealed
    during the cube hold. */
 .depthImg {
   position: absolute;
@@ -385,94 +407,140 @@
   gap: clamp(20px, 2.4vw, 36px);
 }
 
-/* ── Mobile ── */
+/* ── Tablet & below: classical, centered layout (iPads — incl. landscape — and down) ── */
 
-@media (max-width: 768px) {
+@media (max-width: 1200px) {
   .hero {
     flex-direction: column;
     height: auto;
-    min-height: calc(100svh - var(--nav-h) - var(--card-gap));
-    padding: clamp(56px, 12vw, 88px) clamp(20px, 5vw, 40px) clamp(24px, 6vw, 44px);
-    align-items: flex-start;
+    min-height: calc(100svh - var(--card-gap) - var(--card-gap));
+    /* Start the content roughly 30% down the card (between top-aligned and centered). */
+    padding: calc(var(--nav-h) + 13svh) clamp(24px, 5vw, 48px) clamp(36px, 6vw, 64px);
+    align-items: center;
     justify-content: flex-start;
+    text-align: center;
   }
 
-  /* Drop the little background grid on mobile (keep the axes). */
+  /* Drop the background dot-grid; keep the axes. */
   .gridLines {
     display: none;
   }
 
+  /* Centered, stacked column: title, subtitle, form, then cube below. */
   .heroContent {
+    position: static;
     flex: none;
     width: 100%;
-    margin-top: 0;
-    margin-left: 0;
-    padding-bottom: 28px;
+    max-width: 100%;
+    left: auto;
+    margin: 0 auto;
   }
 
-  /* Straight, classical lines: drop the staggered "incline" indents and skew */
-  .heroLabel {
-    padding-left: 0;
+  .heroAbove,
+  .heroBelow {
+    position: static;
+    width: 100%;
   }
 
-  .step1,
-  .step2,
-  .step3 {
-    padding-left: 0;
+  .heroAbove {
+    margin-bottom: clamp(34px, 6.5vw, 58px);
   }
 
-  .step6 {
-    margin-left: 0;
+  /* Two lines: "Frontier Intelligence" / "For the Grid". */
+  .titleBreak {
+    display: none;
   }
 
+  .heroTitle {
+    font-size: clamp(44px, 6.4vw, 64px);
+    line-height: 1.08;
+    transform: none;
+  }
+
+  /* Shrink-wrap to the wrapped text and center that box under the title, so the
+     subtitle reads left-aligned while its center matches the title's center.
+     Capped to the title-sized column so it never exceeds the title width. */
   .heroSub {
-    padding-left: 0;
-    text-indent: 0;
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto clamp(12px, 2vw, 18px);
+    font-size: clamp(13px, 1.6vw, 16px);
+    color: #000;
+    text-align: left;
+    /* Nudge slightly to the right. */
+    transform: translateX(clamp(8px, 2.5vw, 16px));
   }
 
   .heroForm {
     transform: none;
+    width: 100%;
+    max-width: 420px;
   }
 
-  .heroFormInput,
+  .heroFormInput {
+    transform: none;
+    width: auto;
+    flex: 1;
+    min-width: 0;
+  }
+
   .heroFormBtnText {
     transform: none;
   }
 
+  /* Cube flows below the form. */
   .heroCube {
-    position: absolute;
-    left: 70%;
-    top: 67%;
-    transform: translate(-50%, -50%);
+    position: static;
+    transform: none;
     flex: none;
-    padding-left: 0;
-    margin-top: 0;
     width: auto;
+    margin: clamp(52px, 10vw, 104px) auto 0;
   }
 
   .cubeWrap {
-    width: clamp(120px, 34vw, 180px);
+    width: clamp(160px, 32vw, 240px);
   }
 
-  .axisX {
-    top: 67%;
-  }
-
+  /* Hide the hero axes on tablet/mobile — the diagonal axis cut through the
+     centered composition. */
+  .axisX,
   .axisY {
-    right: 30%;
+    display: none;
+  }
+}
+
+/* ── Phones only: slot the cube/animation between the title and the subtitle.
+   (Tablets keep the cube below the form.) ── */
+
+@media (max-width: 640px) {
+  .heroContent {
+    display: contents;
   }
 
+  .heroAbove {
+    order: 1;
+    margin-bottom: clamp(28px, 6vw, 44px);
+  }
+
+  .heroCube {
+    order: 2;
+    margin: 0 auto clamp(28px, 6vw, 44px);
+  }
+
+  .heroBelow {
+    order: 3;
+  }
 }
 
 /* ── Extra-small phones (iPhone widths) ── */
 
 @media (max-width: 480px) {
   .cubeWrap {
-    width: clamp(80px, 26vw, 110px);
+    width: clamp(110px, 34vw, 150px);
   }
 
   .heroTitle {
-    font-size: clamp(36px, 9.5vw, 48px);
+    font-size: clamp(40px, 11vw, 54px);
   }
 
   .heroSub {

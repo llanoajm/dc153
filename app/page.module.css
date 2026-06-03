@@ -23,11 +23,11 @@
   display: flex;
   align-items: center;
   height: calc(100vh - var(--nav-h) - var(--card-gap));
-  margin: var(--card-gap) var(--card-gap) var(--card-gap);
+  margin: clamp(6px, 0.6vw, 10px) var(--card-gap) var(--card-gap);
   /* Top padding clears the nav bar that now sits inside the card. */
   padding: var(--nav-h) clamp(40px, 6vw, 100px) 0 clamp(30px, 4vw, 60px);
   background: #FFFFFF;
-  border-radius: clamp(18px, 1.8vw, 28px);
+  border-radius: clamp(10px, 1vw, 16px);
   border: 1px solid rgba(9, 23, 23, 0.08);
   box-shadow: 0 1px 2px rgba(9, 23, 23, 0.08), 0 12px 32px rgba(9, 23, 23, 0.12);
   overflow: hidden;
@@ -122,6 +122,8 @@
   left: 0;
   right: 0;
   top: calc(var(--axis-y) + 10px);
+  /* Just a tad left of the title. */
+  transform: translateX(-6px);
 }
 
 .heroLabel {
@@ -440,6 +442,7 @@
   .heroBelow {
     position: static;
     width: 100%;
+    transform: none;
   }
 
   .heroAbove {

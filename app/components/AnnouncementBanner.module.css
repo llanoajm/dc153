@@ -9,7 +9,7 @@
   padding: 16px 56px;
   background: #ffffff;
   color: #000;
-  border-radius: clamp(18px, 1.8vw, 28px);
+  border-radius: clamp(8px, 0.8vw, 12px);
   box-shadow: 0 1px 2px rgba(9, 23, 23, 0.06);
 }
 

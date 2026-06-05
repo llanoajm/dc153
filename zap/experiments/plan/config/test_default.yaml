@@ -1,0 +1,78 @@
+# Basic config
+
+---
+tags: []
+
+system:
+  threads: 32
+  runtime: 30
+  memory: auto
+  gpu: 0
+
+data:
+  name: pypsa
+  case: load_medium
+  add_ground: true
+  use_batteries: true
+  num_nodes: 100
+  use_extra_components: true
+  start_hour: peak_hybrid_day  # peak_load_day, peak_hybrid_day, 2019-09-01
+  num_hours: 24
+  battery_cost_scale: 1.0
+  dont_expand: [hydro, coal, biomass]
+  args:
+    power_unit: 1.0e3  # 1e3 = GW
+    cost_unit: 1.0  # $ / MWh
+    marginal_load_value: 500.0  # $ / MWh
+    scale_load: 1.5
+    scale_generator_capacity_factor: 0.8
+    scale_line_capacity_factor: 0.8
+    carbon_tax: 0.0  # $ / ton CO2
+    generator_cost_perturbation: 1.0  # MW
+    load_cost_perturbation: 10.0  # MW
+    drop_empty_generators: false
+    expand_empty_generators: 0.5  # MW
+
+layer:
+  use_admm: false
+  args:
+    machine: cuda
+    num_iterations: 1000
+    rtol: 1.0e-2
+    rho_power: 1.0
+    rho_angle: 1.5
+    resid_norm: 2
+    safe_mode: false
+    battery_window: 24
+    battery_inner_iterations: 10
+    battery_inner_over_relaxation: 1.8
+    minimum_iterations: 100
+
+problem:
+  stochastic: true
+  hours_per_scenario: 12
+  cost_weight: 1.0
+  emissions_weight: 100.0  # $ / ton CO2
+  regularize: 1.0e-4  # Jacobian regularization
+  parameters: [generator, dc_line, ac_line, battery]
+
+optimizer:
+  name: gradient_descent
+  num_iterations: 10
+  initial_state: initial  # initial, relaxation, base_v02/000/model_00050
+  use_wandb: true
+  log_wandb_every: 1
+  checkpoint_every: 1
+  parallel: true  # Set to false with ADMM on
+  num_parallel_workers: 2
+  batch_size: 2  # Set to 1 with ADMM on
+  track_full_loss_every: 1000
+  batch_strategy: fixed
+  args:
+    step_size: 1.0e-3
+    clip: 1000.0
+
+relaxation:
+  should_solve: false
+  price_bound: 50.0  # In scaled units
+  inf_value: 50.0  # Relative to maximum lower bound of that device type
